@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__devchain"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/opt/workspace/student_system/.claude/hooks/devchain-relay.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
