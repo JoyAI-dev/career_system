@@ -72,6 +72,7 @@
     "welcome": "Welcome to the Career Exploration Platform.",
     "journeyTitle": "Self-Discovery Process - Community Activities",
     "myActivities": "My Activities",
+    "availableActivities": "Available Activities",
     "calendarTitle": "Activity Calendar",
     "activitiesHint": "Your joined group activities will show in the calendar below. Complete each step to unlock the next.",
     "noJoinedActivities": "You haven't joined any activities yet. Browse activities to get started!"
@@ -129,6 +130,7 @@
   },
   "activities": {
     "title": "Activities",
+    "myActivitiesTitle": "My Activities",
     "allTypes": "All Types",
     "allTags": "All Tags",
     "count": "{count, plural, =1 {1 activity} other {# activities}}",

@@ -72,6 +72,7 @@
     "welcome": "欢迎来到职业探索平台。",
     "journeyTitle": "自我探索流程 - 社区活动",
     "myActivities": "我的活动",
+    "availableActivities": "可参加的活动",
     "calendarTitle": "活动日历",
     "activitiesHint": "你参加的小组活动将显示在下方日历中。完成每个步骤以解锁下一个。",
     "noJoinedActivities": "你还没有参加任何活动。浏览活动开始探索吧！"
@@ -129,6 +130,7 @@
   },
   "activities": {
     "title": "活动",
+    "myActivitiesTitle": "我的活动",
     "allTypes": "所有类型",
     "allTags": "所有标签",
     "count": "{count, plural, =1 {1 个活动} other {# 个活动}}",

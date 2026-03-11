@@ -3,9 +3,11 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@/lib/auth';
 import { getActivityProgress } from '@/server/queries/activity';
-import { getUserJoinedActivities } from '@/server/queries/activity';
+import { getUserActivities } from '@/server/queries/activity';
+import { getActivityTypes } from '@/server/queries/activityType';
+import { getTags } from '@/server/queries/tag';
 import { ActivityStepper } from '@/components/ActivityStepper';
-import { ActivityCardsRow } from '@/components/ActivityCardsRow';
+import { ActivityBrowser } from '@/app/(main)/activities/ActivityBrowser';
 import { LandingCalendar } from '@/components/LandingCalendar';
 
 export default async function DashboardPage() {
@@ -26,11 +28,15 @@ export default async function DashboardPage() {
   }
 
   // Student landing page — fetch all data in parallel
-  const [steps, joinedActivities, t] = await Promise.all([
+  const [steps, activities, types, tags, t] = await Promise.all([
     getActivityProgress(session.user.id),
-    getUserJoinedActivities(session.user.id),
+    getUserActivities(session.user.id),
+    getActivityTypes(),
+    getTags(),
     getTranslations('dashboard'),
   ]);
+
+  const enabledTypes = types.filter((ty) => ty.isEnabled);
 
   return (
     <div className="space-y-8">
@@ -42,13 +48,14 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Section: Joined Activity Cards */}
+      {/* Section: Available Activities with Filters */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">{t('myActivities')}</h2>
-        <ActivityCardsRow activities={joinedActivities.map(a => ({
-          ...a,
-          scheduledAt: a.scheduledAt?.toISOString() ?? null,
-        }))} />
+        <h2 className="mb-4 text-lg font-semibold">{t('availableActivities')}</h2>
+        <ActivityBrowser
+          activities={JSON.parse(JSON.stringify(activities))}
+          types={enabledTypes.map((ty) => ({ id: ty.id, name: ty.name }))}
+          tags={tags.map((tg) => ({ id: tg.id, name: tg.name }))}
+        />
       </section>
 
       {/* Section: Calendar */}

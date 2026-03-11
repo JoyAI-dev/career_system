@@ -72,6 +72,7 @@
     "welcome": "Bienvenue sur la plateforme d'exploration de carrière.",
     "journeyTitle": "Processus d'auto-découverte - Activités communautaires",
     "myActivities": "Mes activités",
+    "availableActivities": "Activités disponibles",
     "calendarTitle": "Calendrier des activités",
     "activitiesHint": "Vos activités de groupe rejointes apparaîtront dans le calendrier ci-dessous. Complétez chaque étape pour débloquer la suivante.",
     "noJoinedActivities": "Vous n'avez encore rejoint aucune activité. Parcourez les activités pour commencer !"
@@ -129,6 +130,7 @@
   },
   "activities": {
     "title": "Activités",
+    "myActivitiesTitle": "Mes activités",
     "allTypes": "Tous les types",
     "allTags": "Tous les tags",
     "count": "{count, plural, =1 {1 activité} other {# activités}}",
