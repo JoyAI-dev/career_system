@@ -2,6 +2,7 @@
 
 import { useState, useActionState, useTransition } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import {
   Dialog,
@@ -198,7 +199,7 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
             <div className="border-t pt-4">
               <h3 className="mb-2 text-sm font-medium">Activity Guide</h3>
               <div className="prose prose-sm max-w-none">
-                <ReactMarkdown>{activity.guideMarkdown}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{activity.guideMarkdown}</ReactMarkdown>
               </div>
             </div>
           )}
