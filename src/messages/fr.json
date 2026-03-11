@@ -1,8 +1,13 @@
 {
+  "landing": {
+    "title": "Plateforme d'Exploration de Carrière",
+    "description": "Exploration de carrière et gestion des activités étudiantes"
+  },
   "common": {
     "appName": "Plateforme d'Exploration de Carrière",
     "signIn": "Se connecter",
     "signOut": "Se déconnecter",
+    "register": "S'inscrire",
     "save": "Enregistrer",
     "cancel": "Annuler",
     "delete": "Supprimer",
@@ -32,12 +37,13 @@
       "register": "S'inscrire"
     },
     "register": {
-      "title": "Inscription",
-      "description": "Créer un nouveau compte",
+      "title": "Créer un compte",
+      "description": "Inscrivez-vous à la plateforme d'exploration de carrière",
       "username": "Nom d'utilisateur",
       "password": "Mot de passe",
       "confirmPassword": "Confirmer le mot de passe",
-      "registering": "Inscription en cours...",
+      "creating": "Création en cours...",
+      "submit": "Créer un compte",
       "hasAccount": "Vous avez déjà un compte ?",
       "signIn": "Se connecter"
     },

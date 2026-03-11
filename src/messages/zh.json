@@ -1,8 +1,13 @@
 {
+  "landing": {
+    "title": "职业探索平台",
+    "description": "大学生职业探索与活动管理"
+  },
   "common": {
     "appName": "职业探索平台",
     "signIn": "登录",
     "signOut": "退出登录",
+    "register": "注册",
     "save": "保存",
     "cancel": "取消",
     "delete": "删除",
@@ -32,12 +37,13 @@
       "register": "注册"
     },
     "register": {
-      "title": "注册",
-      "description": "创建新账户",
+      "title": "创建账户",
+      "description": "注册职业探索平台",
       "username": "用户名",
       "password": "密码",
       "confirmPassword": "确认密码",
-      "registering": "注册中...",
+      "creating": "创建中...",
+      "submit": "创建账户",
       "hasAccount": "已有账户？",
       "signIn": "登录"
     },

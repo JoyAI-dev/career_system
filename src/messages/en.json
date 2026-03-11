@@ -1,8 +1,13 @@
 {
+  "landing": {
+    "title": "Career Exploration Platform",
+    "description": "Student career exploration and activity management"
+  },
   "common": {
     "appName": "Career Exploration Platform",
     "signIn": "Sign In",
     "signOut": "Sign Out",
+    "register": "Register",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -32,12 +37,13 @@
       "register": "Register"
     },
     "register": {
-      "title": "Register",
-      "description": "Create a new account",
+      "title": "Create Account",
+      "description": "Register for the Career Exploration Platform",
       "username": "Username",
       "password": "Password",
       "confirmPassword": "Confirm Password",
-      "registering": "Registering...",
+      "creating": "Creating account...",
+      "submit": "Create Account",
       "hasAccount": "Already have an account?",
       "signIn": "Sign In"
     },

@@ -12,6 +12,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export default function LoginPage() {
   const t = useTranslations('auth.login');
+  const tc = useTranslations('common');
   const [state, formAction, isPending] = useActionState<LoginState, FormData>(login, {});
 
   return (
@@ -55,7 +56,7 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? t('signingIn') : t('title')}
+              {isPending ? t('signingIn') : tc('signIn')}
             </Button>
           </form>
 
