@@ -2,6 +2,7 @@
 
 import { useState, useActionState, useTransition } from 'react';
 import ReactMarkdown from 'react-markdown';
+import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
@@ -199,6 +200,19 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
               <div className="prose prose-sm max-w-none">
                 <ReactMarkdown>{activity.guideMarkdown}</ReactMarkdown>
               </div>
+            </div>
+          )}
+
+          {/* Post-completion questionnaire update prompt */}
+          {activity.status === 'COMPLETED' && activity.isMember && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+              <h3 className="mb-1 text-sm font-medium text-primary">Update Your Cognitive Profile</h3>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Reflect on what you learned from this activity and update your questionnaire answers.
+              </p>
+              <Link href={`/questionnaire-update?activityId=${activity.id}`}>
+                <Button size="sm">Update Questionnaire</Button>
+              </Link>
             </div>
           )}
         </div>

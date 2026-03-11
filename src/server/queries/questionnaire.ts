@@ -90,6 +90,27 @@ export async function getUserSnapshotIds(userId: string) {
   return snapshots;
 }
 
+/**
+ * Get the user's most recent snapshot answers as a map of questionId → optionId.
+ */
+export async function getLatestSnapshotAnswers(userId: string): Promise<Record<string, string>> {
+  const latestSnapshot = await prisma.responseSnapshot.findFirst({
+    where: { userId },
+    orderBy: { completedAt: 'desc' },
+    select: {
+      answers: {
+        select: { questionId: true, selectedOptionId: true },
+      },
+    },
+  });
+  if (!latestSnapshot) return {};
+  const map: Record<string, string> = {};
+  for (const answer of latestSnapshot.answers) {
+    map[answer.questionId] = answer.selectedOptionId;
+  }
+  return map;
+}
+
 export async function getQuestionWithOptions(questionId: string) {
   return prisma.question.findUnique({
     where: { id: questionId },

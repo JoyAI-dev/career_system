@@ -878,6 +878,117 @@ export async function submitQuestionnaire(
   redirect('/dashboard');
 }
 
+/**
+ * Submit a questionnaire update with activity context (post-activity growth loop).
+ * Creates a new ResponseSnapshot referencing the activity.
+ */
+export async function submitQuestionnaireUpdate(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  const activityId = formData.get('activityId') as string | null;
+
+  const rawAnswers: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith('answer_') && typeof value === 'string') {
+      const questionId = key.replace('answer_', '');
+      rawAnswers[questionId] = value;
+    }
+  }
+
+  const parsed = submitQuestionnaireSchema.safeParse({
+    versionId: formData.get('versionId'),
+    answers: rawAnswers,
+  });
+  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
+
+  const { versionId, answers } = parsed.data;
+
+  // Verify the version is active
+  const version = await prisma.questionnaireVersion.findUnique({
+    where: { id: versionId },
+    select: { isActive: true },
+  });
+  if (!version?.isActive) {
+    return { errors: { _form: ['This questionnaire version is no longer active.'] } };
+  }
+
+  // Get all questions for this version to validate completeness
+  const allQuestions = await prisma.question.findMany({
+    where: { dimension: { topic: { versionId } } },
+    select: { id: true },
+  });
+
+  const questionIds = allQuestions.map((q) => q.id);
+  const answeredIds = Object.keys(answers);
+  const missing = questionIds.filter((id) => !answeredIds.includes(id));
+  if (missing.length > 0) {
+    return { errors: { _form: [`Please answer all questions. ${missing.length} remaining.`] } };
+  }
+
+  // Validate all selected options belong to the right questions
+  const selectedOptionIds = Object.values(answers);
+  const validOptions = await prisma.answerOption.findMany({
+    where: { id: { in: selectedOptionIds } },
+    select: { id: true, questionId: true },
+  });
+  const optionMap = new Map(validOptions.map((o) => [o.id, o.questionId]));
+  for (const [questionId, optionId] of Object.entries(answers)) {
+    const ownerQuestion = optionMap.get(optionId);
+    if (!ownerQuestion || ownerQuestion !== questionId) {
+      return { errors: { _form: ['Invalid answer option selected.'] } };
+    }
+  }
+
+  // Build context string with activity info
+  let contextStr = 'update';
+  if (activityId) {
+    const activity = await prisma.activity.findUnique({
+      where: { id: activityId },
+      select: {
+        id: true,
+        activityTags: { include: { tag: { select: { name: true } } } },
+      },
+    });
+    if (activity) {
+      const tags = activity.activityTags.map((at) => at.tag.name);
+      contextStr = JSON.stringify({
+        type: 'activity',
+        activityId: activity.id,
+        tags,
+      });
+    }
+  }
+
+  // Create snapshot + answers in a single transaction
+  await prisma.$transaction(async (tx) => {
+    const snapshot = await tx.responseSnapshot.create({
+      data: {
+        userId,
+        versionId,
+        context: contextStr,
+        activityId: activityId || null,
+      },
+    });
+
+    await tx.responseAnswer.createMany({
+      data: Object.entries(answers).map(([questionId, selectedOptionId]) => ({
+        snapshotId: snapshot.id,
+        questionId,
+        selectedOptionId,
+      })),
+    });
+  });
+
+  if (activityId) {
+    redirect(`/cognitive-report`);
+  }
+  redirect('/cognitive-report');
+}
+
 export async function validateAnswerOptionsSum(questionId: string): Promise<ActionState> {
   await requireAdmin();
 
