@@ -96,6 +96,7 @@ export async function getUserSnapshotIds(userId: string) {
 export async function getCurrentRecord(userId: string) {
   return prisma.responseSnapshot.findFirst({
     where: { userId, isSnapshot: false },
+    orderBy: { completedAt: 'desc' },
     include: {
       answers: {
         select: {
