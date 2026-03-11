@@ -22,7 +22,12 @@ export function UserTabs({ activeTab, users, total, page, totalPages, query, sor
   const t = useTranslations('admin.users');
 
   function handleTabChange(value: string) {
-    router.push(`/admin/users?tab=${value}`);
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    params.set('sort', sortBy);
+    params.set('order', sortOrder);
+    params.set('tab', value);
+    router.push(`/admin/users?${params.toString()}`);
   }
 
   return (
