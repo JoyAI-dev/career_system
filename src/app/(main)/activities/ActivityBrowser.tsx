@@ -18,7 +18,6 @@ type Activity = {
   isOnline: boolean;
   location: string | null;
   scheduledAt: string | null;
-  createdAt: string;
   typeId: string;
   type: { id: string; name: string };
   activityTags: { tag: Tag }[];
@@ -32,9 +31,11 @@ type Props = {
   activities: Activity[];
   types: ActivityType[];
   tags: Tag[];
+  /** When true, join calls joinActivityType(typeId) instead of joinActivity(id) */
+  joinByType?: boolean;
 };
 
-export function ActivityBrowser({ activities, types, tags }: Props) {
+export function ActivityBrowser({ activities, types, tags, joinByType }: Props) {
   const t = useTranslations('activities');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [tagFilter, setTagFilter] = useState('ALL');
@@ -47,23 +48,28 @@ export function ActivityBrowser({ activities, types, tags }: Props) {
     return true;
   });
 
+  // In joinByType mode, type filter is hidden since cards already represent types
+  const showTypeFilter = !joinByType;
+
   return (
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          aria-label="Filter by activity type"
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <option value="ALL">{t('allTypes')}</option>
-          {types.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+        {showTypeFilter && (
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            aria-label="Filter by activity type"
+            className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="ALL">{t('allTypes')}</option>
+            {types.map((ty) => (
+              <option key={ty.id} value={ty.id}>
+                {ty.name}
+              </option>
+            ))}
+          </select>
+        )}
         <select
           value={tagFilter}
           onChange={(e) => setTagFilter(e.target.value)}
@@ -71,9 +77,9 @@ export function ActivityBrowser({ activities, types, tags }: Props) {
           className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="ALL">{t('allTags')}</option>
-          {tags.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
+          {tags.map((tg) => (
+            <option key={tg.id} value={tg.id}>
+              {tg.name}
             </option>
           ))}
         </select>
@@ -103,6 +109,7 @@ export function ActivityBrowser({ activities, types, tags }: Props) {
       <ActivityDetailDialog
         activity={selectedActivity}
         onClose={() => setSelectedActivity(null)}
+        joinByType={joinByType}
       />
     </div>
   );

@@ -175,6 +175,80 @@ export async function getUserJoinedActivities(userId: string) {
   }));
 }
 
+/**
+ * Get activity types for the dashboard with aggregated instance data.
+ * Returns one entry per enabled ActivityType, shaped for ActivityBrowser/ActivityCard.
+ */
+export async function getActivityTypesForDashboard(userId: string) {
+  const [types, unlockedTypeIds] = await Promise.all([
+    prisma.activityType.findMany({
+      where: { isEnabled: true },
+      orderBy: { order: 'asc' },
+      include: {
+        activities: {
+          where: { status: { in: ['OPEN', 'FULL', 'SCHEDULED', 'IN_PROGRESS'] } },
+          include: {
+            activityTags: {
+              include: { tag: { select: { id: true, name: true } } },
+            },
+            memberships: {
+              where: { userId },
+              select: { role: true },
+              take: 1,
+            },
+            _count: { select: { memberships: true } },
+          },
+        },
+      },
+    }),
+    getUnlockedTypeIds(userId),
+  ]);
+
+  return types.map((type) => {
+    // Aggregate across all active instances
+    const openSpots = type.activities
+      .filter((a) => a.status === 'OPEN')
+      .reduce((sum, a) => sum + (a.capacity - a._count.memberships), 0);
+    const totalMembers = type.activities.reduce((sum, a) => sum + a._count.memberships, 0);
+
+    // User membership across any instance of this type
+    const memberInstance = type.activities.find((a) => a.memberships.length > 0);
+    const isMember = !!memberInstance;
+    const memberRole = memberInstance?.memberships[0]?.role ?? undefined;
+
+    // Collect unique tags from all instances
+    const tagMap = new Map<string, { id: string; name: string }>();
+    for (const a of type.activities) {
+      for (const at of a.activityTags) {
+        tagMap.set(at.tag.id, at.tag);
+      }
+    }
+
+    // Guide from latest instance (if any)
+    const latestInstance = type.activities[0];
+
+    return {
+      id: type.id, // typeId used as the card ID
+      title: type.name,
+      capacity: type.defaultCapacity,
+      status: (openSpots > 0 || type.activities.length === 0 ? 'OPEN' : 'FULL') as ActivityStatus,
+      guideMarkdown: latestInstance?.guideMarkdown ?? null,
+      isOnline: false,
+      location: null,
+      scheduledAt: null as string | null,
+      typeId: type.id,
+      type: { id: type.id, name: type.name },
+      activityTags: [...tagMap.values()].map((tag) => ({ tag })),
+      _count: { memberships: totalMembers },
+      openSpots,
+      instanceCount: type.activities.length,
+      isEligible: unlockedTypeIds.has(type.id),
+      isMember,
+      memberRole,
+    };
+  });
+}
+
 /** Get activity detail with full info for the detail popup */
 export async function getActivityDetail(id: string) {
   return prisma.activity.findUnique({

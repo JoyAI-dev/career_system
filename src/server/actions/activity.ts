@@ -279,6 +279,132 @@ export async function joinActivity(activityId: string): Promise<ActionState> {
 }
 
 /**
+ * Join an activity type. Finds an open instance with capacity or creates a new one.
+ * Uses a Prisma transaction for atomicity:
+ * - If an OPEN instance with capacity exists → join as MEMBER
+ * - If no open instance → create new instance, join as LEADER
+ * - When an instance reaches capacity → auto-transition to FULL
+ */
+export async function joinActivityType(typeId: string): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const te = await getTranslations('serverErrors');
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Verify type exists and is enabled
+      const type = await tx.activityType.findUnique({
+        where: { id: typeId },
+        select: { id: true, name: true, defaultCapacity: true, isEnabled: true },
+      });
+      if (!type || !type.isEnabled) {
+        throw new Error(te('invalidActivityType'));
+      }
+
+      // Check progressive unlock
+      const unlockedTypeIds = await getUnlockedTypeIds(userId);
+      if (!unlockedTypeIds.has(typeId)) {
+        throw new Error(te('prerequisiteNotMet'));
+      }
+
+      // Check if user is already a member of any active instance of this type
+      const existingMembership = await tx.membership.findFirst({
+        where: {
+          userId,
+          activity: {
+            typeId,
+            status: { in: ['OPEN', 'FULL', 'SCHEDULED', 'IN_PROGRESS'] },
+          },
+        },
+      });
+      if (existingMembership) {
+        throw new Error(te('alreadyJoined'));
+      }
+
+      // Find an OPEN instance with capacity (lock rows to prevent race conditions)
+      const openInstances = await tx.$queryRaw<
+        { id: string; capacity: number; title: string }[]
+      >(
+        Prisma.sql`
+          SELECT a.id, a.capacity, a.title
+          FROM activities a
+          WHERE a."typeId" = ${typeId}
+            AND a.status = 'OPEN'
+          ORDER BY a."createdAt" ASC
+          FOR UPDATE
+        `,
+      );
+
+      let targetActivityId: string | null = null;
+      let role: 'LEADER' | 'MEMBER' = 'MEMBER';
+
+      for (const instance of openInstances) {
+        const memberCount = await tx.membership.count({
+          where: { activityId: instance.id },
+        });
+        if (memberCount < instance.capacity) {
+          targetActivityId = instance.id;
+          role = memberCount === 0 ? 'LEADER' : 'MEMBER';
+          break;
+        }
+      }
+
+      if (!targetActivityId) {
+        // No open instance with capacity — create a new one
+        const instanceCount = await tx.activity.count({ where: { typeId } });
+        const newActivity = await tx.activity.create({
+          data: {
+            typeId,
+            title: `${type.name} #${instanceCount + 1}`,
+            capacity: type.defaultCapacity,
+            status: 'OPEN',
+            createdBy: userId,
+          },
+        });
+        targetActivityId = newActivity.id;
+        role = 'LEADER';
+      }
+
+      // Create membership
+      await tx.membership.create({
+        data: { activityId: targetActivityId, userId, role },
+      });
+
+      // Check if instance is now full
+      const newMemberCount = await tx.membership.count({
+        where: { activityId: targetActivityId },
+      });
+      const activity = await tx.activity.findUnique({
+        where: { id: targetActivityId },
+        select: { capacity: true, title: true },
+      });
+
+      if (activity && newMemberCount >= activity.capacity) {
+        await tx.activity.update({
+          where: { id: targetActivityId },
+          data: { status: 'FULL' },
+        });
+
+        await notifyActivityMembers(
+          targetActivityId,
+          'ACTIVITY_FULL',
+          te('notificationActivityFull'),
+          te('notificationActivityFullMsg', { title: activity.title }),
+          tx,
+        );
+      }
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : te('failedToJoin');
+    return { errors: { _form: [message] } };
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath(ACTIVITIES_PATH);
+  return { success: true };
+}
+
+/**
  * Leave an activity. If the activity was FULL, revert to OPEN.
  * Leader cannot leave unless they are the only member.
  * If leader leaves as last member, activity reverts to OPEN.

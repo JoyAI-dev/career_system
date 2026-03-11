@@ -3,8 +3,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@/lib/auth';
 import { getActivityProgress } from '@/server/queries/activity';
-import { getUserActivities } from '@/server/queries/activity';
-import { getActivityTypes } from '@/server/queries/activityType';
+import { getActivityTypesForDashboard } from '@/server/queries/activity';
 import { getTags } from '@/server/queries/tag';
 import { ActivityStepper } from '@/components/ActivityStepper';
 import { ActivityBrowser } from '@/app/(main)/activities/ActivityBrowser';
@@ -28,15 +27,12 @@ export default async function DashboardPage() {
   }
 
   // Student landing page — fetch all data in parallel
-  const [steps, activities, types, tags, t] = await Promise.all([
+  const [steps, activityTypes, tags, t] = await Promise.all([
     getActivityProgress(session.user.id),
-    getUserActivities(session.user.id),
-    getActivityTypes(),
+    getActivityTypesForDashboard(session.user.id),
     getTags(),
     getTranslations('dashboard'),
   ]);
-
-  const enabledTypes = types.filter((ty) => ty.isEnabled);
 
   return (
     <div className="space-y-8">
@@ -52,9 +48,10 @@ export default async function DashboardPage() {
       <section>
         <h2 className="mb-4 text-lg font-semibold">{t('availableActivities')}</h2>
         <ActivityBrowser
-          activities={JSON.parse(JSON.stringify(activities))}
-          types={enabledTypes.map((ty) => ({ id: ty.id, name: ty.name }))}
+          activities={JSON.parse(JSON.stringify(activityTypes))}
+          types={[]}
           tags={tags.map((tg) => ({ id: tg.id, name: tg.name }))}
+          joinByType
         />
       </section>
 

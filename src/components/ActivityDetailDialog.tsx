@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   joinActivity,
+  joinActivityType,
   leaveActivity,
   scheduleMeeting,
   startMeeting,
@@ -48,6 +49,8 @@ type Activity = {
 type Props = {
   activity: Activity | null;
   onClose: () => void;
+  /** When true, join calls joinActivityType(type.id) instead of joinActivity(id) */
+  joinByType?: boolean;
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -72,7 +75,7 @@ const ACTION_KEYS: Record<string, string> = {
   COMPLETE: 'completeMeeting',
 };
 
-export function ActivityDetailDialog({ activity, onClose }: Props) {
+export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
   const t = useTranslations('activities');
   const tCommon = useTranslations('common');
   const [isPending, startTransition] = useTransition();
@@ -83,16 +86,24 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
 
   const isLocked = !activity.isEligible;
   const isFull = activity._count.memberships >= activity.capacity;
-  const canJoin = activity.isEligible && activity.status === 'OPEN' && !isFull && !activity.isMember;
-  const canLeave = activity.isMember && activity.status === 'OPEN';
+  // In joinByType mode, user can always join (overflow creates new instance)
+  const canJoin = joinByType
+    ? activity.isEligible && !activity.isMember
+    : activity.isEligible && activity.status === 'OPEN' && !isFull && !activity.isMember;
+  const canLeave = !joinByType && activity.isMember && activity.status === 'OPEN';
 
   const userRole = activity.memberRole as MemberRole | undefined;
-  const availableActions = getAvailableActions(activity.status, userRole ?? null);
+  // In joinByType mode, no instance-level actions (schedule/start/complete)
+  const availableActions = joinByType
+    ? []
+    : getAvailableActions(activity.status, userRole ?? null);
 
   function handleJoin() {
     setError(null);
     startTransition(async () => {
-      const result = await joinActivity(activity!.id);
+      const result = joinByType
+        ? await joinActivityType(activity!.type.id)
+        : await joinActivity(activity!.id);
       if (result.errors?._form) {
         setError(result.errors._form[0]);
       } else {
