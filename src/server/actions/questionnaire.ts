@@ -891,6 +891,21 @@ export async function submitQuestionnaireUpdate(
 
   const activityId = formData.get('activityId') as string | null;
 
+  // Validate activityId: user must be a member and activity must be COMPLETED
+  if (activityId) {
+    const membership = await (prisma as any).membership.findUnique({
+      where: { activityId_userId: { activityId, userId } },
+      select: { activity: { select: { status: true } } },
+    }) as { activity: { status: string } } | null;
+
+    if (!membership) {
+      return { errors: { _form: ['You are not a member of this activity.'] } };
+    }
+    if (membership.activity.status !== 'COMPLETED') {
+      return { errors: { _form: ['Activity must be completed before updating questionnaire.'] } };
+    }
+  }
+
   const rawAnswers: Record<string, string> = {};
   for (const [key, value] of formData.entries()) {
     if (key.startsWith('answer_') && typeof value === 'string') {
