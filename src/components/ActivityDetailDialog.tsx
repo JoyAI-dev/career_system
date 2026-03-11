@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useTransition } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   Dialog,
@@ -9,6 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { joinActivity, leaveActivity } from '@/server/actions/activity';
 import type { ActivityStatus } from '@prisma/client';
 
 type Tag = { id: string; name: string };
@@ -26,6 +28,8 @@ type Activity = {
   activityTags: { tag: Tag }[];
   _count: { memberships: number };
   isEligible: boolean;
+  isMember?: boolean;
+  memberRole?: string;
 };
 
 type Props = {
@@ -41,11 +45,40 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function ActivityDetailDialog({ activity, onClose }: Props) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
   if (!activity) return null;
 
   const isLocked = !activity.isEligible;
   const isFull = activity._count.memberships >= activity.capacity;
-  const canJoin = activity.isEligible && activity.status === 'OPEN' && !isFull;
+  const canJoin = activity.isEligible && activity.status === 'OPEN' && !isFull && !activity.isMember;
+  const canLeave = activity.isMember;
+
+  function handleJoin() {
+    setError(null);
+    startTransition(async () => {
+      const result = await joinActivity(activity!.id);
+      if (result.errors?._form) {
+        setError(result.errors._form[0]);
+      } else {
+        onClose();
+      }
+    });
+  }
+
+  function handleLeave() {
+    if (!confirm('Are you sure you want to leave this activity?')) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await leaveActivity(activity!.id);
+      if (result.errors?._form) {
+        setError(result.errors._form[0]);
+      } else {
+        onClose();
+      }
+    });
+  }
 
   return (
     <Dialog open={!!activity} onOpenChange={(open) => !open && onClose()}>
@@ -65,6 +98,11 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
             >
               {activity.status === 'IN_PROGRESS' ? 'In Progress' : activity.status}
             </span>
+            {activity.isMember && (
+              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                {activity.memberRole === 'LEADER' ? 'Leader' : 'Joined'}
+              </span>
+            )}
           </div>
 
           {/* Details */}
@@ -100,6 +138,13 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
             </div>
           )}
 
+          {/* Error */}
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              {error}
+            </div>
+          )}
+
           {/* Markdown guide */}
           {activity.guideMarkdown && (
             <div className="border-t pt-4">
@@ -112,20 +157,41 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
         </div>
 
         <DialogFooter>
-          <Button
-            disabled={!canJoin}
-            title={
-              isLocked
-                ? 'Complete prerequisite to unlock'
-                : isFull
-                  ? 'Activity is full'
-                  : activity.status !== 'OPEN'
-                    ? 'Activity is not open for joining'
-                    : 'Join this activity'
-            }
-          >
-            {isLocked ? 'Locked' : isFull ? 'Full' : 'Join'}
-          </Button>
+          {canLeave ? (
+            <Button
+              variant="outline"
+              onClick={handleLeave}
+              disabled={isPending}
+            >
+              {isPending ? 'Leaving...' : 'Leave'}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleJoin}
+              disabled={!canJoin || isPending}
+              title={
+                isLocked
+                  ? 'Complete prerequisite to unlock'
+                  : activity.isMember
+                    ? 'Already joined'
+                    : isFull
+                      ? 'Activity is full'
+                      : activity.status !== 'OPEN'
+                        ? 'Activity is not open for joining'
+                        : 'Join this activity'
+              }
+            >
+              {isPending
+                ? 'Joining...'
+                : isLocked
+                  ? 'Locked'
+                  : activity.isMember
+                    ? 'Joined'
+                    : isFull
+                      ? 'Full'
+                      : 'Join'}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

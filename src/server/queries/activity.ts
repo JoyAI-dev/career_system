@@ -76,16 +76,27 @@ export async function getUserActivities(userId: string) {
         activityTags: {
           include: { tag: { select: { id: true, name: true } } },
         },
+        memberships: {
+          where: { userId },
+          select: { role: true },
+          take: 1,
+        },
         _count: { select: { memberships: true } },
       },
     }),
     getUnlockedTypeIds(userId),
   ]);
 
-  return activities.map((activity) => ({
-    ...activity,
-    isEligible: unlockedTypeIds.has(activity.typeId),
-  }));
+  return activities.map((activity) => {
+    const userMembership = activity.memberships[0] ?? null;
+    const { memberships: _, ...rest } = activity;
+    return {
+      ...rest,
+      isEligible: unlockedTypeIds.has(activity.typeId),
+      isMember: !!userMembership,
+      memberRole: userMembership?.role ?? undefined,
+    };
+  });
 }
 
 /** Get activity detail with full info for the detail popup */

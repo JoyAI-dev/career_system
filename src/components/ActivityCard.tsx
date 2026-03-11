@@ -14,6 +14,8 @@ type Activity = {
   activityTags: { tag: Tag }[];
   _count: { memberships: number };
   isEligible: boolean;
+  isMember?: boolean;
+  memberRole?: string | null;
 };
 
 type Props = {
@@ -70,6 +72,11 @@ export function ActivityCard({ activity, onClick }: Props) {
           {isLocked && (
             <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
               Locked
+            </span>
+          )}
+          {activity.isMember && (
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+              {activity.memberRole === 'LEADER' ? 'Leader' : 'Joined'}
             </span>
           )}
         </div>

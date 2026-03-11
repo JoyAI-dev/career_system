@@ -2,7 +2,8 @@
 
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { requireAdmin, auth } from '@/lib/auth';
+import { requireAdmin, requireAuth, auth } from '@/lib/auth';
+import { getUnlockedTypeIds } from '@/server/queries/activity';
 import { revalidatePath } from 'next/cache';
 
 const ADMIN_PATH = '/admin/activities';
@@ -167,5 +168,140 @@ export async function deleteActivity(id: string): Promise<ActionState> {
   await prisma.activity.delete({ where: { id } });
 
   revalidatePath(ADMIN_PATH);
+  return { success: true };
+}
+
+const ACTIVITIES_PATH = '/activities';
+
+/**
+ * Join an activity with concurrency-safe capacity check.
+ * Uses an interactive Prisma transaction with row-level locking.
+ * First member becomes LEADER, subsequent members are MEMBER.
+ * Activity status transitions to FULL when capacity is reached.
+ */
+export async function joinActivity(activityId: string): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Lock the activity row for update to prevent concurrent joins exceeding capacity
+      const activities = await tx.$queryRawUnsafe<
+        { id: string; typeId: string; capacity: number; status: string }[]
+      >(
+        'SELECT id, "typeId", capacity, status FROM activities WHERE id = $1 FOR UPDATE',
+        activityId,
+      );
+
+      if (activities.length === 0) {
+        throw new Error('Activity not found.');
+      }
+      const activity = activities[0];
+
+      if (activity.status !== 'OPEN') {
+        throw new Error('Activity is not open for joining.');
+      }
+
+      // Check progressive unlock
+      const unlockedTypeIds = await getUnlockedTypeIds(userId);
+      if (!unlockedTypeIds.has(activity.typeId)) {
+        throw new Error('You have not completed the prerequisite activity type.');
+      }
+
+      // Check if already a member (unique constraint backup)
+      const existingMembership = await tx.membership.findUnique({
+        where: { activityId_userId: { activityId, userId } },
+      });
+      if (existingMembership) {
+        throw new Error('You have already joined this activity.');
+      }
+
+      // Count current members (within the lock scope)
+      const memberCount = await tx.membership.count({ where: { activityId } });
+      if (memberCount >= activity.capacity) {
+        throw new Error('Activity is full.');
+      }
+
+      // First member becomes LEADER, others are MEMBER
+      const role = memberCount === 0 ? 'LEADER' : 'MEMBER';
+
+      await tx.membership.create({
+        data: { activityId, userId, role },
+      });
+
+      // Transition to FULL if at capacity
+      if (memberCount + 1 >= activity.capacity) {
+        await tx.activity.update({
+          where: { id: activityId },
+          data: { status: 'FULL' },
+        });
+      }
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to join activity.';
+    return { errors: { _form: [message] } };
+  }
+
+  revalidatePath(ACTIVITIES_PATH);
+  return { success: true };
+}
+
+/**
+ * Leave an activity. If the activity was FULL, revert to OPEN.
+ * Leader cannot leave unless they are the only member.
+ * If leader leaves as last member, activity reverts to OPEN.
+ */
+export async function leaveActivity(activityId: string): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Lock activity row
+      const activities = await tx.$queryRawUnsafe<
+        { id: string; capacity: number; status: string }[]
+      >(
+        'SELECT id, capacity, status FROM activities WHERE id = $1 FOR UPDATE',
+        activityId,
+      );
+
+      if (activities.length === 0) {
+        throw new Error('Activity not found.');
+      }
+      const activity = activities[0];
+
+      const membership = await tx.membership.findUnique({
+        where: { activityId_userId: { activityId, userId } },
+      });
+      if (!membership) {
+        throw new Error('You are not a member of this activity.');
+      }
+
+      // Leader cannot leave if there are other members
+      if (membership.role === 'LEADER') {
+        const memberCount = await tx.membership.count({ where: { activityId } });
+        if (memberCount > 1) {
+          throw new Error('Leader cannot leave while other members remain. Transfer leadership first.');
+        }
+      }
+
+      await tx.membership.delete({
+        where: { id: membership.id },
+      });
+
+      // Revert FULL → OPEN if leaving freed a spot
+      if (activity.status === 'FULL') {
+        await tx.activity.update({
+          where: { id: activityId },
+          data: { status: 'OPEN' },
+        });
+      }
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to leave activity.';
+    return { errors: { _form: [message] } };
+  }
+
+  revalidatePath(ACTIVITIES_PATH);
   return { success: true };
 }

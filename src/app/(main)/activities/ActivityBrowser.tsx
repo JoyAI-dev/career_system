@@ -23,6 +23,8 @@ type Activity = {
   activityTags: { tag: Tag }[];
   _count: { memberships: number };
   isEligible: boolean;
+  isMember?: boolean;
+  memberRole?: string;
 };
 
 type Props = {
