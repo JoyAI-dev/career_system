@@ -45,3 +45,25 @@ export async function getActiveVersion() {
     select: { id: true, version: true },
   });
 }
+
+export async function getQuestionWithOptions(questionId: string) {
+  return prisma.question.findUnique({
+    where: { id: questionId },
+    include: {
+      answerOptions: {
+        orderBy: { score: 'asc' },
+      },
+      dimension: {
+        include: {
+          topic: {
+            include: {
+              version: {
+                select: { id: true, version: true, isActive: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+}

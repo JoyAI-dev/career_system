@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -667,6 +668,8 @@ function QuestionItem({
   const [editOpen, setEditOpen] = useState(false);
   const [notesExpanded, setNotesExpanded] = useState(false);
 
+  const optionsSum = question.answerOptions.reduce((sum, o) => sum + o.score, 0);
+
   const [editState, editAction, editPending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
       const result = await updateQuestion(prev, formData);
@@ -681,15 +684,29 @@ function QuestionItem({
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-sm">{question.title}</p>
-          {question.notes.length > 0 && (
-            <button
-              type="button"
-              className="mt-1 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => setNotesExpanded(!notesExpanded)}
+          <div className="mt-1 flex items-center gap-3">
+            {question.notes.length > 0 && (
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setNotesExpanded(!notesExpanded)}
+              >
+                {notesExpanded ? '▼' : '▶'} {question.notes.length} note{question.notes.length !== 1 ? 's' : ''}
+              </button>
+            )}
+            <Link
+              href={`/admin/questionnaire/${question.id}/options`}
+              className={`text-xs hover:text-foreground ${
+                optionsSum === 100
+                  ? 'text-green-600 dark:text-green-400'
+                  : optionsSum > 0
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-muted-foreground'
+              }`}
             >
-              {notesExpanded ? '▼' : '▶'} {question.notes.length} note{question.notes.length !== 1 ? 's' : ''}
-            </button>
-          )}
+              {question.answerOptions.length} option{question.answerOptions.length !== 1 ? 's' : ''} (sum: {optionsSum})
+            </Link>
+          </div>
         </div>
         {isDraft && (
           <div className="flex shrink-0 items-center gap-1">

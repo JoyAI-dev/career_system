@@ -127,6 +127,7 @@ export async function createDraftVersion(): Promise<ActionState> {
                 orderBy: { order: 'asc' },
                 include: {
                   notes: true,
+                  answerOptions: true,
                 },
               },
             },
@@ -181,6 +182,15 @@ export async function createDraftVersion(): Promise<ActionState> {
                   questionId: newQ.id,
                   label: note.label,
                   content: note.content,
+                },
+              });
+            }
+            for (const opt of q.answerOptions) {
+              await tx.answerOption.create({
+                data: {
+                  questionId: newQ.id,
+                  label: opt.label,
+                  score: opt.score,
                 },
               });
             }
@@ -636,5 +646,149 @@ export async function deleteQuestionNote(noteId: string): Promise<ActionState> {
   await prisma.questionNote.delete({ where: { id: noteId } });
 
   revalidatePath(ADMIN_PATH);
+  return { success: true };
+}
+
+// ─── Answer Option CRUD ─────────────────────────────────────────────
+
+const answerOptionSchema = z.object({
+  label: z.string().min(1, 'Label is required').max(200),
+  score: z.coerce.number().int().min(0, 'Score must be 0 or more').max(100, 'Score must be 100 or less'),
+});
+
+const createAnswerOptionSchema = answerOptionSchema.extend({
+  questionId: z.string().min(1, 'Question is required'),
+});
+
+const updateAnswerOptionSchema = answerOptionSchema.extend({
+  id: z.string().min(1),
+});
+
+export async function createAnswerOption(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = createAnswerOptionSchema.safeParse({
+    questionId: formData.get('questionId'),
+    label: formData.get('label'),
+    score: formData.get('score'),
+  });
+  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
+
+  const versionId = await getVersionIdFromQuestion(parsed.data.questionId);
+  await requireDraftVersion(versionId);
+
+  await prisma.answerOption.create({
+    data: {
+      questionId: parsed.data.questionId,
+      label: parsed.data.label,
+      score: parsed.data.score,
+    },
+  });
+
+  revalidatePath(ADMIN_PATH);
+  return { success: true };
+}
+
+export async function updateAnswerOption(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = updateAnswerOptionSchema.safeParse({
+    id: formData.get('id'),
+    label: formData.get('label'),
+    score: formData.get('score'),
+  });
+  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
+
+  const option = await prisma.answerOption.findUnique({
+    where: { id: parsed.data.id },
+    select: { questionId: true },
+  });
+  if (!option) return { errors: { _form: ['Option not found'] } };
+
+  const versionId = await getVersionIdFromQuestion(option.questionId);
+  await requireDraftVersion(versionId);
+
+  await prisma.answerOption.update({
+    where: { id: parsed.data.id },
+    data: { label: parsed.data.label, score: parsed.data.score },
+  });
+
+  revalidatePath(ADMIN_PATH);
+  return { success: true };
+}
+
+export async function deleteAnswerOption(optionId: string): Promise<ActionState> {
+  await requireAdmin();
+
+  const option = await prisma.answerOption.findUnique({
+    where: { id: optionId },
+    select: { questionId: true },
+  });
+  if (!option) return { errors: { _form: ['Option not found'] } };
+
+  const versionId = await getVersionIdFromQuestion(option.questionId);
+  await requireDraftVersion(versionId);
+
+  await prisma.answerOption.delete({ where: { id: optionId } });
+
+  revalidatePath(ADMIN_PATH);
+  return { success: true };
+}
+
+export async function reorderAnswerOption(
+  optionId: string,
+  direction: 'up' | 'down',
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const option = await prisma.answerOption.findUnique({ where: { id: optionId } });
+  if (!option) return { errors: { _form: ['Option not found'] } };
+
+  const versionId = await getVersionIdFromQuestion(option.questionId);
+  await requireDraftVersion(versionId);
+
+  const allOptions = await prisma.answerOption.findMany({
+    where: { questionId: option.questionId },
+    orderBy: { score: 'asc' },
+  });
+
+  const currentIndex = allOptions.findIndex((o) => o.id === optionId);
+  const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+  if (swapIndex < 0 || swapIndex >= allOptions.length) return { success: true };
+
+  const sibling = allOptions[swapIndex];
+  // Swap scores to swap order
+  await prisma.$transaction([
+    prisma.answerOption.update({ where: { id: option.id }, data: { score: sibling.score } }),
+    prisma.answerOption.update({ where: { id: sibling.id }, data: { score: option.score } }),
+  ]);
+
+  revalidatePath(ADMIN_PATH);
+  return { success: true };
+}
+
+export async function validateAnswerOptionsSum(questionId: string): Promise<ActionState> {
+  await requireAdmin();
+
+  const options = await prisma.answerOption.findMany({
+    where: { questionId },
+    select: { score: true },
+  });
+
+  const sum = options.reduce((acc, o) => acc + o.score, 0);
+  if (sum !== 100) {
+    return {
+      errors: {
+        _form: [`Score sum is ${sum}. Must equal 100.`],
+      },
+    };
+  }
+
   return { success: true };
 }
