@@ -70,6 +70,9 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to the Career Exploration Platform.",
+    "journeyTitle": "Career Exploration Journey",
+    "myActivities": "My Activities",
+    "calendarTitle": "Activity Calendar",
     "activitiesHint": "Your joined group activities will show in the calendar below. Complete each step to unlock the next.",
     "noJoinedActivities": "You haven't joined any activities yet. Browse activities to get started!"
   },
