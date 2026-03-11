@@ -227,7 +227,13 @@
     "afterActivity": "完成{activity}后",
     "postActivityUpdate": "活动后更新",
     "comments": "{count, plural, =1 {1 条评论} other {# 条评论}}",
-    "scoreLabel": "得分：{score}"
+    "scoreLabel": "得分：{score}",
+    "currentState": "当前状态",
+    "compareWithSnapshot": "与快照对比",
+    "snapshotScore": "快照分数",
+    "editAnswers": "编辑答案",
+    "editAnswersDescription": "点击更新您的当前认知状态，变更将实时反映在雷达图上。",
+    "saveSnapshot": "保存快照"
   },
   "notifications": {
     "title": "通知",

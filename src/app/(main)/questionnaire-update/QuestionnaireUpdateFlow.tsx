@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { submitQuestionnaireUpdate, type ActionState } from '@/server/actions/questionnaire';
+import { DimensionNav } from '@/components/DimensionNav';
 import Link from 'next/link';
 
 type AnswerOption = {
@@ -172,12 +173,17 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
         })}
       </div>
 
+      {/* Dimension navigation */}
+      <DimensionNav
+        dimensions={currentTopic.dimensions.map((d) => ({ id: d.id, name: d.name }))}
+      />
+
       {/* Current topic content */}
       <div className="space-y-6">
         <h2 className="text-lg font-semibold">{currentTopic.name}</h2>
 
         {currentTopic.dimensions.map((dimension) => (
-          <div key={dimension.id} className="space-y-4">
+          <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-24 space-y-4">
             <h3 className="text-sm font-medium text-muted-foreground">{dimension.name}</h3>
 
             {dimension.questions.map((question) => {

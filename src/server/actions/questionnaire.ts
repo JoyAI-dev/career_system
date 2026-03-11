@@ -927,22 +927,38 @@ export async function submitQuestionnaire(
     }
   }
 
-  // Create snapshot + answers in a single transaction
+  // Create current record (editable) + initial snapshot (frozen) in a single transaction
   await prisma.$transaction(async (tx) => {
+    const answerData = Object.entries(answers).map(([questionId, selectedOptionId]) => ({
+      questionId,
+      selectedOptionId,
+    }));
+
+    // Current editable record
+    const current = await tx.responseSnapshot.create({
+      data: {
+        userId,
+        versionId,
+        context: 'initial',
+        isSnapshot: false,
+      },
+    });
+    await tx.responseAnswer.createMany({
+      data: answerData.map((a) => ({ ...a, snapshotId: current.id })),
+    });
+
+    // Initial frozen snapshot
     const snapshot = await tx.responseSnapshot.create({
       data: {
         userId,
         versionId,
         context: 'initial',
+        isSnapshot: true,
+        snapshotLabel: null,
       },
     });
-
     await tx.responseAnswer.createMany({
-      data: Object.entries(answers).map(([questionId, selectedOptionId]) => ({
-        snapshotId: snapshot.id,
-        questionId,
-        selectedOptionId,
-      })),
+      data: answerData.map((a) => ({ ...a, snapshotId: snapshot.id })),
     });
   });
 
@@ -1052,30 +1068,184 @@ export async function submitQuestionnaireUpdate(
     }
   }
 
-  // Create snapshot + answers in a single transaction
+  // Update current record + create frozen snapshot in a single transaction
   await prisma.$transaction(async (tx) => {
+    const answerData = Object.entries(answers).map(([questionId, selectedOptionId]) => ({
+      questionId,
+      selectedOptionId,
+    }));
+
+    // Update or create current record
+    const existingCurrent = await tx.responseSnapshot.findFirst({
+      where: { userId, isSnapshot: false },
+      select: { id: true },
+    });
+
+    if (existingCurrent) {
+      // Delete old answers and insert new ones
+      await tx.responseAnswer.deleteMany({ where: { snapshotId: existingCurrent.id } });
+      await tx.responseAnswer.createMany({
+        data: answerData.map((a) => ({ ...a, snapshotId: existingCurrent.id })),
+      });
+      await tx.responseSnapshot.update({
+        where: { id: existingCurrent.id },
+        data: { versionId, completedAt: new Date() },
+      });
+    } else {
+      const current = await tx.responseSnapshot.create({
+        data: { userId, versionId, isSnapshot: false, context: contextStr },
+      });
+      await tx.responseAnswer.createMany({
+        data: answerData.map((a) => ({ ...a, snapshotId: current.id })),
+      });
+    }
+
+    // Create frozen snapshot
     const snapshot = await tx.responseSnapshot.create({
       data: {
         userId,
         versionId,
         context: contextStr,
         activityId: activityId || null,
+        isSnapshot: true,
       },
     });
-
     await tx.responseAnswer.createMany({
-      data: Object.entries(answers).map(([questionId, selectedOptionId]) => ({
+      data: answerData.map((a) => ({ ...a, snapshotId: snapshot.id })),
+    });
+  });
+
+  redirect('/cognitive-report');
+}
+
+/**
+ * Update a single answer in the user's current (editable) record.
+ * If no current record exists, creates one from the latest snapshot.
+ */
+export async function updateCurrentAnswer(
+  questionId: string,
+  optionId: string,
+): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const te = await getTranslations('serverErrors');
+
+  // Validate the option belongs to the question
+  const option = await prisma.answerOption.findUnique({
+    where: { id: optionId },
+    select: { questionId: true },
+  });
+  if (!option || option.questionId !== questionId) {
+    return { errors: { _form: [te('invalidAnswerOption')] } };
+  }
+
+  // Get active version
+  const activeVersion = await prisma.questionnaireVersion.findFirst({
+    where: { isActive: true },
+    select: { id: true },
+  });
+  if (!activeVersion) {
+    return { errors: { _form: [te('questionnaireInactive')] } };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    let currentRecord = await tx.responseSnapshot.findFirst({
+      where: { userId, isSnapshot: false },
+      select: { id: true },
+    });
+
+    if (!currentRecord) {
+      // Create current record from latest snapshot
+      const latestSnapshot = await tx.responseSnapshot.findFirst({
+        where: { userId, isSnapshot: true },
+        orderBy: { completedAt: 'desc' },
+        include: { answers: { select: { questionId: true, selectedOptionId: true } } },
+      });
+
+      const newCurrent = await tx.responseSnapshot.create({
+        data: {
+          userId,
+          versionId: activeVersion.id,
+          isSnapshot: false,
+          context: 'current',
+        },
+      });
+
+      if (latestSnapshot) {
+        await tx.responseAnswer.createMany({
+          data: latestSnapshot.answers.map((a) => ({
+            snapshotId: newCurrent.id,
+            questionId: a.questionId,
+            selectedOptionId: a.selectedOptionId,
+          })),
+        });
+      }
+
+      currentRecord = { id: newCurrent.id };
+    }
+
+    // Upsert the answer
+    const existingAnswer = await tx.responseAnswer.findFirst({
+      where: { snapshotId: currentRecord.id, questionId },
+    });
+
+    if (existingAnswer) {
+      await tx.responseAnswer.update({
+        where: { id: existingAnswer.id },
+        data: { selectedOptionId: optionId },
+      });
+    } else {
+      await tx.responseAnswer.create({
+        data: {
+          snapshotId: currentRecord.id,
+          questionId,
+          selectedOptionId: optionId,
+        },
+      });
+    }
+  });
+
+  revalidatePath('/cognitive-report');
+  return { success: true };
+}
+
+/**
+ * Create a named snapshot from the user's current state.
+ */
+export async function createSnapshot(label?: string): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  const currentRecord = await prisma.responseSnapshot.findFirst({
+    where: { userId, isSnapshot: false },
+    include: { answers: { select: { questionId: true, selectedOptionId: true } } },
+  });
+
+  if (!currentRecord || currentRecord.answers.length === 0) {
+    return { errors: { _form: ['No current answers to snapshot'] } };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const snapshot = await tx.responseSnapshot.create({
+      data: {
+        userId,
+        versionId: currentRecord.versionId,
+        isSnapshot: true,
+        snapshotLabel: label || null,
+        context: 'manual',
+      },
+    });
+    await tx.responseAnswer.createMany({
+      data: currentRecord.answers.map((a) => ({
         snapshotId: snapshot.id,
-        questionId,
-        selectedOptionId,
+        questionId: a.questionId,
+        selectedOptionId: a.selectedOptionId,
       })),
     });
   });
 
-  if (activityId) {
-    redirect(`/cognitive-report`);
-  }
-  redirect('/cognitive-report');
+  revalidatePath('/cognitive-report');
+  return { success: true };
 }
 
 export async function validateAnswerOptionsSum(questionId: string): Promise<ActionState> {

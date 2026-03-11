@@ -142,12 +142,14 @@ model AnswerOption {
 // ─── Response Snapshots (Immutable) ─────────────────────────────────
 
 model ResponseSnapshot {
-  id          String   @id @default(cuid())
-  userId      String
-  versionId   String
-  completedAt DateTime @default(now())
-  context     String?
-  activityId  String?
+  id            String   @id @default(cuid())
+  userId        String
+  versionId     String
+  completedAt   DateTime @default(now())
+  context       String?
+  activityId    String?
+  isSnapshot    Boolean  @default(true)
+  snapshotLabel String?
 
   user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   version QuestionnaireVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)

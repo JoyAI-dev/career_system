@@ -227,7 +227,13 @@
     "afterActivity": "After {activity}",
     "postActivityUpdate": "Post-activity update",
     "comments": "{count, plural, =1 {1 comment} other {# comments}}",
-    "scoreLabel": "Score: {score}"
+    "scoreLabel": "Score: {score}",
+    "currentState": "Current State",
+    "compareWithSnapshot": "Compare with Snapshot",
+    "snapshotScore": "Snapshot Score",
+    "editAnswers": "Edit Answers",
+    "editAnswersDescription": "Click to update your current cognitive state. Changes are reflected in the radar chart in real-time.",
+    "saveSnapshot": "Save Snapshot"
   },
   "notifications": {
     "title": "Notifications",

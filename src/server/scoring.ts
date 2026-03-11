@@ -91,6 +91,26 @@ export function calculateScores(
   };
 }
 
+/**
+ * Client-friendly scoring from a map of questionId → score.
+ * Used for real-time radar updates without DB round-trip.
+ */
+export function calculateScoresFromMap(
+  questionScoreMap: Record<string, number>,
+  structure: VersionStructure,
+): { topicScores: { topicId: string; topicName: string; score: number }[]; overallScore: number } {
+  const topicScores = structure.topics.map((topic) => {
+    const questions = topic.dimensions.flatMap((d) => d.questions);
+    const scores = questions.map((q) => questionScoreMap[q.id] ?? 0);
+    const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    return { topicId: topic.id, topicName: topic.name, score: Math.round(avg * 100) / 100 };
+  });
+  const overallScore = topicScores.length > 0
+    ? topicScores.reduce((s, t) => s + t.score, 0) / topicScores.length
+    : 0;
+  return { topicScores, overallScore: Math.round(overallScore * 100) / 100 };
+}
+
 // ─── Data-Fetching Wrapper ───────────────────────────────────────────
 
 /**

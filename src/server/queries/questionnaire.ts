@@ -83,11 +83,29 @@ export async function getActiveVersion() {
 
 export async function getUserSnapshotIds(userId: string) {
   const snapshots = await prisma.responseSnapshot.findMany({
-    where: { userId },
+    where: { userId, isSnapshot: true },
     orderBy: { completedAt: 'asc' },
-    select: { id: true, completedAt: true, context: true },
+    select: { id: true, completedAt: true, context: true, snapshotLabel: true },
   });
   return snapshots;
+}
+
+/**
+ * Get the user's current (non-snapshot, editable) record with answers.
+ */
+export async function getCurrentRecord(userId: string) {
+  return prisma.responseSnapshot.findFirst({
+    where: { userId, isSnapshot: false },
+    include: {
+      answers: {
+        select: {
+          questionId: true,
+          selectedOptionId: true,
+          selectedOption: { select: { score: true } },
+        },
+      },
+    },
+  });
 }
 
 /**
