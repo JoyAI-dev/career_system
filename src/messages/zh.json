@@ -234,7 +234,16 @@
     "activities": "活动",
     "calendar": "日历",
     "profile": "个人资料",
-    "admin": "管理"
+    "admin": "管理",
+    "adminDashboard": "管理面板",
+    "users": "用户管理",
+    "questionnaire": "问卷管理",
+    "adminActivities": "活动管理",
+    "activityTypes": "活动类型",
+    "tags": "标签管理",
+    "grades": "年级管理",
+    "recruitment": "招聘管理",
+    "settings": "系统设置"
   },
   "admin": {
     "dashboard": {

@@ -234,7 +234,16 @@
     "activities": "Activités",
     "calendar": "Calendrier",
     "profile": "Profil",
-    "admin": "Administration"
+    "admin": "Administration",
+    "adminDashboard": "Tableau de bord",
+    "users": "Utilisateurs",
+    "questionnaire": "Questionnaire",
+    "adminActivities": "Activités",
+    "activityTypes": "Types d'activité",
+    "tags": "Étiquettes",
+    "grades": "Niveaux",
+    "recruitment": "Recrutement",
+    "settings": "Paramètres"
   },
   "admin": {
     "dashboard": {

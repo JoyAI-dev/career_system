@@ -6,31 +6,31 @@ import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import {
   LayoutDashboard,
+  Users,
+  ClipboardList,
   Activity,
-  Calendar,
-  User,
-  ShieldCheck,
+  Tags,
+  Settings,
+  Briefcase,
+  GraduationCap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const navItems = [
-  { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
-  { href: '/activities', labelKey: 'activities', icon: Activity },
-  { href: '/calendar', labelKey: 'calendar', icon: Calendar },
-  { href: '/profile', labelKey: 'profile', icon: User },
-];
-
-const adminItems = [
-  { href: '/admin', labelKey: 'admin', icon: ShieldCheck },
+const adminNavItems = [
+  { href: '/admin', labelKey: 'adminDashboard', icon: LayoutDashboard, exact: true },
+  { href: '/admin/users', labelKey: 'users', icon: Users },
+  { href: '/admin/questionnaire', labelKey: 'questionnaire', icon: ClipboardList },
+  { href: '/admin/activities', labelKey: 'adminActivities', icon: Activity },
+  { href: '/admin/activity-types', labelKey: 'activityTypes', icon: Briefcase },
+  { href: '/admin/tags', labelKey: 'tags', icon: Tags },
+  { href: '/admin/grades', labelKey: 'grades', icon: GraduationCap },
+  { href: '/admin/recruitment', labelKey: 'recruitment', icon: Briefcase },
+  { href: '/admin/settings', labelKey: 'settings', icon: Settings },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
   const t = useTranslations('nav');
-  const isAdmin = session?.user?.role === 'ADMIN';
-
-  const items = isAdmin ? [...navItems, ...adminItems] : navItems;
 
   return (
     <nav className="flex flex-col gap-1 px-3 py-4">
@@ -38,9 +38,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <h2 className="text-lg font-semibold tracking-tight">{t('appName')}</h2>
         <p className="text-xs text-muted-foreground">{t('subtitle')}</p>
       </div>
-      {items.map((item) => {
-        const isActive =
-          pathname === item.href || pathname.startsWith(item.href + '/');
+      {adminNavItems.map((item) => {
+        const isActive = item.exact
+          ? pathname === item.href
+          : pathname === item.href || pathname.startsWith(item.href + '/');
         return (
           <Link
             key={item.href}

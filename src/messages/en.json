@@ -234,7 +234,16 @@
     "activities": "Activities",
     "calendar": "Calendar",
     "profile": "Profile",
-    "admin": "Admin"
+    "admin": "Admin",
+    "adminDashboard": "Dashboard",
+    "users": "Users",
+    "questionnaire": "Questionnaire",
+    "adminActivities": "Activities",
+    "activityTypes": "Activity Types",
+    "tags": "Tags",
+    "grades": "Grades",
+    "recruitment": "Recruitment",
+    "settings": "Settings"
   },
   "admin": {
     "dashboard": {
