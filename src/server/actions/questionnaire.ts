@@ -937,6 +937,7 @@ export async function submitQuestionnaire(
     // Guard: if current record already exists (double-submit), skip creation
     const existingCurrent = await tx.responseSnapshot.findFirst({
       where: { userId, isSnapshot: false },
+      orderBy: { completedAt: 'desc' },
       select: { id: true },
     });
     if (existingCurrent) return;
@@ -1085,6 +1086,7 @@ export async function submitQuestionnaireUpdate(
     // Update or create current record
     const existingCurrent = await tx.responseSnapshot.findFirst({
       where: { userId, isSnapshot: false },
+      orderBy: { completedAt: 'desc' },
       select: { id: true },
     });
 
@@ -1161,6 +1163,7 @@ export async function updateCurrentAnswer(
 
     let currentRecord = await tx.responseSnapshot.findFirst({
       where: { userId, isSnapshot: false },
+      orderBy: { completedAt: 'desc' },
       select: { id: true },
     });
 
@@ -1228,6 +1231,7 @@ export async function createSnapshot(label?: string): Promise<ActionState> {
 
   const currentRecord = await prisma.responseSnapshot.findFirst({
     where: { userId, isSnapshot: false },
+    orderBy: { completedAt: 'desc' },
     include: { answers: { select: { questionId: true, selectedOptionId: true } } },
   });
 
