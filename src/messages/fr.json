@@ -75,7 +75,9 @@
     "availableActivities": "Activités disponibles",
     "calendarTitle": "Calendrier des activités",
     "activitiesHint": "Vos activités de groupe rejointes apparaîtront dans le calendrier ci-dessous. Complétez chaque étape pour débloquer la suivante.",
-    "noJoinedActivities": "Vous n'avez encore rejoint aucune activité. Parcourez les activités pour commencer !"
+    "noJoinedActivities": "Vous n'avez encore rejoint aucune activité. Parcourez les activités pour commencer !",
+    "floatingReport": "Rapport cognitif",
+    "floatingReportStage": "Rapport cognitif · {stage}"
   },
   "profile": {
     "title": "Profil",
@@ -243,6 +245,7 @@
     "dashboard": "Tableau de bord",
     "activities": "Activités",
     "calendar": "Calendrier",
+    "cognitiveReport": "Rapport cognitif",
     "profile": "Profil",
     "admin": "Administration",
     "adminDashboard": "Tableau de bord",

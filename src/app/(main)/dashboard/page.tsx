@@ -8,6 +8,7 @@ import { getTags } from '@/server/queries/tag';
 import { ActivityStepper } from '@/components/ActivityStepper';
 import { ActivityBrowser } from '@/app/(main)/activities/ActivityBrowser';
 import { LandingCalendar } from '@/components/LandingCalendar';
+import { FloatingReportButton } from '@/components/FloatingReportButton';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -34,8 +35,14 @@ export default async function DashboardPage() {
     getTranslations('dashboard'),
   ]);
 
+  // Find current activity stage name for floating button
+  const currentStep = steps.find((s) => s.state === 'current');
+
   return (
     <div className="space-y-8">
+      {/* Floating cognitive report button */}
+      <FloatingReportButton currentStage={currentStep?.typeName ?? null} />
+
       {/* Section: Progress Stepper */}
       <section>
         <h2 className="mb-4 text-lg font-semibold">{t('journeyTitle')}</h2>

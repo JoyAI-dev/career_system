@@ -75,7 +75,9 @@
     "availableActivities": "可参加的活动",
     "calendarTitle": "活动日历",
     "activitiesHint": "你参加的小组活动将显示在下方日历中。完成每个步骤以解锁下一个。",
-    "noJoinedActivities": "你还没有参加任何活动。浏览活动开始探索吧！"
+    "noJoinedActivities": "你还没有参加任何活动。浏览活动开始探索吧！",
+    "floatingReport": "认知报告",
+    "floatingReportStage": "认知报告 · {stage}"
   },
   "profile": {
     "title": "个人资料",
@@ -243,6 +245,7 @@
     "dashboard": "首页",
     "activities": "活动",
     "calendar": "日历",
+    "cognitiveReport": "认知报告",
     "profile": "个人资料",
     "admin": "管理",
     "adminDashboard": "管理面板",

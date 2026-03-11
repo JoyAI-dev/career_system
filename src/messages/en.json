@@ -75,7 +75,9 @@
     "availableActivities": "Available Activities",
     "calendarTitle": "Activity Calendar",
     "activitiesHint": "Your joined group activities will show in the calendar below. Complete each step to unlock the next.",
-    "noJoinedActivities": "You haven't joined any activities yet. Browse activities to get started!"
+    "noJoinedActivities": "You haven't joined any activities yet. Browse activities to get started!",
+    "floatingReport": "Cognitive Report",
+    "floatingReportStage": "Cognitive Report · {stage}"
   },
   "profile": {
     "title": "Profile",
@@ -243,6 +245,7 @@
     "dashboard": "Dashboard",
     "activities": "Activities",
     "calendar": "Calendar",
+    "cognitiveReport": "Cognitive Report",
     "profile": "Profile",
     "admin": "Admin",
     "adminDashboard": "Dashboard",

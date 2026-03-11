@@ -12,6 +12,7 @@ import {
   Activity,
   Calendar,
   User,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -33,6 +34,7 @@ const studentNavItems = [
   { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
   { href: '/activities', labelKey: 'activities', icon: Activity },
   { href: '/calendar', labelKey: 'calendar', icon: Calendar },
+  { href: '/cognitive-report', labelKey: 'cognitiveReport', icon: ClipboardList },
   { href: '/profile', labelKey: 'profile', icon: User },
 ] as const;
 
