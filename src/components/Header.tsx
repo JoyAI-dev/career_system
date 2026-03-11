@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { Menu, LogOut } from 'lucide-react';
+import { NotificationBell } from '@/components/NotificationBell';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -15,7 +16,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Sidebar } from '@/components/Sidebar';
 
-export function Header() {
+export function Header({ initialUnreadCount = 0 }: { initialUnreadCount?: number }) {
   const { data: session } = useSession();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -37,6 +38,9 @@ export function Header() {
       </Sheet>
 
       <div className="flex-1" />
+
+      {/* Notification bell */}
+      <NotificationBell initialCount={initialUnreadCount} />
 
       {/* User menu */}
       <DropdownMenu>

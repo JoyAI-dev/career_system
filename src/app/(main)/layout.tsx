@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
 import { auth } from '@/lib/auth';
 import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
+import { getUnreadCount } from '@/server/queries/notification';
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -17,6 +18,8 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     }
   }
 
+  const unreadCount = session?.user ? await getUnreadCount(session.user.id) : 0;
+
   return (
     <SessionProvider>
       <div className="flex min-h-screen">
@@ -28,7 +31,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
         {/* Main content area */}
         <div className="flex flex-1 flex-col">
-          <Header />
+          <Header initialUnreadCount={unreadCount} />
           <main className="flex-1 p-4 md:p-6">{children}</main>
         </div>
       </div>
