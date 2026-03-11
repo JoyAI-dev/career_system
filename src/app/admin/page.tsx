@@ -15,6 +15,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const ADMIN_LINKS = [
+  { href: '/admin/users', label: 'Users', desc: 'User management and roles' },
   { href: '/admin/questionnaire', label: 'Questionnaire', desc: 'Manage cognitive questionnaire' },
   { href: '/admin/activities', label: 'Activities', desc: 'Create and manage activities' },
   { href: '/admin/activity-types', label: 'Activity Types', desc: 'Progressive activity types' },

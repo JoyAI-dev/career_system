@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 
 export async function getAllGradeOptions() {
   return prisma.gradeOption.findMany({
@@ -89,5 +90,118 @@ export async function getDashboardStats() {
       createdAt: u.createdAt.toISOString(),
     })),
     nearCapacity,
+  };
+}
+
+export type UserListItem = {
+  id: string;
+  username: string;
+  name: string | null;
+  school: string | null;
+  major: string | null;
+  grade: string | null;
+  role: string;
+  createdAt: string;
+  hasSnapshot: boolean;
+};
+
+export async function searchUsers({
+  query,
+  page = 1,
+  sortBy = 'createdAt',
+  sortOrder = 'desc',
+}: {
+  query?: string;
+  page?: number;
+  sortBy?: 'createdAt' | 'username';
+  sortOrder?: 'asc' | 'desc';
+}): Promise<{ users: UserListItem[]; total: number }> {
+  const take = 20;
+  const skip = (page - 1) * take;
+
+  const where: Prisma.UserWhereInput = query
+    ? {
+        OR: [
+          { username: { contains: query, mode: 'insensitive' as const } },
+          { school: { contains: query, mode: 'insensitive' as const } },
+          { major: { contains: query, mode: 'insensitive' as const } },
+          { name: { contains: query, mode: 'insensitive' as const } },
+        ],
+      }
+    : {};
+
+  const orderBy = { [sortBy]: sortOrder };
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy,
+      take,
+      skip,
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        school: true,
+        major: true,
+        grade: true,
+        role: true,
+        createdAt: true,
+        _count: { select: { responseSnapshots: true } },
+      },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return {
+    users: users.map((u) => ({
+      id: u.id,
+      username: u.username,
+      name: u.name,
+      school: u.school,
+      major: u.major,
+      grade: u.grade,
+      role: String(u.role),
+      createdAt: u.createdAt.toISOString(),
+      hasSnapshot: u._count.responseSnapshots > 0,
+    })),
+    total,
+  };
+}
+
+export async function getUserDetail(userId: string) {
+  const [user, snapshotCount, activityCount] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        school: true,
+        major: true,
+        grade: true,
+        role: true,
+        studentIdUrl: true,
+        createdAt: true,
+      },
+    }),
+    prisma.responseSnapshot.count({ where: { userId } }),
+    (prisma as any).membership.count({ where: { userId } }) as Promise<number>,
+  ]);
+
+  if (!user) return null;
+
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.name,
+    school: user.school,
+    major: user.major,
+    grade: user.grade,
+    role: String(user.role),
+    studentIdUrl: user.studentIdUrl,
+    createdAt: user.createdAt.toISOString(),
+    snapshotCount,
+    activityCount,
   };
 }

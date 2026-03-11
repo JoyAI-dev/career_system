@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdmin, auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 
 // --- Grade Options ---
@@ -178,4 +178,51 @@ export async function updateSystemSetting(
   });
 
   revalidatePath('/admin/settings');
+}
+
+// --- User Role Management ---
+
+export async function changeUserRole(
+  userId: string,
+  newRole: 'USER' | 'ADMIN',
+): Promise<{ success?: boolean; error?: string }> {
+  await requireAdmin();
+  const session = await auth();
+  const adminId = session!.user.id;
+
+  if (adminId === userId) {
+    return { error: 'You cannot change your own role.' };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, username: true },
+  });
+  if (!user) return { error: 'User not found.' };
+
+  const oldRole = user.role;
+  if (oldRole === newRole) return { error: `User is already ${newRole}.` };
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: { role: newRole },
+    }),
+    (prisma as any).auditLog.create({
+      data: {
+        adminId,
+        action: 'ROLE_CHANGE',
+        targetId: userId,
+        details: JSON.stringify({
+          username: user.username,
+          from: oldRole,
+          to: newRole,
+        }),
+      },
+    }),
+  ]);
+
+  revalidatePath('/admin/users');
+  revalidatePath(`/admin/users/${userId}`);
+  return { success: true };
 }

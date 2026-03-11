@@ -31,6 +31,7 @@ model User {
   recruitmentInfos   RecruitmentInfo[]
   responseComments   ResponseComment[]
   notifications      Notification[]
+  auditLogs          AuditLog[]     @relation("auditLogs")
 
   @@map("users")
 }
@@ -312,4 +313,21 @@ model Notification {
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+// ─── Audit Log ──────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String
+  targetId   String
+  details    String
+  createdAt  DateTime @default(now())
+
+  admin User @relation("auditLogs", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([targetId])
+  @@map("audit_logs")
 }
