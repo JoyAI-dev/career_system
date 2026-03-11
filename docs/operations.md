@@ -43,9 +43,9 @@
 ### Build & Deploy
 
 - Push to `main` triggers auto-deploy via Vercel Git integration
-- Build command (configured in `vercel.json`): `prisma generate && next build`
+- Build command (configured in `vercel.json`): `prisma migrate deploy && prisma generate && next build`
 - `postinstall` script also runs `prisma generate` during `npm install`
-- Migrations must be run separately before deploy (see Migration Workflow below)
+- Migrations run automatically during the Vercel build via `prisma migrate deploy` (idempotent — skips already-applied migrations)
 
 ### Environment Variables
 
