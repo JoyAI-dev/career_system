@@ -51,6 +51,21 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </Link>
+        <Link href="/admin/activity-types">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardHeader>
+              <CardTitle>Activity Types</CardTitle>
+              <CardDescription>
+                Manage progressive activity types
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Configure activity types, prerequisites, ordering, and capacity.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );

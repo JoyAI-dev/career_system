@@ -54,6 +54,52 @@ async function main() {
     });
   }
   console.log('Seeded grade options');
+
+  // Seed activity types (idempotent via upsert)
+  // PRD progression chain: 圆桌会议 → 探索搭子 → 深度探索 → 竞赛 → 试水案例 → 聚焦讨论 → 导师拍卖 → 实习拍卖
+  const activityTypeNames = [
+    { name: '圆桌会议', order: 0, defaultCapacity: 8 },
+    { name: '探索搭子', order: 1, defaultCapacity: 6 },
+    { name: '深度探索', order: 2, defaultCapacity: 10 },
+    { name: '竞赛', order: 3, defaultCapacity: 20 },
+    { name: '试水案例', order: 4, defaultCapacity: 10 },
+    { name: '聚焦讨论', order: 5, defaultCapacity: 12 },
+    { name: '导师拍卖', order: 6, defaultCapacity: 15 },
+    { name: '实习拍卖', order: 7, defaultCapacity: 15 },
+  ];
+
+  // First pass: upsert all types without prerequisites
+  const typeMap = new Map<string, string>();
+  for (const t of activityTypeNames) {
+    const created = await prisma.activityType.upsert({
+      where: { name: t.name },
+      update: { order: t.order, defaultCapacity: t.defaultCapacity },
+      create: { name: t.name, order: t.order, defaultCapacity: t.defaultCapacity },
+    });
+    typeMap.set(t.name, created.id);
+  }
+
+  // Second pass: set prerequisite chain
+  const prerequisiteChain: [string, string][] = [
+    ['探索搭子', '圆桌会议'],
+    ['深度探索', '探索搭子'],
+    ['竞赛', '深度探索'],
+    ['试水案例', '竞赛'],
+    ['聚焦讨论', '试水案例'],
+    ['导师拍卖', '聚焦讨论'],
+    ['实习拍卖', '导师拍卖'],
+  ];
+
+  for (const [typeName, prereqName] of prerequisiteChain) {
+    const typeId = typeMap.get(typeName)!;
+    const prereqId = typeMap.get(prereqName)!;
+    await prisma.activityType.update({
+      where: { id: typeId },
+      data: { prerequisiteTypeId: prereqId },
+    });
+  }
+
+  console.log('Seeded activity types with prerequisite chain');
 }
 
 main()
