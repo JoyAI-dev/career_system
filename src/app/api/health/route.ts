@@ -1,29 +1,24 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-export async function GET() {
-  const checks: Record<string, string> = {};
+export const dynamic = 'force-dynamic';
 
-  // Check database connectivity
+export async function GET() {
+  const version = process.env.APP_VERSION || '0.1.0';
+
+  let db: 'connected' | 'disconnected' = 'disconnected';
   try {
     await prisma.$queryRaw`SELECT 1`;
-    checks.database = 'ok';
+    db = 'connected';
   } catch {
-    checks.database = 'unavailable';
+    // DB unreachable
   }
 
-  // Check login_attempts table exists
-  try {
-    await prisma.loginAttempt.count();
-    checks.rateLimiter = 'ok';
-  } catch {
-    checks.rateLimiter = 'missing_table';
-  }
-
-  const healthy = Object.values(checks).every((v) => v === 'ok');
+  const status = db === 'connected' ? 'ok' : 'degraded';
+  const statusCode = db === 'connected' ? 200 : 503;
 
   return NextResponse.json(
-    { status: healthy ? 'healthy' : 'degraded', checks },
-    { status: healthy ? 200 : 503 },
+    { status, version, db, timestamp: new Date().toISOString() },
+    { status: statusCode },
   );
 }

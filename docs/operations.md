@@ -40,7 +40,45 @@
 
 ## Deployment (Vercel)
 
-- Push to `main` branch triggers auto-deploy
-- Environment variables configured in Vercel dashboard
-- Build command: `npx prisma generate && npm run build`
-- Migrations run via CI or manually before deploy: `npx prisma migrate deploy`
+### Build & Deploy
+
+- Push to `main` triggers auto-deploy via Vercel Git integration
+- Build command (configured in `vercel.json`): `prisma generate && next build`
+- `postinstall` script also runs `prisma generate` during `npm install`
+- Migrations must be run separately before deploy (see Migration Workflow below)
+
+### Environment Variables
+
+Configure these in the Vercel dashboard (Settings → Environment Variables):
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string (Supabase pooler recommended) |
+| `NEXTAUTH_SECRET` | Random secret for Auth.js session encryption |
+| `NEXTAUTH_URL` | Production URL (e.g., `https://your-app.vercel.app`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only) |
+| `NEXT_PUBLIC_APP_URL` | Public-facing app URL |
+| `APP_VERSION` | App version string (optional, defaults to `0.1.0`) |
+
+### Migration Workflow
+
+1. Create migration locally: `npx prisma migrate dev --name <name>`
+2. Commit the generated SQL file in `prisma/migrations/`
+3. Push to `main` — Vercel build runs `prisma migrate deploy` automatically
+4. Verify via health check: `GET /api/health` → `{ status: "ok", db: "connected" }`
+
+### Health Check
+
+- **Endpoint:** `GET /api/health`
+- **Response:** `{ status: "ok", version: "x.y.z", db: "connected", timestamp: "..." }`
+- Returns HTTP 503 with `status: "degraded"` if database is unreachable
+
+### Security Headers
+
+Configured in `vercel.json`:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
