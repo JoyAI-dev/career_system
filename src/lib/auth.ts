@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { checkRateLimit, recordFailedAttempt, resetAttempts } from '@/lib/rate-limit';
 import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { getTranslations } from 'next-intl/server';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -28,7 +29,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Rate limiting check
         const rateCheck = await checkRateLimit(username);
         if (!rateCheck.allowed) {
-          throw new Error('Too many login attempts. Please try again later.');
+          const te = await getTranslations('serverErrors');
+          throw new Error(te('rateLimited'));
         }
 
         const user = await prisma.user.findUnique({

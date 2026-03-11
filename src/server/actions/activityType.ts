@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { getTranslations } from 'next-intl/server';
 
 const ADMIN_PATH = '/admin/activity-types';
 
@@ -12,24 +13,30 @@ export type ActionState = {
   success?: boolean;
 };
 
-const createActivityTypeSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100),
-  defaultCapacity: z.coerce.number().int().min(1, 'Must be at least 1').max(1000),
-  prerequisiteTypeId: z.string().optional().transform((v) => v || null),
-});
+function getCreateActivityTypeSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(1, t('nameRequired')).max(100),
+    defaultCapacity: z.coerce.number().int().min(1, t('capacityMinOne')).max(1000),
+    prerequisiteTypeId: z.string().optional().transform((v) => v || null),
+  });
+}
 
-const updateActivityTypeSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1, 'Name is required').max(100),
-  defaultCapacity: z.coerce.number().int().min(1, 'Must be at least 1').max(1000),
-  prerequisiteTypeId: z.string().optional().transform((v) => v || null),
-});
+function getUpdateActivityTypeSchema(t: (key: string) => string) {
+  return z.object({
+    id: z.string().min(1),
+    name: z.string().min(1, t('nameRequired')).max(100),
+    defaultCapacity: z.coerce.number().int().min(1, t('capacityMinOne')).max(1000),
+    prerequisiteTypeId: z.string().optional().transform((v) => v || null),
+  });
+}
 
 export async function createActivityType(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const createActivityTypeSchema = getCreateActivityTypeSchema(tv);
 
   const parsed = createActivityTypeSchema.safeParse({
     name: formData.get('name'),
@@ -61,6 +68,9 @@ export async function updateActivityType(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const updateActivityTypeSchema = getUpdateActivityTypeSchema(tv);
 
   const parsed = updateActivityTypeSchema.safeParse({
     id: formData.get('id'),
@@ -72,7 +82,7 @@ export async function updateActivityType(
 
   // Prevent self-reference
   if (parsed.data.prerequisiteTypeId === parsed.data.id) {
-    return { errors: { prerequisiteTypeId: ['Cannot be its own prerequisite'] } };
+    return { errors: { prerequisiteTypeId: [te('cannotSelfPrerequisite')] } };
   }
 
   await prisma.activityType.update({
@@ -90,11 +100,12 @@ export async function updateActivityType(
 
 export async function deleteActivityType(id: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   // Check if any activities use this type
   const count = await prisma.activity.count({ where: { typeId: id } });
   if (count > 0) {
-    return { errors: { _form: [`Cannot delete: ${count} activities use this type.`] } };
+    return { errors: { _form: [te('cannotDeleteTypeInUse', { count })] } };
   }
 
   // Clear prerequisite references pointing to this type
@@ -114,9 +125,10 @@ export async function reorderActivityType(
   direction: 'up' | 'down',
 ): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const type = await prisma.activityType.findUnique({ where: { id } });
-  if (!type) return { errors: { _form: ['Activity type not found'] } };
+  if (!type) return { errors: { _form: [te('activityTypeNotFound')] } };
 
   const sibling = await prisma.activityType.findFirst({
     where: {
@@ -138,12 +150,13 @@ export async function reorderActivityType(
 
 export async function toggleActivityType(id: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const type = await prisma.activityType.findUnique({
     where: { id },
     select: { isEnabled: true },
   });
-  if (!type) return { errors: { _form: ['Activity type not found'] } };
+  if (!type) return { errors: { _form: [te('activityTypeNotFound')] } };
 
   await prisma.activityType.update({
     where: { id },

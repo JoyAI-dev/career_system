@@ -4,17 +4,20 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { getTranslations } from 'next-intl/server';
 
 export type ActionState = {
   errors?: { [key: string]: string[] };
   success?: boolean;
 };
 
-const addCommentSchema = z.object({
-  responseAnswerId: z.string().min(1, 'Answer ID is required'),
-  content: z.string().min(1, 'Comment is required').max(1000),
-  activityTag: z.string().max(100).optional(),
-});
+function getAddCommentSchema(t: (key: string) => string) {
+  return z.object({
+    responseAnswerId: z.string().min(1, t('answerIdRequired')),
+    content: z.string().min(1, t('commentRequired')).max(1000),
+    activityTag: z.string().max(100).optional(),
+  });
+}
 
 // Actor model: Self-reflection only. Users can only comment on their own
 // questionnaire answers as part of their cognitive growth journaling.
@@ -27,6 +30,9 @@ export async function addComment(
   formData: FormData,
 ): Promise<ActionState> {
   const session = await requireAuth();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const addCommentSchema = getAddCommentSchema(tv);
 
   const parsed = addCommentSchema.safeParse({
     responseAnswerId: formData.get('responseAnswerId'),
@@ -41,7 +47,7 @@ export async function addComment(
     select: { snapshot: { select: { userId: true } } },
   });
   if (!answer || answer.snapshot.userId !== session.user.id) {
-    return { errors: { _form: ['You can only comment on your own answers.'] } };
+    return { errors: { _form: [te('onlyCommentOwnAnswers')] } };
   }
 
   await prisma.responseComment.create({

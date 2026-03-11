@@ -31,32 +31,35 @@ export type TransitionResult =
 
 /**
  * Validate whether a state transition is allowed.
+ * Accepts an optional translation function for localized error messages.
  */
 export function validateTransition(
   currentStatus: ActivityStatus,
   action: TransitionAction,
   userRole: MemberRole | null,
+  te?: (key: string, values?: Record<string, string>) => string,
 ): TransitionResult {
   const transition = TRANSITIONS.find(
     (t) => t.from === currentStatus && t.action === action,
   );
 
   if (!transition) {
-    return {
-      valid: false,
-      error: `Cannot ${action.toLowerCase()} from ${currentStatus} status.`,
-    };
+    const msg = te
+      ? te('cannotTransition', { action: action.toLowerCase(), status: currentStatus })
+      : `Cannot ${action.toLowerCase()} from ${currentStatus} status.`;
+    return { valid: false, error: msg };
   }
 
   if (!userRole) {
-    return { valid: false, error: 'You are not a member of this activity.' };
+    const msg = te ? te('notMemberOfActivity') : 'You are not a member of this activity.';
+    return { valid: false, error: msg };
   }
 
   if (userRole !== transition.requiredRole) {
-    return {
-      valid: false,
-      error: `Only the ${transition.requiredRole.toLowerCase()} can ${action.toLowerCase()} this activity.`,
-    };
+    const msg = te
+      ? te('onlyRoleCanAction', { role: transition.requiredRole.toLowerCase(), action: action.toLowerCase() })
+      : `Only the ${transition.requiredRole.toLowerCase()} can ${action.toLowerCase()} this activity.`;
+    return { valid: false, error: msg };
   }
 
   return { valid: true, to: transition.to };

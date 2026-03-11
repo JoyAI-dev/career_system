@@ -6,21 +6,24 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { signIn } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
-const registerSchema = z
-  .object({
-    username: z
-      .string()
-      .min(3, 'Username must be at least 3 characters')
-      .max(50, 'Username must be at most 50 characters')
-      .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
-    password: z.string().min(8, 'Password must be at least 8 characters').max(128),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  });
+function getRegisterSchema(t: (key: string) => string) {
+  return z
+    .object({
+      username: z
+        .string()
+        .min(3, t('usernameMin'))
+        .max(50, t('usernameMax'))
+        .regex(/^[a-zA-Z0-9_]+$/, t('usernameFormat')),
+      password: z.string().min(8, t('passwordMin')).max(128),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t('passwordMismatch'),
+      path: ['confirmPassword'],
+    });
+}
 
 export type RegisterState = {
   errors?: {
@@ -36,6 +39,10 @@ export async function register(
   _prevState: RegisterState,
   formData: FormData,
 ): Promise<RegisterState> {
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const registerSchema = getRegisterSchema(tv);
+
   const parsed = registerSchema.safeParse({
     username: formData.get('username'),
     password: formData.get('password'),
@@ -56,7 +63,7 @@ export async function register(
   if (existing) {
     return {
       errors: {
-        username: ['This username is already taken'],
+        username: [te('usernameTaken')],
       },
     };
   }
@@ -78,7 +85,7 @@ export async function register(
     ) {
       return {
         errors: {
-          username: ['This username is already taken'],
+          username: [te('usernameTaken')],
         },
       };
     }
@@ -100,10 +107,12 @@ export async function register(
   redirect('/dashboard');
 }
 
-const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required'),
-});
+function getLoginSchema(t: (key: string) => string) {
+  return z.object({
+    username: z.string().min(1, t('usernameRequired')),
+    password: z.string().min(1, t('passwordRequired')),
+  });
+}
 
 export type LoginState = {
   errors?: {
@@ -114,6 +123,10 @@ export type LoginState = {
 };
 
 export async function login(_prevState: LoginState, formData: FormData): Promise<LoginState> {
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const loginSchema = getLoginSchema(tv);
+
   const parsed = loginSchema.safeParse({
     username: formData.get('username'),
     password: formData.get('password'),
@@ -132,7 +145,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   } catch {
     return {
       errors: {
-        _form: ['Invalid username or password'],
+        _form: [te('invalidCredentials')],
       },
     };
   }

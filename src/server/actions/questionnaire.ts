@@ -5,52 +5,98 @@ import { prisma } from '@/lib/db';
 import { requireAdmin, requireAuth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 const ADMIN_PATH = '/admin/questionnaire';
 
-// ─── Zod Schemas ────────────────────────────────────────────────────
+// ─── Zod Schema Factories ───────────────────────────────────────────
 
-const createTopicSchema = z.object({
-  versionId: z.string().min(1, 'Version is required'),
-  name: z.string().min(1, 'Name is required').max(200),
-});
+function getCreateTopicSchema(t: (key: string) => string) {
+  return z.object({
+    versionId: z.string().min(1, t('versionRequired')),
+    name: z.string().min(1, t('nameRequired')).max(200),
+  });
+}
 
-const updateTopicSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1, 'Name is required').max(200),
-});
+function getUpdateTopicSchema(t: (key: string) => string) {
+  return z.object({
+    id: z.string().min(1),
+    name: z.string().min(1, t('nameRequired')).max(200),
+  });
+}
 
-const createDimensionSchema = z.object({
-  topicId: z.string().min(1, 'Topic is required'),
-  name: z.string().min(1, 'Name is required').max(200),
-});
+function getCreateDimensionSchema(t: (key: string) => string) {
+  return z.object({
+    topicId: z.string().min(1, t('topicRequired')),
+    name: z.string().min(1, t('nameRequired')).max(200),
+  });
+}
 
-const updateDimensionSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1, 'Name is required').max(200),
-});
+function getUpdateDimensionSchema(t: (key: string) => string) {
+  return z.object({
+    id: z.string().min(1),
+    name: z.string().min(1, t('nameRequired')).max(200),
+  });
+}
 
-const createQuestionSchema = z.object({
-  dimensionId: z.string().min(1, 'Dimension is required'),
-  title: z.string().min(1, 'Title is required').max(500),
-});
+function getCreateQuestionSchema(t: (key: string) => string) {
+  return z.object({
+    dimensionId: z.string().min(1, t('dimensionRequired')),
+    title: z.string().min(1, t('titleRequired')).max(500),
+  });
+}
 
-const updateQuestionSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1, 'Title is required').max(500),
-});
+function getUpdateQuestionSchema(t: (key: string) => string) {
+  return z.object({
+    id: z.string().min(1),
+    title: z.string().min(1, t('titleRequired')).max(500),
+  });
+}
 
-const createNoteSchema = z.object({
-  questionId: z.string().min(1, 'Question is required'),
-  label: z.string().min(1, 'Label is required').max(100),
-  content: z.string().min(1, 'Content is required').max(2000),
-});
+function getCreateNoteSchema(t: (key: string) => string) {
+  return z.object({
+    questionId: z.string().min(1, t('questionRequired')),
+    label: z.string().min(1, t('labelRequired')).max(100),
+    content: z.string().min(1, t('contentRequired')).max(2000),
+  });
+}
 
-const updateNoteSchema = z.object({
-  id: z.string().min(1),
-  label: z.string().min(1, 'Label is required').max(100),
-  content: z.string().min(1, 'Content is required').max(2000),
-});
+function getUpdateNoteSchema(t: (key: string) => string) {
+  return z.object({
+    id: z.string().min(1),
+    label: z.string().min(1, t('labelRequired')).max(100),
+    content: z.string().min(1, t('contentRequired')).max(2000),
+  });
+}
+
+function getAnswerOptionSchema(t: (key: string) => string) {
+  return z.object({
+    label: z.string().min(1, t('labelRequired')).max(200),
+    score: z.coerce.number().int().min(0, t('scoreMin')).max(100, t('scoreMax')),
+  });
+}
+
+function getCreateAnswerOptionSchema(t: (key: string) => string) {
+  return getAnswerOptionSchema(t).extend({
+    questionId: z.string().min(1, t('questionRequired')),
+  });
+}
+
+function getUpdateAnswerOptionSchema(t: (key: string) => string) {
+  return getAnswerOptionSchema(t).extend({
+    id: z.string().min(1),
+  });
+}
+
+function getSubmitQuestionnaireSchema(t: (key: string) => string) {
+  return z.object({
+    versionId: z.string().min(1),
+    answers: z.record(z.string(), z.string()).refine(
+      (val) => Object.keys(val).length > 0,
+      t('atLeastOneAnswer'),
+    ),
+  });
+}
 
 // ─── State Types ────────────────────────────────────────────────────
 
@@ -61,35 +107,35 @@ export type ActionState = {
 
 // ─── Helper: Verify version is a draft (not active) ────────────────
 
-async function requireDraftVersion(versionId: string) {
+async function requireDraftVersion(versionId: string, te: (key: string) => string) {
   const version = await prisma.questionnaireVersion.findUnique({
     where: { id: versionId },
     select: { isActive: true },
   });
-  if (!version) throw new Error('Version not found');
-  if (version.isActive) throw new Error('Cannot modify an active (published) version');
+  if (!version) throw new Error(te('versionNotFound'));
+  if (version.isActive) throw new Error(te('cannotModifyActive'));
   return version;
 }
 
-async function getVersionIdFromTopic(topicId: string) {
+async function getVersionIdFromTopic(topicId: string, te: (key: string) => string) {
   const topic = await prisma.topic.findUnique({
     where: { id: topicId },
     select: { versionId: true },
   });
-  if (!topic) throw new Error('Topic not found');
+  if (!topic) throw new Error(te('topicNotFound'));
   return topic.versionId;
 }
 
-async function getVersionIdFromDimension(dimensionId: string) {
+async function getVersionIdFromDimension(dimensionId: string, te: (key: string) => string) {
   const dimension = await prisma.dimension.findUnique({
     where: { id: dimensionId },
     include: { topic: { select: { versionId: true } } },
   });
-  if (!dimension) throw new Error('Dimension not found');
+  if (!dimension) throw new Error(te('dimensionNotFound'));
   return dimension.topic.versionId;
 }
 
-async function getVersionIdFromQuestion(questionId: string) {
+async function getVersionIdFromQuestion(questionId: string, te: (key: string) => string) {
   const question = await prisma.question.findUnique({
     where: { id: questionId },
     include: {
@@ -98,7 +144,7 @@ async function getVersionIdFromQuestion(questionId: string) {
       },
     },
   });
-  if (!question) throw new Error('Question not found');
+  if (!question) throw new Error(te('questionNotFound'));
   return question.dimension.topic.versionId;
 }
 
@@ -106,13 +152,14 @@ async function getVersionIdFromQuestion(questionId: string) {
 
 export async function createDraftVersion(): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const existing = await prisma.questionnaireVersion.findFirst({
     where: { isActive: false },
     select: { id: true },
   });
   if (existing) {
-    return { errors: { _form: ['A draft version already exists. Publish or delete it first.'] } };
+    return { errors: { _form: [te('draftAlreadyExists')] } };
   }
 
   const active = await prisma.questionnaireVersion.findFirst({
@@ -208,13 +255,14 @@ export async function createDraftVersion(): Promise<ActionState> {
 
 export async function publishVersion(versionId: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const version = await prisma.questionnaireVersion.findUnique({
     where: { id: versionId },
     select: { isActive: true },
   });
-  if (!version) return { errors: { _form: ['Version not found'] } };
-  if (version.isActive) return { errors: { _form: ['Version is already active'] } };
+  if (!version) return { errors: { _form: [te('versionNotFound')] } };
+  if (version.isActive) return { errors: { _form: [te('versionAlreadyActive')] } };
 
   await prisma.$transaction([
     prisma.questionnaireVersion.updateMany({
@@ -233,12 +281,13 @@ export async function publishVersion(versionId: string): Promise<ActionState> {
 
 export async function setActiveVersion(versionId: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const version = await prisma.questionnaireVersion.findUnique({
     where: { id: versionId },
     select: { id: true },
   });
-  if (!version) return { errors: { _form: ['Version not found'] } };
+  if (!version) return { errors: { _form: [te('versionNotFound')] } };
 
   await prisma.$transaction([
     prisma.questionnaireVersion.updateMany({
@@ -257,13 +306,14 @@ export async function setActiveVersion(versionId: string): Promise<ActionState> 
 
 export async function deleteDraftVersion(versionId: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const version = await prisma.questionnaireVersion.findUnique({
     where: { id: versionId },
     select: { isActive: true },
   });
-  if (!version) return { errors: { _form: ['Version not found'] } };
-  if (version.isActive) return { errors: { _form: ['Cannot delete the active version'] } };
+  if (!version) return { errors: { _form: [te('versionNotFound')] } };
+  if (version.isActive) return { errors: { _form: [te('cannotDeleteActive')] } };
 
   await prisma.questionnaireVersion.delete({ where: { id: versionId } });
 
@@ -278,6 +328,9 @@ export async function createTopic(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const createTopicSchema = getCreateTopicSchema(tv);
 
   const parsed = createTopicSchema.safeParse({
     versionId: formData.get('versionId'),
@@ -285,7 +338,7 @@ export async function createTopic(
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  await requireDraftVersion(parsed.data.versionId);
+  await requireDraftVersion(parsed.data.versionId, te);
 
   const maxOrder = await prisma.topic.aggregate({
     where: { versionId: parsed.data.versionId },
@@ -309,6 +362,9 @@ export async function updateTopic(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const updateTopicSchema = getUpdateTopicSchema(tv);
 
   const parsed = updateTopicSchema.safeParse({
     id: formData.get('id'),
@@ -316,8 +372,8 @@ export async function updateTopic(
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  const versionId = await getVersionIdFromTopic(parsed.data.id);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromTopic(parsed.data.id, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.topic.update({
     where: { id: parsed.data.id },
@@ -330,9 +386,10 @@ export async function updateTopic(
 
 export async function deleteTopic(topicId: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
-  const versionId = await getVersionIdFromTopic(topicId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromTopic(topicId, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.topic.delete({ where: { id: topicId } });
 
@@ -345,11 +402,12 @@ export async function reorderTopic(
   direction: 'up' | 'down',
 ): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const topic = await prisma.topic.findUnique({ where: { id: topicId } });
-  if (!topic) return { errors: { _form: ['Topic not found'] } };
+  if (!topic) return { errors: { _form: [te('topicNotFound')] } };
 
-  await requireDraftVersion(topic.versionId);
+  await requireDraftVersion(topic.versionId, te);
 
   const sibling = await prisma.topic.findFirst({
     where: {
@@ -377,6 +435,9 @@ export async function createDimension(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const createDimensionSchema = getCreateDimensionSchema(tv);
 
   const parsed = createDimensionSchema.safeParse({
     topicId: formData.get('topicId'),
@@ -384,8 +445,8 @@ export async function createDimension(
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  const versionId = await getVersionIdFromTopic(parsed.data.topicId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromTopic(parsed.data.topicId, te);
+  await requireDraftVersion(versionId, te);
 
   const maxOrder = await prisma.dimension.aggregate({
     where: { topicId: parsed.data.topicId },
@@ -409,6 +470,9 @@ export async function updateDimension(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const updateDimensionSchema = getUpdateDimensionSchema(tv);
 
   const parsed = updateDimensionSchema.safeParse({
     id: formData.get('id'),
@@ -416,8 +480,8 @@ export async function updateDimension(
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  const versionId = await getVersionIdFromDimension(parsed.data.id);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromDimension(parsed.data.id, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.dimension.update({
     where: { id: parsed.data.id },
@@ -430,9 +494,10 @@ export async function updateDimension(
 
 export async function deleteDimension(dimensionId: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
-  const versionId = await getVersionIdFromDimension(dimensionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromDimension(dimensionId, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.dimension.delete({ where: { id: dimensionId } });
 
@@ -445,12 +510,13 @@ export async function reorderDimension(
   direction: 'up' | 'down',
 ): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const dim = await prisma.dimension.findUnique({ where: { id: dimensionId } });
-  if (!dim) return { errors: { _form: ['Dimension not found'] } };
+  if (!dim) return { errors: { _form: [te('dimensionNotFound')] } };
 
-  const versionId = await getVersionIdFromTopic(dim.topicId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromTopic(dim.topicId, te);
+  await requireDraftVersion(versionId, te);
 
   const sibling = await prisma.dimension.findFirst({
     where: {
@@ -478,6 +544,9 @@ export async function createQuestion(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const createQuestionSchema = getCreateQuestionSchema(tv);
 
   const parsed = createQuestionSchema.safeParse({
     dimensionId: formData.get('dimensionId'),
@@ -485,8 +554,8 @@ export async function createQuestion(
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  const versionId = await getVersionIdFromDimension(parsed.data.dimensionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromDimension(parsed.data.dimensionId, te);
+  await requireDraftVersion(versionId, te);
 
   const maxOrder = await prisma.question.aggregate({
     where: { dimensionId: parsed.data.dimensionId },
@@ -510,6 +579,9 @@ export async function updateQuestion(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const updateQuestionSchema = getUpdateQuestionSchema(tv);
 
   const parsed = updateQuestionSchema.safeParse({
     id: formData.get('id'),
@@ -517,8 +589,8 @@ export async function updateQuestion(
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  const versionId = await getVersionIdFromQuestion(parsed.data.id);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromQuestion(parsed.data.id, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.question.update({
     where: { id: parsed.data.id },
@@ -531,9 +603,10 @@ export async function updateQuestion(
 
 export async function deleteQuestion(questionId: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
-  const versionId = await getVersionIdFromQuestion(questionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromQuestion(questionId, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.question.delete({ where: { id: questionId } });
 
@@ -546,12 +619,13 @@ export async function reorderQuestion(
   direction: 'up' | 'down',
 ): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const q = await prisma.question.findUnique({ where: { id: questionId } });
-  if (!q) return { errors: { _form: ['Question not found'] } };
+  if (!q) return { errors: { _form: [te('questionNotFound')] } };
 
-  const versionId = await getVersionIdFromDimension(q.dimensionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromDimension(q.dimensionId, te);
+  await requireDraftVersion(versionId, te);
 
   const sibling = await prisma.question.findFirst({
     where: {
@@ -579,6 +653,9 @@ export async function createQuestionNote(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const createNoteSchema = getCreateNoteSchema(tv);
 
   const parsed = createNoteSchema.safeParse({
     questionId: formData.get('questionId'),
@@ -587,8 +664,8 @@ export async function createQuestionNote(
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  const versionId = await getVersionIdFromQuestion(parsed.data.questionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromQuestion(parsed.data.questionId, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.questionNote.create({
     data: {
@@ -607,6 +684,9 @@ export async function updateQuestionNote(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const updateNoteSchema = getUpdateNoteSchema(tv);
 
   const parsed = updateNoteSchema.safeParse({
     id: formData.get('id'),
@@ -619,10 +699,10 @@ export async function updateQuestionNote(
     where: { id: parsed.data.id },
     select: { questionId: true },
   });
-  if (!note) return { errors: { _form: ['Note not found'] } };
+  if (!note) return { errors: { _form: [te('noteNotFound')] } };
 
-  const versionId = await getVersionIdFromQuestion(note.questionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromQuestion(note.questionId, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.questionNote.update({
     where: { id: parsed.data.id },
@@ -635,15 +715,16 @@ export async function updateQuestionNote(
 
 export async function deleteQuestionNote(noteId: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const note = await prisma.questionNote.findUnique({
     where: { id: noteId },
     select: { questionId: true },
   });
-  if (!note) return { errors: { _form: ['Note not found'] } };
+  if (!note) return { errors: { _form: [te('noteNotFound')] } };
 
-  const versionId = await getVersionIdFromQuestion(note.questionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromQuestion(note.questionId, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.questionNote.delete({ where: { id: noteId } });
 
@@ -653,24 +734,14 @@ export async function deleteQuestionNote(noteId: string): Promise<ActionState> {
 
 // ─── Answer Option CRUD ─────────────────────────────────────────────
 
-const answerOptionSchema = z.object({
-  label: z.string().min(1, 'Label is required').max(200),
-  score: z.coerce.number().int().min(0, 'Score must be 0 or more').max(100, 'Score must be 100 or less'),
-});
-
-const createAnswerOptionSchema = answerOptionSchema.extend({
-  questionId: z.string().min(1, 'Question is required'),
-});
-
-const updateAnswerOptionSchema = answerOptionSchema.extend({
-  id: z.string().min(1),
-});
-
 export async function createAnswerOption(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const createAnswerOptionSchema = getCreateAnswerOptionSchema(tv);
 
   const parsed = createAnswerOptionSchema.safeParse({
     questionId: formData.get('questionId'),
@@ -679,8 +750,8 @@ export async function createAnswerOption(
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  const versionId = await getVersionIdFromQuestion(parsed.data.questionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromQuestion(parsed.data.questionId, te);
+  await requireDraftVersion(versionId, te);
 
   const maxOrder = await prisma.answerOption.aggregate({
     where: { questionId: parsed.data.questionId },
@@ -705,6 +776,9 @@ export async function updateAnswerOption(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const updateAnswerOptionSchema = getUpdateAnswerOptionSchema(tv);
 
   const parsed = updateAnswerOptionSchema.safeParse({
     id: formData.get('id'),
@@ -717,10 +791,10 @@ export async function updateAnswerOption(
     where: { id: parsed.data.id },
     select: { questionId: true },
   });
-  if (!option) return { errors: { _form: ['Option not found'] } };
+  if (!option) return { errors: { _form: [te('optionNotFound')] } };
 
-  const versionId = await getVersionIdFromQuestion(option.questionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromQuestion(option.questionId, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.answerOption.update({
     where: { id: parsed.data.id },
@@ -733,15 +807,16 @@ export async function updateAnswerOption(
 
 export async function deleteAnswerOption(optionId: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const option = await prisma.answerOption.findUnique({
     where: { id: optionId },
     select: { questionId: true },
   });
-  if (!option) return { errors: { _form: ['Option not found'] } };
+  if (!option) return { errors: { _form: [te('optionNotFound')] } };
 
-  const versionId = await getVersionIdFromQuestion(option.questionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromQuestion(option.questionId, te);
+  await requireDraftVersion(versionId, te);
 
   await prisma.answerOption.delete({ where: { id: optionId } });
 
@@ -754,12 +829,13 @@ export async function reorderAnswerOption(
   direction: 'up' | 'down',
 ): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const option = await prisma.answerOption.findUnique({ where: { id: optionId } });
-  if (!option) return { errors: { _form: ['Option not found'] } };
+  if (!option) return { errors: { _form: [te('optionNotFound')] } };
 
-  const versionId = await getVersionIdFromQuestion(option.questionId);
-  await requireDraftVersion(versionId);
+  const versionId = await getVersionIdFromQuestion(option.questionId, te);
+  await requireDraftVersion(versionId, te);
 
   const sibling = await prisma.answerOption.findFirst({
     where: {
@@ -782,20 +858,15 @@ export async function reorderAnswerOption(
 
 // ─── User Questionnaire Submission ───────────────────────────────────
 
-const submitQuestionnaireSchema = z.object({
-  versionId: z.string().min(1),
-  answers: z.record(z.string(), z.string()).refine(
-    (val) => Object.keys(val).length > 0,
-    'At least one answer is required',
-  ),
-});
-
 export async function submitQuestionnaire(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   const session = await requireAuth();
   const userId = session.user.id;
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const submitQuestionnaireSchema = getSubmitQuestionnaireSchema(tv);
 
   const rawAnswers: Record<string, string> = {};
   for (const [key, value] of formData.entries()) {
@@ -819,7 +890,7 @@ export async function submitQuestionnaire(
     select: { isActive: true },
   });
   if (!version?.isActive) {
-    return { errors: { _form: ['This questionnaire version is no longer active.'] } };
+    return { errors: { _form: [te('questionnaireInactive')] } };
   }
 
   // Get all questions for this version to validate completeness
@@ -838,7 +909,7 @@ export async function submitQuestionnaire(
   // Check all questions are answered
   const missing = questionIds.filter((id) => !answeredIds.includes(id));
   if (missing.length > 0) {
-    return { errors: { _form: [`Please answer all questions. ${missing.length} remaining.`] } };
+    return { errors: { _form: [te('answerAllQuestions', { count: missing.length.toString() })] } };
   }
 
   // Validate all selected options exist and belong to the right questions
@@ -852,7 +923,7 @@ export async function submitQuestionnaire(
   for (const [questionId, optionId] of Object.entries(answers)) {
     const ownerQuestion = optionMap.get(optionId);
     if (!ownerQuestion || ownerQuestion !== questionId) {
-      return { errors: { _form: ['Invalid answer option selected.'] } };
+      return { errors: { _form: [te('invalidAnswerOption')] } };
     }
   }
 
@@ -888,6 +959,9 @@ export async function submitQuestionnaireUpdate(
 ): Promise<ActionState> {
   const session = await requireAuth();
   const userId = session.user.id;
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const submitQuestionnaireSchema = getSubmitQuestionnaireSchema(tv);
 
   const activityId = formData.get('activityId') as string | null;
 
@@ -899,10 +973,10 @@ export async function submitQuestionnaireUpdate(
     }) as { activity: { status: string } } | null;
 
     if (!membership) {
-      return { errors: { _form: ['You are not a member of this activity.'] } };
+      return { errors: { _form: [te('notActivityMember')] } };
     }
     if (membership.activity.status !== 'COMPLETED') {
-      return { errors: { _form: ['Activity must be completed before updating questionnaire.'] } };
+      return { errors: { _form: [te('activityMustBeCompleted')] } };
     }
   }
 
@@ -928,7 +1002,7 @@ export async function submitQuestionnaireUpdate(
     select: { isActive: true },
   });
   if (!version?.isActive) {
-    return { errors: { _form: ['This questionnaire version is no longer active.'] } };
+    return { errors: { _form: [te('questionnaireInactive')] } };
   }
 
   // Get all questions for this version to validate completeness
@@ -941,7 +1015,7 @@ export async function submitQuestionnaireUpdate(
   const answeredIds = Object.keys(answers);
   const missing = questionIds.filter((id) => !answeredIds.includes(id));
   if (missing.length > 0) {
-    return { errors: { _form: [`Please answer all questions. ${missing.length} remaining.`] } };
+    return { errors: { _form: [te('answerAllQuestions', { count: missing.length.toString() })] } };
   }
 
   // Validate all selected options belong to the right questions
@@ -954,7 +1028,7 @@ export async function submitQuestionnaireUpdate(
   for (const [questionId, optionId] of Object.entries(answers)) {
     const ownerQuestion = optionMap.get(optionId);
     if (!ownerQuestion || ownerQuestion !== questionId) {
-      return { errors: { _form: ['Invalid answer option selected.'] } };
+      return { errors: { _form: [te('invalidAnswerOption')] } };
     }
   }
 
@@ -1006,6 +1080,7 @@ export async function submitQuestionnaireUpdate(
 
 export async function validateAnswerOptionsSum(questionId: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const options = await prisma.answerOption.findMany({
     where: { questionId },
@@ -1016,7 +1091,7 @@ export async function validateAnswerOptionsSum(questionId: string): Promise<Acti
   if (sum !== 100) {
     return {
       errors: {
-        _form: [`Score sum is ${sum}. Must equal 100.`],
+        _form: [te('scoreSumInvalid', { sum: sum.toString() })],
       },
     };
   }

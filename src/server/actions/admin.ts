@@ -5,17 +5,20 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requireAdmin, auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { getTranslations } from 'next-intl/server';
 
 // --- Grade Options ---
 
-const gradeOptionSchema = z.object({
-  label: z
-    .string()
-    .min(1, 'Label is required')
-    .max(50, 'Label must be at most 50 characters'),
-  order: z.coerce.number().int().min(0, 'Order must be non-negative'),
-  isActive: z.coerce.boolean().default(true),
-});
+function getGradeOptionSchema(t: (key: string) => string) {
+  return z.object({
+    label: z
+      .string()
+      .min(1, t('labelRequired'))
+      .max(50, t('labelMax')),
+    order: z.coerce.number().int().min(0, t('orderMin')),
+    isActive: z.coerce.boolean().default(true),
+  });
+}
 
 export type GradeOptionState = {
   errors?: {
@@ -32,6 +35,9 @@ export async function createGradeOption(
   formData: FormData,
 ): Promise<GradeOptionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const gradeOptionSchema = getGradeOptionSchema(tv);
 
   const parsed = gradeOptionSchema.safeParse({
     label: formData.get('label'),
@@ -47,7 +53,7 @@ export async function createGradeOption(
 
   const existing = await prisma.gradeOption.findUnique({ where: { label } });
   if (existing) {
-    return { errors: { label: ['This label already exists'] } };
+    return { errors: { label: [te('labelAlreadyExists')] } };
   }
 
   try {
@@ -59,7 +65,7 @@ export async function createGradeOption(
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      return { errors: { label: ['This label already exists'] } };
+      return { errors: { label: [te('labelAlreadyExists')] } };
     }
     throw error;
   }
@@ -73,10 +79,13 @@ export async function updateGradeOption(
   formData: FormData,
 ): Promise<GradeOptionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const gradeOptionSchema = getGradeOptionSchema(tv);
 
   const id = formData.get('id') as string;
   if (!id) {
-    return { errors: { _form: ['Grade option ID is required'] } };
+    return { errors: { _form: [te('gradeOptionIdRequired')] } };
   }
 
   const parsed = gradeOptionSchema.safeParse({
@@ -94,7 +103,7 @@ export async function updateGradeOption(
   // Check for duplicate label (excluding current)
   const existing = await prisma.gradeOption.findUnique({ where: { label } });
   if (existing && existing.id !== id) {
-    return { errors: { label: ['This label already exists'] } };
+    return { errors: { label: [te('labelAlreadyExists')] } };
   }
 
   try {
@@ -107,7 +116,7 @@ export async function updateGradeOption(
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      return { errors: { label: ['This label already exists'] } };
+      return { errors: { label: [te('labelAlreadyExists')] } };
     }
     throw error;
   }
@@ -189,19 +198,20 @@ export async function changeUserRole(
   await requireAdmin();
   const session = await auth();
   const adminId = session!.user.id;
+  const te = await getTranslations('serverErrors');
 
   if (adminId === userId) {
-    return { error: 'You cannot change your own role.' };
+    return { error: te('cannotChangeOwnRole') };
   }
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { role: true, username: true },
   });
-  if (!user) return { error: 'User not found.' };
+  if (!user) return { error: te('userNotFound') };
 
   const oldRole = user.role;
-  if (oldRole === newRole) return { error: `User is already ${newRole}.` };
+  if (oldRole === newRole) return { error: te('userAlreadyRole', { role: newRole }) };
 
   await prisma.$transaction([
     prisma.user.update({

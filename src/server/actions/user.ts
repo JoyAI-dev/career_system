@@ -4,13 +4,16 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { getTranslations } from 'next-intl/server';
 
-const updateProfileSchema = z.object({
-  name: z.string().max(100, 'Name must be at most 100 characters').optional().or(z.literal('')),
-  school: z.string().max(100, 'School must be at most 100 characters').optional().or(z.literal('')),
-  major: z.string().max(100, 'Major must be at most 100 characters').optional().or(z.literal('')),
-  grade: z.string().optional().or(z.literal('')),
-});
+function getUpdateProfileSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().max(100, t('nameMax')).optional().or(z.literal('')),
+    school: z.string().max(100, t('schoolMax')).optional().or(z.literal('')),
+    major: z.string().max(100, t('majorMax')).optional().or(z.literal('')),
+    grade: z.string().optional().or(z.literal('')),
+  });
+}
 
 export type UpdateProfileState = {
   errors?: {
@@ -28,6 +31,9 @@ export async function updateProfile(
   formData: FormData,
 ): Promise<UpdateProfileState> {
   const session = await requireAuth();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const updateProfileSchema = getUpdateProfileSchema(tv);
 
   const parsed = updateProfileSchema.safeParse({
     name: formData.get('name'),
@@ -48,7 +54,7 @@ export async function updateProfile(
       where: { label: grade, isActive: true },
     });
     if (!validOption) {
-      return { errors: { grade: ['Invalid grade option'] } };
+      return { errors: { grade: [tv('invalidGrade')] } };
     }
   }
 

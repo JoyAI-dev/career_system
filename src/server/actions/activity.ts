@@ -9,6 +9,8 @@ import { revalidatePath } from 'next/cache';
 import { notifyActivityMembers } from '@/server/notifications';
 import { Prisma } from '@prisma/client';
 import type { ActivityStatus, MemberRole } from '@prisma/client';
+import { getTranslations } from 'next-intl/server';
+import { getLocale } from 'next-intl/server';
 
 const ADMIN_PATH = '/admin/activities';
 
@@ -17,26 +19,30 @@ export type ActionState = {
   success?: boolean;
 };
 
-const createActivitySchema = z.object({
-  typeId: z.string().min(1, 'Activity type is required'),
-  title: z.string().min(1, 'Title is required').max(200),
-  capacity: z.coerce.number().int().min(1, 'Capacity must be at least 1'),
-  guideMarkdown: z.string().optional(),
-  location: z.string().optional(),
-  isOnline: z.preprocess((v) => v === 'true' || v === true, z.boolean()).optional(),
-  tagIds: z.array(z.string()).optional(),
-});
+function getCreateActivitySchema(t: (key: string) => string) {
+  return z.object({
+    typeId: z.string().min(1, t('activityTypeRequired')),
+    title: z.string().min(1, t('titleRequired')).max(200),
+    capacity: z.coerce.number().int().min(1, t('capacityMin')),
+    guideMarkdown: z.string().optional(),
+    location: z.string().optional(),
+    isOnline: z.preprocess((v) => v === 'true' || v === true, z.boolean()).optional(),
+    tagIds: z.array(z.string()).optional(),
+  });
+}
 
-const updateActivitySchema = z.object({
-  id: z.string().min(1),
-  typeId: z.string().min(1, 'Activity type is required'),
-  title: z.string().min(1, 'Title is required').max(200),
-  capacity: z.coerce.number().int().min(1, 'Capacity must be at least 1'),
-  guideMarkdown: z.string().optional(),
-  location: z.string().optional(),
-  isOnline: z.preprocess((v) => v === 'true' || v === true, z.boolean()).optional(),
-  tagIds: z.array(z.string()).optional(),
-});
+function getUpdateActivitySchema(t: (key: string) => string) {
+  return z.object({
+    id: z.string().min(1),
+    typeId: z.string().min(1, t('activityTypeRequired')),
+    title: z.string().min(1, t('titleRequired')).max(200),
+    capacity: z.coerce.number().int().min(1, t('capacityMin')),
+    guideMarkdown: z.string().optional(),
+    location: z.string().optional(),
+    isOnline: z.preprocess((v) => v === 'true' || v === true, z.boolean()).optional(),
+    tagIds: z.array(z.string()).optional(),
+  });
+}
 
 export async function createActivity(
   _prevState: ActionState,
@@ -44,6 +50,9 @@ export async function createActivity(
 ): Promise<ActionState> {
   await requireAdmin();
   const session = await auth();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const createActivitySchema = getCreateActivitySchema(tv);
 
   const tagIds = formData.getAll('tagIds').map(String);
 
@@ -61,7 +70,7 @@ export async function createActivity(
 
   const type = await prisma.activityType.findUnique({ where: { id: parsed.data.typeId } });
   if (!type || !type.isEnabled) {
-    return { errors: { typeId: ['Invalid or disabled activity type.'] } };
+    return { errors: { typeId: [te('invalidActivityType')] } };
   }
 
   await prisma.activity.create({
@@ -90,6 +99,9 @@ export async function updateActivity(
   formData: FormData,
 ): Promise<ActionState> {
   await requireAdmin();
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const updateActivitySchema = getUpdateActivitySchema(tv);
 
   const tagIds = formData.getAll('tagIds').map(String);
 
@@ -111,22 +123,22 @@ export async function updateActivity(
     include: { _count: { select: { memberships: true } } },
   });
   if (!existing) {
-    return { errors: { _form: ['Activity not found.'] } };
+    return { errors: { _form: [te('activityNotFound')] } };
   }
   if (existing.status !== 'OPEN') {
-    return { errors: { _form: ['Can only edit activities with OPEN status.'] } };
+    return { errors: { _form: [te('canOnlyEditOpen')] } };
   }
   if (parsed.data.capacity < existing._count.memberships) {
     return {
       errors: {
-        capacity: [`Capacity cannot be less than current member count (${existing._count.memberships}).`],
+        capacity: [te('capacityBelowMembers', { count: existing._count.memberships.toString() })],
       },
     };
   }
 
   const type = await prisma.activityType.findUnique({ where: { id: parsed.data.typeId } });
   if (!type || !type.isEnabled) {
-    return { errors: { typeId: ['Invalid or disabled activity type.'] } };
+    return { errors: { typeId: [te('invalidActivityType')] } };
   }
 
   await prisma.$transaction([
@@ -155,17 +167,18 @@ export async function updateActivity(
 
 export async function deleteActivity(id: string): Promise<ActionState> {
   await requireAdmin();
+  const te = await getTranslations('serverErrors');
 
   const existing = await prisma.activity.findUnique({
     where: { id },
     include: { _count: { select: { memberships: true } } },
   });
   if (!existing) {
-    return { errors: { _form: ['Activity not found.'] } };
+    return { errors: { _form: [te('activityNotFound')] } };
   }
   if (existing._count.memberships > 0) {
     return {
-      errors: { _form: [`Cannot delete: activity has ${existing._count.memberships} members.`] },
+      errors: { _form: [te('cannotDeleteWithMembers', { count: existing._count.memberships.toString() })] },
     };
   }
 
@@ -186,6 +199,7 @@ const ACTIVITIES_PATH = '/activities';
 export async function joinActivity(activityId: string): Promise<ActionState> {
   const session = await requireAuth();
   const userId = session.user.id;
+  const te = await getTranslations('serverErrors');
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -197,18 +211,18 @@ export async function joinActivity(activityId: string): Promise<ActionState> {
       );
 
       if (activities.length === 0) {
-        throw new Error('Activity not found.');
+        throw new Error(te('activityNotFound'));
       }
       const activity = activities[0];
 
       if (activity.status !== 'OPEN') {
-        throw new Error('Activity is not open for joining.');
+        throw new Error(te('activityNotOpen'));
       }
 
       // Check progressive unlock
       const unlockedTypeIds = await getUnlockedTypeIds(userId);
       if (!unlockedTypeIds.has(activity.typeId)) {
-        throw new Error('You have not completed the prerequisite activity type.');
+        throw new Error(te('prerequisiteNotMet'));
       }
 
       // Check if already a member (unique constraint backup)
@@ -216,13 +230,13 @@ export async function joinActivity(activityId: string): Promise<ActionState> {
         where: { activityId_userId: { activityId, userId } },
       });
       if (existingMembership) {
-        throw new Error('You have already joined this activity.');
+        throw new Error(te('alreadyJoined'));
       }
 
       // Count current members (within the lock scope)
       const memberCount = await tx.membership.count({ where: { activityId } });
       if (memberCount >= activity.capacity) {
-        throw new Error('Activity is full.');
+        throw new Error(te('activityFull'));
       }
 
       // First member becomes LEADER, others are MEMBER
@@ -249,14 +263,14 @@ export async function joinActivity(activityId: string): Promise<ActionState> {
         await notifyActivityMembers(
           activityId,
           'ACTIVITY_FULL',
-          'Activity Full',
-          `"${title}" has reached full capacity. The leader can now schedule a meeting.`,
+          te('notificationActivityFull'),
+          te('notificationActivityFullMsg', { title }),
           tx,
         );
       }
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to join activity.';
+    const message = error instanceof Error ? error.message : te('failedToJoin');
     return { errors: { _form: [message] } };
   }
 
@@ -272,6 +286,7 @@ export async function joinActivity(activityId: string): Promise<ActionState> {
 export async function leaveActivity(activityId: string): Promise<ActionState> {
   const session = await requireAuth();
   const userId = session.user.id;
+  const te = await getTranslations('serverErrors');
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -283,7 +298,7 @@ export async function leaveActivity(activityId: string): Promise<ActionState> {
       );
 
       if (activities.length === 0) {
-        throw new Error('Activity not found.');
+        throw new Error(te('activityNotFound'));
       }
       const activity = activities[0];
 
@@ -291,14 +306,14 @@ export async function leaveActivity(activityId: string): Promise<ActionState> {
         where: { activityId_userId: { activityId, userId } },
       });
       if (!membership) {
-        throw new Error('You are not a member of this activity.');
+        throw new Error(te('notMember'));
       }
 
       // Leader cannot leave if there are other members
       if (membership.role === 'LEADER') {
         const memberCount = await tx.membership.count({ where: { activityId } });
         if (memberCount > 1) {
-          throw new Error('Leader cannot leave while other members remain. Transfer leadership first.');
+          throw new Error(te('leaderCannotLeave'));
         }
       }
 
@@ -315,7 +330,7 @@ export async function leaveActivity(activityId: string): Promise<ActionState> {
       }
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to leave activity.';
+    const message = error instanceof Error ? error.message : te('failedToLeave');
     return { errors: { _form: [message] } };
   }
 
@@ -323,12 +338,14 @@ export async function leaveActivity(activityId: string): Promise<ActionState> {
   return { success: true };
 }
 
-const scheduleSchema = z.object({
-  activityId: z.string().min(1),
-  scheduledAt: z.coerce.date({ error: 'Meeting date/time is required' }),
-  location: z.string().optional(),
-  isOnline: z.preprocess((v) => v === 'true' || v === true, z.boolean()).optional(),
-});
+function getScheduleSchema(t: (key: string) => string) {
+  return z.object({
+    activityId: z.string().min(1),
+    scheduledAt: z.coerce.date({ error: t('meetingDateRequired') }),
+    location: z.string().optional(),
+    isOnline: z.preprocess((v) => v === 'true' || v === true, z.boolean()).optional(),
+  });
+}
 
 /**
  * Schedule a meeting (FULL → SCHEDULED).
@@ -340,6 +357,10 @@ export async function scheduleMeeting(
 ): Promise<ActionState> {
   const session = await requireAuth();
   const userId = session.user.id;
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const locale = await getLocale();
+  const scheduleSchema = getScheduleSchema(tv);
 
   const parsed = scheduleSchema.safeParse({
     activityId: formData.get('activityId'),
@@ -356,7 +377,7 @@ export async function scheduleMeeting(
       >(
         Prisma.sql`SELECT id, status FROM activities WHERE id = ${parsed.data.activityId} FOR UPDATE`,
       );
-      if (activities.length === 0) throw new Error('Activity not found.');
+      if (activities.length === 0) throw new Error(te('activityNotFound'));
       const activity = activities[0];
 
       const membership = await tx.membership.findUnique({
@@ -364,7 +385,7 @@ export async function scheduleMeeting(
       });
       const userRole: MemberRole | null = membership?.role ?? null;
 
-      const result = validateTransition(activity.status, 'SCHEDULE', userRole);
+      const result = validateTransition(activity.status, 'SCHEDULE', userRole, te);
       if (!result.valid) throw new Error(result.error);
 
       await tx.activity.update({
@@ -383,7 +404,7 @@ export async function scheduleMeeting(
         select: { title: true },
       });
       const title = activityData?.title ?? 'Activity';
-      const dateStr = parsed.data.scheduledAt.toLocaleDateString('en-US', {
+      const dateStr = parsed.data.scheduledAt.toLocaleDateString(locale, {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
@@ -393,14 +414,14 @@ export async function scheduleMeeting(
       await notifyActivityMembers(
         parsed.data.activityId,
         'TIME_CONFIRMED',
-        'Meeting Scheduled',
-        `"${title}" has been scheduled for ${dateStr}.`,
+        te('notificationMeetingScheduled'),
+        te('notificationMeetingScheduledMsg', { title, date: dateStr }),
         tx,
         userId,
       );
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to schedule meeting.';
+    const message = error instanceof Error ? error.message : te('failedToSchedule');
     return { errors: { _form: [message] } };
   }
 
@@ -414,6 +435,7 @@ export async function scheduleMeeting(
 export async function startMeeting(activityId: string): Promise<ActionState> {
   const session = await requireAuth();
   const userId = session.user.id;
+  const te = await getTranslations('serverErrors');
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -422,7 +444,7 @@ export async function startMeeting(activityId: string): Promise<ActionState> {
       >(
         Prisma.sql`SELECT id, status FROM activities WHERE id = ${activityId} FOR UPDATE`,
       );
-      if (activities.length === 0) throw new Error('Activity not found.');
+      if (activities.length === 0) throw new Error(te('activityNotFound'));
       const activity = activities[0];
 
       const membership = await tx.membership.findUnique({
@@ -430,7 +452,7 @@ export async function startMeeting(activityId: string): Promise<ActionState> {
       });
       const userRole: MemberRole | null = membership?.role ?? null;
 
-      const result = validateTransition(activity.status, 'START', userRole);
+      const result = validateTransition(activity.status, 'START', userRole, te);
       if (!result.valid) throw new Error(result.error);
 
       await tx.activity.update({
@@ -439,7 +461,7 @@ export async function startMeeting(activityId: string): Promise<ActionState> {
       });
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to start meeting.';
+    const message = error instanceof Error ? error.message : te('failedToStart');
     return { errors: { _form: [message] } };
   }
 
@@ -453,6 +475,7 @@ export async function startMeeting(activityId: string): Promise<ActionState> {
 export async function completeMeeting(activityId: string): Promise<ActionState> {
   const session = await requireAuth();
   const userId = session.user.id;
+  const te = await getTranslations('serverErrors');
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -461,7 +484,7 @@ export async function completeMeeting(activityId: string): Promise<ActionState> 
       >(
         Prisma.sql`SELECT id, status FROM activities WHERE id = ${activityId} FOR UPDATE`,
       );
-      if (activities.length === 0) throw new Error('Activity not found.');
+      if (activities.length === 0) throw new Error(te('activityNotFound'));
       const activity = activities[0];
 
       const membership = await tx.membership.findUnique({
@@ -469,7 +492,7 @@ export async function completeMeeting(activityId: string): Promise<ActionState> 
       });
       const userRole: MemberRole | null = membership?.role ?? null;
 
-      const result = validateTransition(activity.status, 'COMPLETE', userRole);
+      const result = validateTransition(activity.status, 'COMPLETE', userRole, te);
       if (!result.valid) throw new Error(result.error);
 
       await tx.activity.update({
@@ -478,7 +501,7 @@ export async function completeMeeting(activityId: string): Promise<ActionState> 
       });
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to complete meeting.';
+    const message = error instanceof Error ? error.message : te('failedToComplete');
     return { errors: { _form: [message] } };
   }
 
