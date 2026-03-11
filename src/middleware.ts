@@ -41,8 +41,9 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico, sitemap.xml, robots.txt (metadata files)
      * - api/auth (Auth.js routes handled internally)
+     * - api/health (public health-check endpoint)
      * - public assets (SVGs, images)
      */
-    '/((?!_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|api/auth|.*\\.svg$|.*\\.png$|.*\\.jpg$|.*\\.ico$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|api/auth|api/health|.*\\.svg$|.*\\.png$|.*\\.jpg$|.*\\.ico$).*)',
   ],
 };
