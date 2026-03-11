@@ -5,6 +5,7 @@ import {
   getCurrentRecord,
   getActiveVersionWithStructure,
 } from '@/server/queries/questionnaire';
+import { getUserReflections } from '@/server/queries/reflection';
 import { getSnapshotScores } from '@/server/scoring';
 import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
@@ -17,10 +18,11 @@ export default async function CognitiveReportPage() {
     redirect('/login');
   }
 
-  const [snapshotMeta, currentRecord, version, t] = await Promise.all([
+  const [snapshotMeta, currentRecord, version, reflectionsByQuestion, t] = await Promise.all([
     getUserSnapshotIds(session.user.id),
     getCurrentRecord(session.user.id),
     getActiveVersionWithStructure(),
+    getUserReflections(session.user.id),
     getTranslations('cognitiveReport'),
   ]);
 
@@ -127,6 +129,7 @@ export default async function CognitiveReportPage() {
         snapshots={snapshots}
         currentAnswers={currentAnswers}
         versionStructure={versionStructure}
+        reflectionsByQuestion={reflectionsByQuestion}
       />
     </div>
   );

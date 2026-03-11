@@ -237,7 +237,8 @@ export async function getActivityTypesForDashboard(userId: string) {
       id: type.id, // typeId used as the card ID
       title: type.name,
       capacity: type.defaultCapacity,
-      status: (openSpots > 0 || type.activities.length === 0 ? 'OPEN' : 'FULL') as ActivityStatus,
+      // Type-level cards are always joinable via overflow — never FULL from a user perspective
+      status: 'OPEN' as ActivityStatus,
       guideMarkdown: latestInstance?.guideMarkdown ?? null,
       isOnline: false,
       location: null,

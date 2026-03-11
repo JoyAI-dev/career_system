@@ -43,10 +43,13 @@ type SnapshotEntry = {
 
 type CurrentAnswer = { optionId: string; score: number };
 
+type ReflectionItem = { id: string; content: string; activityTag: string | null; createdAt: string };
+
 type Props = {
   snapshots: SnapshotEntry[];
   currentAnswers: Record<string, CurrentAnswer>;
   versionStructure: VersionStructure;
+  reflectionsByQuestion?: Record<string, ReflectionItem[]>;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -71,7 +74,7 @@ function computeScores(
 
 // ─── Component ─────────────────────────────────────────────────────────
 
-export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswers, versionStructure }: Props) {
+export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswers, versionStructure, reflectionsByQuestion = {} }: Props) {
   const t = useTranslations('cognitiveReport');
   const format = useFormatter();
   const [answers, setAnswers] = useState<Record<string, CurrentAnswer>>(initialAnswers);
@@ -316,7 +319,10 @@ export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswer
                                     );
                                   })}
                                 </div>
-                                <QuestionReflections questionId={question.id} />
+                                <QuestionReflections
+                                  questionId={question.id}
+                                  initialReflections={reflectionsByQuestion[question.id] ?? []}
+                                />
                               </div>
                             ))}
                           </div>

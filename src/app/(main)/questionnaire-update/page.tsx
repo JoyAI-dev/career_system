@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getActiveVersionWithStructure, getLatestSnapshotAnswers } from '@/server/queries/questionnaire';
+import { getUserReflections } from '@/server/queries/reflection';
 import { QuestionnaireUpdateFlow } from './QuestionnaireUpdateFlow';
 import { getTranslations } from 'next-intl/server';
 
@@ -16,9 +17,10 @@ export default async function QuestionnaireUpdatePage({
 
   const { activityId } = await searchParams;
 
-  const [version, previousAnswers, t] = await Promise.all([
+  const [version, previousAnswers, reflectionsByQuestion, t] = await Promise.all([
     getActiveVersionWithStructure(),
     getLatestSnapshotAnswers(session.user.id),
+    getUserReflections(session.user.id),
     getTranslations('questionnaire'),
   ]);
 
@@ -50,6 +52,7 @@ export default async function QuestionnaireUpdatePage({
       previousAnswers={previousAnswers}
       activityId={activityId}
       activityTitle={activityTitle}
+      reflectionsByQuestion={reflectionsByQuestion}
     />
   );
 }

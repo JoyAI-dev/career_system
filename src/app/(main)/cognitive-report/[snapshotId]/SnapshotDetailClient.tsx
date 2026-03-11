@@ -47,7 +47,15 @@ type Props = {
 
 export function SnapshotDetailClient({ grouped, activityTag }: Props) {
   const t = useTranslations('cognitiveReport');
-  const [expandedAnswers, setExpandedAnswers] = useState<Set<string>>(new Set());
+  const [expandedAnswers, setExpandedAnswers] = useState<Set<string>>(() => {
+    const allIds = new Set<string>();
+    for (const topic of grouped) {
+      for (const dim of topic.dimensions) {
+        for (const answer of dim.answers) allIds.add(answer.id);
+      }
+    }
+    return allIds;
+  });
 
   function toggleAnswer(answerId: string) {
     setExpandedAnswers((prev) => {

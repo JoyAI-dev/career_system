@@ -67,7 +67,7 @@ export default async function ProfilePage() {
           </CardHeader>
           <CardContent>
             {hasCompleted ? (
-              <Button render={<Link href="/cognitive-report" />}>
+              <Button nativeButton={false} render={<Link href="/cognitive-report" />}>
                 {t('viewReport')}
               </Button>
             ) : (

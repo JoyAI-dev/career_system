@@ -58,7 +58,15 @@ type Version = {
   topics: Topic[];
 };
 
-export function QuestionnaireFlow({ version }: { version: Version }) {
+type ReflectionItem = { id: string; content: string; activityTag: string | null; createdAt: string };
+
+export function QuestionnaireFlow({
+  version,
+  reflectionsByQuestion = {},
+}: {
+  version: Version;
+  reflectionsByQuestion?: Record<string, ReflectionItem[]>;
+}) {
   const t = useTranslations('questionnaire');
   const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -246,7 +254,10 @@ export function QuestionnaireFlow({ version }: { version: Version }) {
                       );
                     })}
                   </div>
-                  <QuestionReflections questionId={question.id} />
+                  <QuestionReflections
+                    questionId={question.id}
+                    initialReflections={reflectionsByQuestion[question.id] ?? []}
+                  />
                 </CardContent>
               </Card>
             ))}

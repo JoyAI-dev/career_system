@@ -1,3 +1,6 @@
+-- Drop the old incorrect (userId, versionId) partial unique index
+DROP INDEX IF EXISTS "response_snapshots_current_unique";
+
 -- Dedup: For each user with multiple isSnapshot=false rows, keep only the newest
 -- (by completedAt DESC), and convert the rest to snapshots (isSnapshot=true).
 UPDATE "response_snapshots"

@@ -934,6 +934,13 @@ export async function submitQuestionnaire(
       selectedOptionId,
     }));
 
+    // Guard: if current record already exists (double-submit), skip creation
+    const existingCurrent = await tx.responseSnapshot.findFirst({
+      where: { userId, isSnapshot: false },
+      select: { id: true },
+    });
+    if (existingCurrent) return;
+
     // Current editable record
     const current = await tx.responseSnapshot.create({
       data: {
@@ -1149,6 +1156,9 @@ export async function updateCurrentAnswer(
   }
 
   await prisma.$transaction(async (tx) => {
+    // Lock any existing current record to prevent concurrent duplicate creation
+    await tx.$queryRaw`SELECT id FROM "response_snapshots" WHERE "userId" = ${userId} AND "isSnapshot" = false LIMIT 1 FOR UPDATE`;
+
     let currentRecord = await tx.responseSnapshot.findFirst({
       where: { userId, isSnapshot: false },
       select: { id: true },

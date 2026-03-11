@@ -668,7 +668,10 @@
   "errors": {
     "notFound": "Page not found",
     "serverError": "Server error",
-    "unauthorized": "Unauthorized access"
+    "unauthorized": "Unauthorized access",
+    "title": "Something went wrong",
+    "description": "An error occurred while loading this page.",
+    "tryAgain": "Try again"
   },
   "metadata": {
     "title": "Career Exploration Platform",

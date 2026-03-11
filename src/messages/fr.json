@@ -668,7 +668,10 @@
   "errors": {
     "notFound": "Page non trouvée",
     "serverError": "Erreur du serveur",
-    "unauthorized": "Accès non autorisé"
+    "unauthorized": "Accès non autorisé",
+    "title": "Une erreur est survenue",
+    "description": "Une erreur s'est produite lors du chargement de cette page.",
+    "tryAgain": "Réessayer"
   },
   "metadata": {
     "title": "Plateforme d'Exploration de Carrière",

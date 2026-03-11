@@ -59,14 +59,17 @@ type Version = {
   topics: Topic[];
 };
 
+type ReflectionItem = { id: string; content: string; activityTag: string | null; createdAt: string };
+
 type Props = {
   version: Version;
   previousAnswers: Record<string, string>;
   activityId?: string;
   activityTitle?: string;
+  reflectionsByQuestion?: Record<string, ReflectionItem[]>;
 };
 
-export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, activityTitle }: Props) {
+export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, activityTitle, reflectionsByQuestion = {} }: Props) {
   const t = useTranslations('questionnaire');
   const tUpdate = useTranslations('questionnaire.update');
   const tCommon = useTranslations('common');
@@ -284,6 +287,7 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
                     </div>
                     <QuestionReflections
                       questionId={question.id}
+                      initialReflections={reflectionsByQuestion[question.id] ?? []}
                       activityTag={activityTitle}
                     />
                   </CardContent>

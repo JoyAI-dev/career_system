@@ -347,11 +347,13 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
             >
               {isPending
                 ? t('joining')
-                : isFull
-                  ? t('full')
-                  : activity.status !== 'OPEN'
-                    ? t(STATUS_KEYS[activity.status] ?? 'statusOpen')
-                    : t('join')}
+                : joinByType
+                  ? t('join')
+                  : isFull
+                    ? t('full')
+                    : activity.status !== 'OPEN'
+                      ? t(STATUS_KEYS[activity.status] ?? 'statusOpen')
+                      : t('join')}
             </Button>
           ) : isLocked ? (
             <Button disabled>{t('locked')}</Button>

@@ -668,7 +668,10 @@
   "errors": {
     "notFound": "页面未找到",
     "serverError": "服务器错误",
-    "unauthorized": "未授权访问"
+    "unauthorized": "未授权访问",
+    "title": "出了点问题",
+    "description": "加载页面时发生错误。",
+    "tryAgain": "重试"
   },
   "metadata": {
     "title": "职业探索平台",

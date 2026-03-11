@@ -59,6 +59,6 @@ export async function addComment(
     },
   });
 
-  revalidatePath('/cognitive-report');
+  revalidatePath('/cognitive-report', 'layout');
   return { success: true };
 }

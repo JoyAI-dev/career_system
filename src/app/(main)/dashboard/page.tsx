@@ -2,8 +2,8 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@/lib/auth';
-import { getActivityProgress } from '@/server/queries/activity';
-import { getActivityTypesForDashboard } from '@/server/queries/activity';
+import { getActivityProgress, getUserActivities } from '@/server/queries/activity';
+import { getActivityTypes } from '@/server/queries/activityType';
 import { getTags } from '@/server/queries/tag';
 import { ActivityStepper } from '@/components/ActivityStepper';
 import { ActivityBrowser } from '@/app/(main)/activities/ActivityBrowser';
@@ -28,9 +28,10 @@ export default async function DashboardPage() {
   }
 
   // Student landing page — fetch all data in parallel
-  const [steps, activityTypes, tags, t] = await Promise.all([
+  const [steps, activities, activityTypes, tags, t] = await Promise.all([
     getActivityProgress(session.user.id),
-    getActivityTypesForDashboard(session.user.id),
+    getUserActivities(session.user.id),
+    getActivityTypes(),
     getTags(),
     getTranslations('dashboard'),
   ]);
@@ -55,10 +56,12 @@ export default async function DashboardPage() {
       <section>
         <h2 className="mb-4 text-lg font-semibold">{t('availableActivities')}</h2>
         <ActivityBrowser
-          activities={JSON.parse(JSON.stringify(activityTypes))}
-          types={[]}
+          activities={activities.map((a) => ({
+            ...a,
+            scheduledAt: a.scheduledAt?.toISOString() ?? null,
+          }))}
+          types={activityTypes.map((at) => ({ id: at.id, name: at.name }))}
           tags={tags.map((tg) => ({ id: tg.id, name: tg.name }))}
-          joinByType
         />
       </section>
 

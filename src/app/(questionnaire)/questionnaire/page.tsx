@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { hasCompletedQuestionnaire, getActiveVersionWithStructure } from '@/server/queries/questionnaire';
+import { getUserReflections } from '@/server/queries/reflection';
 import { QuestionnaireFlow } from './QuestionnaireFlow';
 import { getTranslations } from 'next-intl/server';
 
@@ -16,8 +17,9 @@ export default async function QuestionnairePage() {
     redirect('/dashboard');
   }
 
-  const [version, t] = await Promise.all([
+  const [version, reflectionsByQuestion, t] = await Promise.all([
     getActiveVersionWithStructure(),
+    getUserReflections(session.user.id),
     getTranslations('questionnaire'),
   ]);
 
@@ -32,5 +34,5 @@ export default async function QuestionnairePage() {
     );
   }
 
-  return <QuestionnaireFlow version={version} />;
+  return <QuestionnaireFlow version={version} reflectionsByQuestion={reflectionsByQuestion} />;
 }
