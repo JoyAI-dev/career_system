@@ -81,6 +81,21 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </Link>
+        <Link href="/admin/activities">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardHeader>
+              <CardTitle>Activities</CardTitle>
+              <CardDescription>
+                Create and manage activities
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create activities with types, tags, capacity, and markdown guides.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );
