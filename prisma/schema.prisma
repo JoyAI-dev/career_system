@@ -31,6 +31,7 @@ model User {
   activityComments   ActivityComment[]
   recruitmentInfos   RecruitmentInfo[]
   responseComments   ResponseComment[]
+  reflections        Reflection[]
   notifications      Notification[]
   auditLogs          AuditLog[]     @relation("auditLogs")
 
@@ -107,10 +108,11 @@ model Question {
   title       String
   order       Int
 
-  dimension      Dimension        @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
-  notes          QuestionNote[]
-  answerOptions  AnswerOption[]
+  dimension       Dimension        @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+  notes           QuestionNote[]
+  answerOptions   AnswerOption[]
   responseAnswers ResponseAnswer[]
+  reflections     Reflection[]
 
   @@map("questions")
 }
@@ -186,6 +188,21 @@ model ResponseComment {
 
   @@index([responseAnswerId])
   @@map("response_comments")
+}
+
+model Reflection {
+  id          String   @id @default(cuid())
+  userId      String
+  questionId  String
+  content     String
+  activityTag String?
+  createdAt   DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId, userId])
+  @@map("reflections")
 }
 
 // ─── Activity System ─────────────────────────────────────────────────

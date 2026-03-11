@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { updateCurrentAnswer, createSnapshot } from '@/server/actions/questionnaire';
+import { QuestionReflections } from '@/components/QuestionReflections';
 import type { ScoringResult } from '@/server/scoring';
 
 const CognitiveRadarChart = dynamic(
@@ -323,6 +324,7 @@ export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswer
                                     );
                                   })}
                                 </div>
+                                <QuestionReflections questionId={question.id} />
                               </div>
                             ))}
                           </div>

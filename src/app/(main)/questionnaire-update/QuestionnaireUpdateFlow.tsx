@@ -4,8 +4,18 @@ import { useState, useActionState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { submitQuestionnaireUpdate, type ActionState } from '@/server/actions/questionnaire';
 import { DimensionNav } from '@/components/DimensionNav';
+import { SectionProgress } from '@/components/SectionProgress';
+import { QuestionReflections } from '@/components/QuestionReflections';
 import Link from 'next/link';
 
 type AnswerOption = {
@@ -64,6 +74,9 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
   const [answers, setAnswers] = useState<Record<string, string>>(previousAnswers);
   const [state, formAction] = useActionState<ActionState, FormData>(submitQuestionnaireUpdate, {});
   const [isPending, startTransition] = useTransition();
+  const [unansweredDialogOpen, setUnansweredDialogOpen] = useState(false);
+  const [unansweredQuestions, setUnansweredQuestions] = useState<Question[]>([]);
+  const [isSubmitAttempt, setIsSubmitAttempt] = useState(false);
 
   const topics = version.topics;
   const currentTopic = topics[currentTopicIndex];
@@ -71,13 +84,14 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
   const isLastTopic = currentTopicIndex === topics.length - 1;
 
   const topicQuestions = currentTopic.dimensions.flatMap((d) => d.questions);
-  const allCurrentAnswered = topicQuestions.every((q) => answers[q.id]);
-
   const allQuestions = topics.flatMap((t) => t.dimensions.flatMap((d) => d.questions));
   const totalQuestions = allQuestions.length;
   const answeredCount = allQuestions.filter((q) => answers[q.id]).length;
 
-  // Track which answers changed from previous
+  // Section progress
+  const sectionAnswered = topicQuestions.filter((q) => answers[q.id]).length;
+  const sectionTotal = topicQuestions.length;
+
   const changedCount = Object.entries(answers).filter(
     ([qId, optId]) => previousAnswers[qId] !== optId,
   ).length;
@@ -86,19 +100,53 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
   }
 
+  function scrollToQuestion(questionId: string) {
+    setUnansweredDialogOpen(false);
+    setTimeout(() => {
+      const el = document.getElementById(`question-${questionId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  }
+
+  function handleNext() {
+    const unanswered = topicQuestions.filter((q) => !answers[q.id]);
+    if (unanswered.length > 0) {
+      setUnansweredQuestions(unanswered);
+      setIsSubmitAttempt(false);
+      setUnansweredDialogOpen(true);
+    } else {
+      goNext();
+    }
+  }
+
+  function handleContinueAnyway() {
+    setUnansweredDialogOpen(false);
+    goNext();
+  }
+
   function goNext() {
     if (currentTopicIndex < topics.length - 1) {
       setCurrentTopicIndex((i) => i + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
   function goPrev() {
     if (currentTopicIndex > 0) {
       setCurrentTopicIndex((i) => i - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
   function handleSubmit() {
+    const allUnanswered = allQuestions.filter((q) => !answers[q.id]);
+    if (allUnanswered.length > 0) {
+      setUnansweredQuestions(allUnanswered);
+      setIsSubmitAttempt(true);
+      setUnansweredDialogOpen(true);
+      return;
+    }
+
     const formData = new FormData();
     formData.set('versionId', version.id);
     if (activityId) formData.set('activityId', activityId);
@@ -178,6 +226,13 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
         dimensions={currentTopic.dimensions.map((d) => ({ id: d.id, name: d.name }))}
       />
 
+      {/* Floating section progress */}
+      <SectionProgress
+        answered={sectionAnswered}
+        total={sectionTotal}
+        label={t('questionsCount', { answered: sectionAnswered, total: sectionTotal })}
+      />
+
       {/* Current topic content */}
       <div className="space-y-6">
         <h2 className="text-lg font-semibold">{currentTopic.name}</h2>
@@ -189,7 +244,7 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
             {dimension.questions.map((question) => {
               const wasChanged = previousAnswers[question.id] && answers[question.id] !== previousAnswers[question.id];
               return (
-                <Card key={question.id} className={wasChanged ? 'ring-1 ring-primary/30' : ''}>
+                <Card key={question.id} id={`question-${question.id}`} className={`scroll-mt-28 ${wasChanged ? 'ring-1 ring-primary/30' : ''}`}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm">{question.title}</CardTitle>
@@ -227,6 +282,10 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
                         );
                       })}
                     </div>
+                    <QuestionReflections
+                      questionId={question.id}
+                      activityTag={activityTitle}
+                    />
                   </CardContent>
                 </Card>
               );
@@ -260,19 +319,49 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
         {isLastTopic ? (
           <Button
             onClick={handleSubmit}
-            disabled={answeredCount < totalQuestions || isPending}
+            disabled={isPending}
           >
             {isPending ? t('submitting') : changedCount > 0 ? tUpdate('submitUpdateWithCount', { count: changedCount }) : tUpdate('submitUpdate')}
           </Button>
         ) : (
-          <Button
-            onClick={goNext}
-            disabled={!allCurrentAnswered}
-          >
+          <Button onClick={handleNext}>
             {t('nextTopic')}
           </Button>
         )}
       </div>
+
+      {/* Unanswered Questions Dialog */}
+      <Dialog open={unansweredDialogOpen} onOpenChange={setUnansweredDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('unansweredTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('unansweredDescription', { count: unansweredQuestions.length })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-60 space-y-1 overflow-y-auto">
+            {unansweredQuestions.map((q) => (
+              <button
+                key={q.id}
+                onClick={() => scrollToQuestion(q.id)}
+                className="w-full rounded-md px-3 py-2 text-left text-sm text-primary hover:bg-muted"
+              >
+                {q.title}
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUnansweredDialogOpen(false)}>
+              {t('goBack')}
+            </Button>
+            {!isSubmitAttempt && (
+              <Button onClick={handleContinueAnyway}>
+                {t('continueAnyway')}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

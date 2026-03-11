@@ -120,6 +120,10 @@
     "submitting": "Soumission...",
     "submit": "Soumettre le questionnaire",
     "loadingChart": "Chargement du graphique...",
+    "unansweredTitle": "Questions sans réponse",
+    "unansweredDescription": "Vous avez {count} question(s) sans réponse. Cliquez pour y accéder.",
+    "goBack": "Retour",
+    "continueAnyway": "Continuer quand même",
     "update": {
       "title": "Mettre à jour votre profil cognitif",
       "descriptionWithActivity": "Réfléchissez à votre expérience de <strong>{activity}</strong> et mettez à jour vos réponses.",
@@ -676,6 +680,12 @@
     "administrator": "Administrateur",
     "student": "Étudiant",
     "logOut": "Se déconnecter"
+  },
+  "reflections": {
+    "title": "Réflexions",
+    "placeholder": "Écrivez vos réflexions sur cette question...",
+    "add": "Ajouter",
+    "adding": "Ajout..."
   },
   "languageSwitcher": {
     "label": "Changer de langue"

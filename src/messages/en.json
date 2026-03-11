@@ -120,6 +120,10 @@
     "submitting": "Submitting...",
     "submit": "Submit Questionnaire",
     "loadingChart": "Loading chart...",
+    "unansweredTitle": "Unanswered Questions",
+    "unansweredDescription": "You have {count} unanswered question(s). Click a question to jump to it.",
+    "goBack": "Go Back",
+    "continueAnyway": "Continue Anyway",
     "update": {
       "title": "Update Your Cognitive Profile",
       "descriptionWithActivity": "Reflect on your experience from <strong>{activity}</strong> and update your answers.",
@@ -676,6 +680,12 @@
     "administrator": "Administrator",
     "student": "Student",
     "logOut": "Log out"
+  },
+  "reflections": {
+    "title": "Reflections",
+    "placeholder": "Write your thoughts on this question...",
+    "add": "Add",
+    "adding": "Adding..."
   },
   "languageSwitcher": {
     "label": "Switch language"

@@ -120,6 +120,10 @@
     "submitting": "提交中...",
     "submit": "提交问卷",
     "loadingChart": "加载图表中...",
+    "unansweredTitle": "有未回答的问题",
+    "unansweredDescription": "还有 {count} 道题未回答。点击问题可快速跳转。",
+    "goBack": "返回作答",
+    "continueAnyway": "继续下一步",
     "update": {
       "title": "更新认知档案",
       "descriptionWithActivity": "回顾您在 <strong>{activity}</strong> 中的体验，更新您的答案。",
@@ -676,6 +680,12 @@
     "administrator": "管理员",
     "student": "学生",
     "logOut": "退出登录"
+  },
+  "reflections": {
+    "title": "反思笔记",
+    "placeholder": "写下你对这道题的思考...",
+    "add": "添加",
+    "adding": "添加中..."
   },
   "languageSwitcher": {
     "label": "切换语言"
