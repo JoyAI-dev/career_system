@@ -66,10 +66,18 @@ type Props = {
   previousAnswers: Record<string, string>;
   activityId?: string;
   activityTitle?: string;
+  activityStage?: string;
   reflectionsByQuestion?: Record<string, ReflectionItem[]>;
 };
 
-export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, activityTitle, reflectionsByQuestion = {} }: Props) {
+export function QuestionnaireUpdateFlow({
+  version,
+  previousAnswers,
+  activityId,
+  activityTitle,
+  activityStage,
+  reflectionsByQuestion = {},
+}: Props) {
   const t = useTranslations('questionnaire');
   const tUpdate = useTranslations('questionnaire.update');
   const tCommon = useTranslations('common');
@@ -288,7 +296,7 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
                     <QuestionReflections
                       questionId={question.id}
                       initialReflections={reflectionsByQuestion[question.id] ?? []}
-                      activityTag={activityTitle}
+                      activityTag={activityStage ?? activityTitle}
                     />
                   </CardContent>
                 </Card>
@@ -320,18 +328,25 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
           </Link>
         </div>
 
-        {isLastTopic ? (
-          <Button
-            onClick={handleSubmit}
-            disabled={isPending}
-          >
-            {isPending ? t('submitting') : changedCount > 0 ? tUpdate('submitUpdateWithCount', { count: changedCount }) : tUpdate('submitUpdate')}
-          </Button>
-        ) : (
-          <Button onClick={handleNext}>
-            {t('nextTopic')}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {!isLastTopic && (
+            <Button variant="outline" onClick={handleSubmit} disabled={isPending}>
+              {isPending ? t('submitting') : changedCount > 0 ? tUpdate('submitUpdateWithCount', { count: changedCount }) : tUpdate('submitUpdate')}
+            </Button>
+          )}
+          {isLastTopic ? (
+            <Button
+              onClick={handleSubmit}
+              disabled={isPending}
+            >
+              {isPending ? t('submitting') : changedCount > 0 ? tUpdate('submitUpdateWithCount', { count: changedCount }) : tUpdate('submitUpdate')}
+            </Button>
+          ) : (
+            <Button onClick={handleNext}>
+              {t('nextTopic')}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Unanswered Questions Dialog */}

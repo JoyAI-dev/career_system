@@ -637,7 +637,10 @@ export async function completeMeeting(activityId: string): Promise<ActionState> 
 
 /**
  * Finish an activity — mark the user's membership as personally completed.
- * Only allowed when the instance status is COMPLETED and the user hasn't finished yet.
+ * Allowed when:
+ * - instance is FULL or COMPLETED, OR
+ * - instance is OPEN but already at capacity
+ * and the user hasn't finished yet.
  */
 export async function finishActivity(activityId: string): Promise<ActionState> {
   const session = await requireAuth();
@@ -646,13 +649,15 @@ export async function finishActivity(activityId: string): Promise<ActionState> {
 
   try {
     await prisma.$transaction(async (tx) => {
-      // Verify instance is COMPLETED
+      // Verify instance is finishable
       const activity = await tx.activity.findUnique({
         where: { id: activityId },
-        select: { status: true },
+        select: { status: true, capacity: true, _count: { select: { memberships: true } } },
       });
       if (!activity) throw new Error(te('activityNotFound'));
-      if (activity.status !== 'COMPLETED') {
+      const isOpenButFull = activity.status === 'OPEN' && activity._count.memberships >= activity.capacity;
+      const canFinishInstance = activity.status === 'FULL' || activity.status === 'COMPLETED' || isOpenButFull;
+      if (!canFinishInstance) {
         throw new Error(te('activityNotCompleted'));
       }
 

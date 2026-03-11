@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "职业探索平台",
-    "description": "大学生职业探索与活动管理平台"
+    "description": "学生职业探索与活动管理平台"
   },
   "stepper": {
     "roundtable": "圆桌会议",
@@ -185,7 +185,9 @@
     "statusCompleted": "已完成",
     "finishActivity": "完成活动",
     "finishing": "完成中...",
-    "alreadyFinished": "您已完成此活动。"
+    "alreadyFinished": "您已完成此活动。",
+    "joinedMembers": "已加入成员",
+    "noJoinedMembers": "暂无已加入成员。"
   },
   "calendar": {
     "title": "日历",
@@ -675,10 +677,6 @@
     "title": "出了点问题",
     "description": "加载页面时发生错误。",
     "tryAgain": "重试"
-  },
-  "metadata": {
-    "title": "职业探索平台",
-    "description": "学生职业探索与活动管理平台"
   },
   "header": {
     "toggleNavigation": "切换导航",

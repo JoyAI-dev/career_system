@@ -10,8 +10,8 @@ export async function GET() {
   try {
     await prisma.$queryRaw`SELECT 1`;
     db = 'connected';
-  } catch {
-    // DB unreachable
+  } catch (error) {
+    console.error('[health] database connectivity check failed', error);
   }
 
   const status = db === 'connected' ? 'ok' : 'degraded';

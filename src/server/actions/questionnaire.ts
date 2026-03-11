@@ -999,47 +999,71 @@ export async function submitQuestionnaire(
     }
   }
 
-  // Create current record (editable) + initial snapshot (frozen) in a single transaction
+  // Save/update current record (editable) + ensure initial snapshot (frozen) exists.
   await prisma.$transaction(async (tx) => {
     const answerData = Object.entries(answers).map(([questionId, selectedOptionId]) => ({
       questionId,
       selectedOptionId,
     }));
 
-    // Guard: if current record already exists (double-submit), skip creation
+    // Upsert current editable record with submitted answers.
     const existingCurrent = await tx.responseSnapshot.findFirst({
       where: { userId, isSnapshot: false },
       orderBy: { completedAt: 'desc' },
       select: { id: true },
     });
-    if (existingCurrent) return;
 
-    // Current editable record
-    const current = await tx.responseSnapshot.create({
-      data: {
-        userId,
-        versionId,
-        context: 'initial',
-        isSnapshot: false,
-      },
-    });
-    await tx.responseAnswer.createMany({
-      data: answerData.map((a) => ({ ...a, snapshotId: current.id })),
-    });
+    let currentId: string;
+    if (existingCurrent) {
+      currentId = existingCurrent.id;
+      await tx.responseAnswer.deleteMany({ where: { snapshotId: currentId } });
+      await tx.responseAnswer.createMany({
+        data: answerData.map((a) => ({ ...a, snapshotId: currentId })),
+      });
+      await tx.responseSnapshot.update({
+        where: { id: currentId },
+        data: {
+          versionId,
+          context: 'initial',
+          completedAt: new Date(),
+        },
+      });
+    } else {
+      const current = await tx.responseSnapshot.create({
+        data: {
+          userId,
+          versionId,
+          context: 'initial',
+          isSnapshot: false,
+          completedAt: new Date(),
+        },
+      });
+      currentId = current.id;
+      await tx.responseAnswer.createMany({
+        data: answerData.map((a) => ({ ...a, snapshotId: currentId })),
+      });
+    }
 
-    // Initial frozen snapshot
-    const snapshot = await tx.responseSnapshot.create({
-      data: {
-        userId,
-        versionId,
-        context: 'initial',
-        isSnapshot: true,
-        snapshotLabel: null,
-      },
+    // Create the first frozen snapshot if the user has not completed yet.
+    const existingSnapshot = await tx.responseSnapshot.findFirst({
+      where: { userId, isSnapshot: true },
+      select: { id: true },
     });
-    await tx.responseAnswer.createMany({
-      data: answerData.map((a) => ({ ...a, snapshotId: snapshot.id })),
-    });
+    if (!existingSnapshot) {
+      const snapshot = await tx.responseSnapshot.create({
+        data: {
+          userId,
+          versionId,
+          context: 'initial',
+          isSnapshot: true,
+          snapshotLabel: null,
+          completedAt: new Date(),
+        },
+      });
+      await tx.responseAnswer.createMany({
+        data: answerData.map((a) => ({ ...a, snapshotId: snapshot.id })),
+      });
+    }
   });
 
   redirect('/dashboard');
@@ -1061,18 +1085,15 @@ export async function submitQuestionnaireUpdate(
 
   const activityId = formData.get('activityId') as string | null;
 
-  // Validate activityId: user must be a member and activity must be COMPLETED
+  // Validate activityId: user must be a member
   if (activityId) {
     const membership = await (prisma as any).membership.findUnique({
       where: { activityId_userId: { activityId, userId } },
-      select: { activity: { select: { status: true } } },
-    }) as { activity: { status: string } } | null;
+      select: { activity: { select: { id: true } } },
+    }) as { activity: { id: string } } | null;
 
     if (!membership) {
       return { errors: { _form: [te('notActivityMember')] } };
-    }
-    if (membership.activity.status !== 'COMPLETED') {
-      return { errors: { _form: [te('activityMustBeCompleted')] } };
     }
   }
 
@@ -1122,6 +1143,7 @@ export async function submitQuestionnaireUpdate(
       where: { id: activityId },
       select: {
         id: true,
+        type: { select: { name: true } },
         activityTags: { include: { tag: { select: { name: true } } } },
       },
     });
@@ -1130,6 +1152,7 @@ export async function submitQuestionnaireUpdate(
       contextStr = JSON.stringify({
         type: 'activity',
         activityId: activity.id,
+        activityType: activity.type.name,
         tags,
       });
     }

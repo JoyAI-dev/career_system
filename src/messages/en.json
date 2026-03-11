@@ -181,7 +181,9 @@
     "statusCompleted": "Completed",
     "finishActivity": "Finish Activity",
     "finishing": "Finishing...",
-    "alreadyFinished": "You have already completed this activity."
+    "alreadyFinished": "You have already completed this activity.",
+    "joinedMembers": "Joined Members",
+    "noJoinedMembers": "No joined members yet."
   },
   "calendar": {
     "title": "Calendar",
@@ -671,10 +673,6 @@
     "title": "Something went wrong",
     "description": "An error occurred while loading this page.",
     "tryAgain": "Try again"
-  },
-  "metadata": {
-    "title": "Career Exploration Platform",
-    "description": "Student career exploration and activity management platform"
   },
   "header": {
     "toggleNavigation": "Toggle navigation",

@@ -48,6 +48,7 @@ type Activity = {
   isMember?: boolean;
   memberRole?: string;
   memberCompletedAt?: string | null;
+  members?: { username: string; name: string | null; role?: string }[];
 };
 
 type Comment = {
@@ -86,6 +87,8 @@ const ACTION_KEYS: Record<string, string> = {
   COMPLETE: 'completeMeeting',
 };
 
+const FINISHABLE_STATUSES: ActivityStatus[] = ['FULL', 'COMPLETED'];
+
 export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
   const t = useTranslations('activities');
   const tCommon = useTranslations('common');
@@ -112,9 +115,9 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
   // Show instance-scoped features only when viewing an actual instance (not type-level)
   const showInstanceFeatures = !joinByType && activity.isMember;
 
-  // Finish button: visible when instance is COMPLETED, user is member, and hasn't finished yet
+  // Finish button: visible when instance is FULL/COMPLETED, user is member, and hasn't finished yet
   const canFinish = showInstanceFeatures
-    && activity.status === 'COMPLETED'
+    && (FINISHABLE_STATUSES.includes(activity.status) || (activity.status === 'OPEN' && isFull))
     && !activity.memberCompletedAt;
 
   function handleJoin() {
@@ -215,6 +218,30 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
             )}
           </div>
 
+          {/* Joined member list */}
+          <div className="border-t pt-3">
+            <h3 className="mb-2 text-sm font-medium">{t('joinedMembers')}</h3>
+            {activity.members && activity.members.length > 0 ? (
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                {activity.members.map((m) => (
+                  <li key={m.username} className="flex items-center justify-between gap-2">
+                    <span>
+                      {m.username}
+                      {m.name ? ` (${m.name})` : ''}
+                    </span>
+                    {m.role === 'LEADER' && (
+                      <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                        {t('leader')}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('noJoinedMembers')}</p>
+            )}
+          </div>
+
           {/* Tags */}
           {activity.activityTags.length > 0 && (
             <div className="flex flex-wrap gap-1">
@@ -295,7 +322,9 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
           )}
 
           {/* Already finished badge */}
-          {showInstanceFeatures && activity.status === 'COMPLETED' && activity.memberCompletedAt && (
+          {showInstanceFeatures
+            && (FINISHABLE_STATUSES.includes(activity.status) || (activity.status === 'OPEN' && isFull))
+            && activity.memberCompletedAt && (
             <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
               {t('alreadyFinished')}
             </div>

@@ -5,6 +5,7 @@ import {
   getCurrentRecord,
   getActiveVersionWithStructure,
 } from '@/server/queries/questionnaire';
+import { getActivityProgress } from '@/server/queries/activity';
 import { getUserReflections } from '@/server/queries/reflection';
 import { getSnapshotScores } from '@/server/scoring';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,13 +19,16 @@ export default async function CognitiveReportPage() {
     redirect('/login');
   }
 
-  const [snapshotMeta, currentRecord, version, reflectionsByQuestion, t] = await Promise.all([
+  const [snapshotMeta, currentRecord, version, reflectionsByQuestion, steps, t] = await Promise.all([
     getUserSnapshotIds(session.user.id),
     getCurrentRecord(session.user.id),
     getActiveVersionWithStructure(),
     getUserReflections(session.user.id),
+    getActivityProgress(session.user.id),
     getTranslations('cognitiveReport'),
   ]);
+
+  const currentStep = steps.find((s) => s.state === 'current');
 
   // No data at all — user hasn't completed questionnaire
   if (!currentRecord && snapshotMeta.length === 0) {
@@ -130,6 +134,7 @@ export default async function CognitiveReportPage() {
         currentAnswers={currentAnswers}
         versionStructure={versionStructure}
         reflectionsByQuestion={reflectionsByQuestion}
+        currentStageLabel={currentStep?.typeName ?? null}
       />
     </div>
   );

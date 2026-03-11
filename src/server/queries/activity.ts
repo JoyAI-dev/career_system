@@ -77,9 +77,13 @@ export async function getUserActivities(userId: string) {
           include: { tag: { select: { id: true, name: true } } },
         },
         memberships: {
-          where: { userId },
-          select: { role: true, completedAt: true },
-          take: 1,
+          select: {
+            userId: true,
+            role: true,
+            completedAt: true,
+            user: { select: { username: true, name: true } },
+          },
+          orderBy: { joinedAt: 'asc' },
         },
         _count: { select: { memberships: true } },
       },
@@ -88,14 +92,19 @@ export async function getUserActivities(userId: string) {
   ]);
 
   return activities.map((activity) => {
-    const userMembership = activity.memberships[0] ?? null;
-    const { memberships: _, ...rest } = activity;
+    const userMembership = activity.memberships.find((m) => m.userId === userId) ?? null;
+    const { memberships, ...rest } = activity;
     return {
       ...rest,
       isEligible: unlockedTypeIds.has(activity.typeId),
       isMember: !!userMembership,
       memberRole: userMembership?.role ?? undefined,
       memberCompletedAt: userMembership?.completedAt?.toISOString() ?? null,
+      members: memberships.map((m) => ({
+        username: m.user.username,
+        name: m.user.name,
+        role: m.role,
+      })),
     };
   });
 }
@@ -165,6 +174,13 @@ export async function getUserJoinedActivities(userId: string) {
           activityTags: {
             include: { tag: { select: { id: true, name: true } } },
           },
+          memberships: {
+            select: {
+              role: true,
+              user: { select: { username: true, name: true } },
+            },
+            orderBy: { joinedAt: 'asc' },
+          },
           _count: { select: { memberships: true } },
         },
       },
@@ -178,6 +194,11 @@ export async function getUserJoinedActivities(userId: string) {
     isMember: true,
     memberRole: m.role,
     memberCompletedAt: m.completedAt?.toISOString() ?? null,
+    members: m.activity.memberships.map((member) => ({
+      username: member.user.username,
+      name: member.user.name,
+      role: member.role,
+    })),
   }));
 }
 

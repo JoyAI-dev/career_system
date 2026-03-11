@@ -37,13 +37,18 @@ export default async function QuestionnaireUpdatePage({
 
   // If activityId provided, fetch activity info for display
   let activityTitle: string | undefined;
+  let activityStage: string | undefined;
   if (activityId) {
     const { prisma } = await import('@/lib/db');
     const activity = await prisma.activity.findUnique({
       where: { id: activityId },
-      select: { title: true },
+      select: {
+        title: true,
+        type: { select: { name: true } },
+      },
     });
     activityTitle = activity?.title ?? undefined;
+    activityStage = activity?.type.name ?? undefined;
   }
 
   return (
@@ -52,6 +57,7 @@ export default async function QuestionnaireUpdatePage({
       previousAnswers={previousAnswers}
       activityId={activityId}
       activityTitle={activityTitle}
+      activityStage={activityStage}
       reflectionsByQuestion={reflectionsByQuestion}
     />
   );

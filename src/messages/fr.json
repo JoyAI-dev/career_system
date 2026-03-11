@@ -181,7 +181,9 @@
     "statusCompleted": "Terminé",
     "finishActivity": "Terminer l'activité",
     "finishing": "En cours...",
-    "alreadyFinished": "Vous avez déjà terminé cette activité."
+    "alreadyFinished": "Vous avez déjà terminé cette activité.",
+    "joinedMembers": "Membres inscrits",
+    "noJoinedMembers": "Aucun membre inscrit."
   },
   "calendar": {
     "title": "Calendrier",
@@ -671,10 +673,6 @@
     "title": "Une erreur est survenue",
     "description": "Une erreur s'est produite lors du chargement de cette page.",
     "tryAgain": "Réessayer"
-  },
-  "metadata": {
-    "title": "Plateforme d'Exploration de Carrière",
-    "description": "Plateforme d'exploration de carrière et de gestion des activités étudiantes"
   },
   "header": {
     "toggleNavigation": "Basculer la navigation",

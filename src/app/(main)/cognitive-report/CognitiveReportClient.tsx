@@ -50,6 +50,7 @@ type Props = {
   currentAnswers: Record<string, CurrentAnswer>;
   versionStructure: VersionStructure;
   reflectionsByQuestion?: Record<string, ReflectionItem[]>;
+  currentStageLabel?: string | null;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -74,7 +75,13 @@ function computeScores(
 
 // ─── Component ─────────────────────────────────────────────────────────
 
-export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswers, versionStructure, reflectionsByQuestion = {} }: Props) {
+export function CognitiveReportClient({
+  snapshots,
+  currentAnswers: initialAnswers,
+  versionStructure,
+  reflectionsByQuestion = {},
+  currentStageLabel = null,
+}: Props) {
   const t = useTranslations('cognitiveReport');
   const format = useFormatter();
   const [answers, setAnswers] = useState<Record<string, CurrentAnswer>>(initialAnswers);
@@ -98,6 +105,23 @@ export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswer
 
   const selectedSnapshot = snapshots.length > 0 ? snapshots[selectedSnapshotIdx] : null;
 
+  function extractContextTag(context: string | null): string | null {
+    if (!context) return null;
+    try {
+      const ctx = JSON.parse(context);
+      if (ctx?.type === 'activity') {
+        if (Array.isArray(ctx.tags) && ctx.tags.length > 0 && typeof ctx.tags[0] === 'string') return ctx.tags[0];
+        if (typeof ctx.activityType === 'string' && ctx.activityType) return ctx.activityType;
+      }
+    } catch {
+      // ignore non-json context
+    }
+    return null;
+  }
+
+  const selectedContextTag = selectedSnapshot ? extractContextTag(selectedSnapshot.context) : null;
+  const effectiveStageTag = selectedContextTag ?? currentStageLabel;
+
   const handleAnswerChange = useCallback((questionId: string, optionId: string, score: number) => {
     setAnswers((prev) => ({ ...prev, [questionId]: { optionId, score } }));
     startTransition(async () => {
@@ -107,9 +131,9 @@ export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswer
 
   const handleCreateSnapshot = useCallback(() => {
     startTransition(async () => {
-      await createSnapshot();
+      await createSnapshot(currentStageLabel ?? undefined);
     });
-  }, []);
+  }, [currentStageLabel]);
 
   function contextLabel(context: string | null, snapshotLabel: string | null, index: number) {
     if (snapshotLabel) return snapshotLabel;
@@ -118,8 +142,9 @@ export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswer
     if (!context) return t('assessment');
     try {
       const ctx = JSON.parse(context);
-      if (ctx.type === 'activity' && ctx.tags?.length) {
-        return t('afterActivity', { activity: ctx.tags[0] });
+      if (ctx.type === 'activity') {
+        if (ctx.activityType) return t('afterActivity', { activity: ctx.activityType });
+        if (ctx.tags?.length) return t('afterActivity', { activity: ctx.tags[0] });
       }
     } catch {
       // not JSON
@@ -226,18 +251,54 @@ export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswer
                 (st) => st.topicName === topic.topicName,
               );
               const change = snapshotTopic ? topic.score - snapshotTopic.score : 0;
+              const topicQuestions = versionStructure?.topics
+                .find((t) => t.id === topic.topicId)
+                ?.dimensions.flatMap((d) => d.questions) ?? [];
+              const topicReflections = topicQuestions
+                .flatMap((q) => reflectionsByQuestion[q.id] ?? [])
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
               return (
                 <div
                   key={topic.topicId}
                   className="flex items-center justify-between rounded-lg border px-4 py-3"
                 >
-                  <p className="text-sm font-medium">{topic.topicName}</p>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold">{topic.score}</span>
-                    {snapshotTopic && change !== 0 && (
-                      <span className={`text-xs font-medium ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {change > 0 ? '+' : ''}{Math.round(change * 100) / 100}
-                      </span>
+                  <div className="w-full">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium">{topic.topicName}</p>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold">{topic.score}</span>
+                        {snapshotTopic && change !== 0 && (
+                          <span className={`text-xs font-medium ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {change > 0 ? '+' : ''}{Math.round(change * 100) / 100}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {topicReflections.length > 0 && (
+                      <div className="mt-3 space-y-2 border-t pt-2">
+                        {topicReflections.slice(0, 2).map((r) => {
+                          const displayTag = r.activityTag ?? effectiveStageTag;
+                          return (
+                          <div key={r.id} className="rounded bg-muted/40 px-2.5 py-2 text-xs">
+                            <p className="text-foreground">{r.content}</p>
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              {format.dateTime(new Date(r.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}
+                              {displayTag && (
+                                <span className="ml-2 rounded-full bg-primary/10 px-1.5 py-0.5 text-primary">
+                                  {displayTag}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          );
+                        })}
+                        {topicReflections.length > 2 && (
+                          <p className="text-[11px] text-muted-foreground">
+                            +{topicReflections.length - 2}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -322,6 +383,7 @@ export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswer
                                 <QuestionReflections
                                   questionId={question.id}
                                   initialReflections={reflectionsByQuestion[question.id] ?? []}
+                                  activityTag={effectiveStageTag ?? undefined}
                                 />
                               </div>
                             ))}
