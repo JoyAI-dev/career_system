@@ -5,17 +5,17 @@ import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { type StepState } from '@/server/queries/activity';
 
-// Maps DB activity type order (0-7) to i18n keys
-const stepKeys = [
-  'roundtable',
-  'studyBuddy',
-  'deepExplore',
-  'competition',
-  'trialCase',
-  'focusDiscussion',
-  'mentorAuction',
-  'internAuction',
-] as const;
+// Maps activity type name (stable) to i18n translation key
+const stepKeyMap: Record<string, string> = {
+  '圆桌会议': 'roundtable',
+  '探索搭子': 'studyBuddy',
+  '深度探索': 'deepExplore',
+  '竞赛': 'competition',
+  '试水案例': 'trialCase',
+  '聚焦讨论': 'focusDiscussion',
+  '导师拍卖': 'mentorAuction',
+  '实习拍卖': 'internAuction',
+};
 
 interface ActivityStepperProps {
   steps: Array<{
@@ -32,8 +32,8 @@ export function ActivityStepper({ steps }: ActivityStepperProps) {
   return (
     <div className="flex items-start gap-0 overflow-x-auto pb-2 scrollbar-none" role="list">
       {steps.map((step, index) => {
-        const key = stepKeys[step.order] ?? step.typeName;
-        const label = t(key);
+        const i18nKey = stepKeyMap[step.typeName];
+        const label = i18nKey ? t(i18nKey) : step.typeName;
         const isLast = index === steps.length - 1;
 
         return (
@@ -51,7 +51,7 @@ export function ActivityStepper({ steps }: ActivityStepperProps) {
                 {step.state === 'completed' ? (
                   <Check className="h-5 w-5" />
                 ) : (
-                  <span>{step.order + 1}</span>
+                  <span>{index + 1}</span>
                 )}
               </div>
               {/* Label */}
