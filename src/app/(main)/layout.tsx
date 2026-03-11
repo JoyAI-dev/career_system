@@ -32,7 +32,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           </aside>
 
           <div className="flex flex-1 flex-col">
-            <Header initialUnreadCount={unreadCount} />
+            <Header initialUnreadCount={unreadCount} variant="admin" />
             <main className="flex-1 p-4 md:p-6">{children}</main>
           </div>
         </div>
@@ -44,7 +44,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <SessionProvider>
       <div className="flex min-h-screen flex-col bg-[#F5F8FF]">
-        <Header initialUnreadCount={unreadCount} />
+        <Header initialUnreadCount={unreadCount} variant="student" />
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
     </SessionProvider>
