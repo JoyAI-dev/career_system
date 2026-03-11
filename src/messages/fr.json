@@ -1,0 +1,119 @@
+{
+  "common": {
+    "appName": "Plateforme d'Exploration de Carrière",
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "search": "Rechercher",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "submit": "Soumettre",
+    "close": "Fermer",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "description": "Connectez-vous à votre compte",
+      "username": "Nom d'utilisateur",
+      "password": "Mot de passe",
+      "signingIn": "Connexion en cours...",
+      "noAccount": "Pas encore de compte ?",
+      "register": "S'inscrire"
+    },
+    "register": {
+      "title": "Inscription",
+      "description": "Créer un nouveau compte",
+      "username": "Nom d'utilisateur",
+      "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "registering": "Inscription en cours...",
+      "hasAccount": "Vous avez déjà un compte ?",
+      "signIn": "Se connecter"
+    },
+    "errors": {
+      "invalidCredentials": "Nom d'utilisateur ou mot de passe incorrect",
+      "usernameTaken": "Ce nom d'utilisateur est déjà pris",
+      "passwordMismatch": "Les mots de passe ne correspondent pas"
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de bord"
+  },
+  "profile": {
+    "title": "Profil"
+  },
+  "questionnaire": {
+    "title": "Questionnaire"
+  },
+  "activities": {
+    "title": "Activités"
+  },
+  "calendar": {
+    "title": "Calendrier"
+  },
+  "cognitiveReport": {
+    "title": "Rapport cognitif"
+  },
+  "notifications": {
+    "title": "Notifications"
+  },
+  "admin": {
+    "dashboard": {
+      "title": "Panneau d'administration"
+    },
+    "users": {
+      "title": "Gestion des utilisateurs"
+    },
+    "questionnaire": {
+      "title": "Gestion du questionnaire"
+    },
+    "activities": {
+      "title": "Gestion des activités"
+    },
+    "activityTypes": {
+      "title": "Types d'activités"
+    },
+    "tags": {
+      "title": "Gestion des tags"
+    },
+    "recruitment": {
+      "title": "Gestion du recrutement"
+    },
+    "grades": {
+      "title": "Gestion des niveaux"
+    },
+    "settings": {
+      "title": "Paramètres système"
+    }
+  },
+  "errors": {
+    "notFound": "Page non trouvée",
+    "serverError": "Erreur du serveur",
+    "unauthorized": "Accès non autorisé"
+  },
+  "metadata": {
+    "title": "Plateforme d'Exploration de Carrière",
+    "description": "Plateforme d'exploration de carrière et de gestion des activités étudiantes"
+  },
+  "header": {
+    "toggleNavigation": "Basculer la navigation",
+    "navigation": "Navigation",
+    "administrator": "Administrateur",
+    "student": "Étudiant",
+    "logOut": "Se déconnecter"
+  },
+  "languageSwitcher": {
+    "label": "Changer de langue"
+  }
+}

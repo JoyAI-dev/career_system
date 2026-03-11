@@ -1,0 +1,119 @@
+{
+  "common": {
+    "appName": "职业探索平台",
+    "signIn": "登录",
+    "signOut": "退出登录",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "search": "搜索",
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "confirm": "确认",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "submit": "提交",
+    "close": "关闭",
+    "yes": "是",
+    "no": "否"
+  },
+  "auth": {
+    "login": {
+      "title": "登录",
+      "description": "登录您的账户",
+      "username": "用户名",
+      "password": "密码",
+      "signingIn": "登录中...",
+      "noAccount": "还没有账户？",
+      "register": "注册"
+    },
+    "register": {
+      "title": "注册",
+      "description": "创建新账户",
+      "username": "用户名",
+      "password": "密码",
+      "confirmPassword": "确认密码",
+      "registering": "注册中...",
+      "hasAccount": "已有账户？",
+      "signIn": "登录"
+    },
+    "errors": {
+      "invalidCredentials": "用户名或密码错误",
+      "usernameTaken": "该用户名已被使用",
+      "passwordMismatch": "两次密码不一致"
+    }
+  },
+  "dashboard": {
+    "title": "仪表板"
+  },
+  "profile": {
+    "title": "个人资料"
+  },
+  "questionnaire": {
+    "title": "问卷调查"
+  },
+  "activities": {
+    "title": "活动"
+  },
+  "calendar": {
+    "title": "日历"
+  },
+  "cognitiveReport": {
+    "title": "认知报告"
+  },
+  "notifications": {
+    "title": "通知"
+  },
+  "admin": {
+    "dashboard": {
+      "title": "管理面板"
+    },
+    "users": {
+      "title": "用户管理"
+    },
+    "questionnaire": {
+      "title": "问卷管理"
+    },
+    "activities": {
+      "title": "活动管理"
+    },
+    "activityTypes": {
+      "title": "活动类型"
+    },
+    "tags": {
+      "title": "标签管理"
+    },
+    "recruitment": {
+      "title": "招聘管理"
+    },
+    "grades": {
+      "title": "年级管理"
+    },
+    "settings": {
+      "title": "系统设置"
+    }
+  },
+  "errors": {
+    "notFound": "页面未找到",
+    "serverError": "服务器错误",
+    "unauthorized": "未授权访问"
+  },
+  "metadata": {
+    "title": "职业探索平台",
+    "description": "学生职业探索与活动管理平台"
+  },
+  "header": {
+    "toggleNavigation": "切换导航",
+    "navigation": "导航",
+    "administrator": "管理员",
+    "student": "学生",
+    "logOut": "退出登录"
+  },
+  "languageSwitcher": {
+    "label": "切换语言"
+  }
+}

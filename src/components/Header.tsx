@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Sidebar } from '@/components/Sidebar';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export function Header({ initialUnreadCount = 0 }: { initialUnreadCount?: number }) {
   const { data: session } = useSession();
@@ -38,6 +39,9 @@ export function Header({ initialUnreadCount = 0 }: { initialUnreadCount?: number
       </Sheet>
 
       <div className="flex-1" />
+
+      {/* Language switcher */}
+      <LanguageSwitcher />
 
       {/* Notification bell */}
       <NotificationBell initialCount={initialUnreadCount} />

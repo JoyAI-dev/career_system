@@ -1,0 +1,119 @@
+{
+  "common": {
+    "appName": "Career Exploration Platform",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "auth": {
+    "login": {
+      "title": "Login",
+      "description": "Sign in to your account",
+      "username": "Username",
+      "password": "Password",
+      "signingIn": "Signing in...",
+      "noAccount": "Don't have an account?",
+      "register": "Register"
+    },
+    "register": {
+      "title": "Register",
+      "description": "Create a new account",
+      "username": "Username",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "registering": "Registering...",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign In"
+    },
+    "errors": {
+      "invalidCredentials": "Invalid username or password",
+      "usernameTaken": "This username is already taken",
+      "passwordMismatch": "Passwords do not match"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard"
+  },
+  "profile": {
+    "title": "Profile"
+  },
+  "questionnaire": {
+    "title": "Questionnaire"
+  },
+  "activities": {
+    "title": "Activities"
+  },
+  "calendar": {
+    "title": "Calendar"
+  },
+  "cognitiveReport": {
+    "title": "Cognitive Report"
+  },
+  "notifications": {
+    "title": "Notifications"
+  },
+  "admin": {
+    "dashboard": {
+      "title": "Admin Dashboard"
+    },
+    "users": {
+      "title": "User Management"
+    },
+    "questionnaire": {
+      "title": "Questionnaire Management"
+    },
+    "activities": {
+      "title": "Activity Management"
+    },
+    "activityTypes": {
+      "title": "Activity Types"
+    },
+    "tags": {
+      "title": "Tag Management"
+    },
+    "recruitment": {
+      "title": "Recruitment Management"
+    },
+    "grades": {
+      "title": "Grade Management"
+    },
+    "settings": {
+      "title": "System Settings"
+    }
+  },
+  "errors": {
+    "notFound": "Page not found",
+    "serverError": "Server error",
+    "unauthorized": "Unauthorized access"
+  },
+  "metadata": {
+    "title": "Career Exploration Platform",
+    "description": "Student career exploration and activity management platform"
+  },
+  "header": {
+    "toggleNavigation": "Toggle navigation",
+    "navigation": "Navigation",
+    "administrator": "Administrator",
+    "student": "Student",
+    "logOut": "Log out"
+  },
+  "languageSwitcher": {
+    "label": "Switch language"
+  }
+}
