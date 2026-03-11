@@ -6,6 +6,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MarkdownEditor } from '@/components/MarkdownEditor';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
@@ -918,12 +919,12 @@ function AddNoteButton({ questionId }: { questionId: string }) {
           )}
           <div className="space-y-2">
             <Label htmlFor="note-content">{t('noteContent')}</Label>
-            <textarea
+            <MarkdownEditor
               id="note-content"
               name="content"
               required
-              rows={3}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              minHeight={120}
+              preview="edit"
             />
           </div>
           <Button type="submit" disabled={pending}>
@@ -988,13 +989,13 @@ function NoteItem({ note, isDraft }: { note: QuestionNote; isDraft: boolean }) {
                 )}
                 <div className="space-y-2">
                   <Label htmlFor={`edit-note-${note.id}-content`}>{t('noteContent')}</Label>
-                  <textarea
+                  <MarkdownEditor
                     id={`edit-note-${note.id}-content`}
                     name="content"
                     defaultValue={note.content}
                     required
-                    rows={3}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    minHeight={120}
+                    preview="edit"
                   />
                 </div>
                 <Button type="submit" disabled={editPending}>

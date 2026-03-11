@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MarkdownEditor } from '@/components/MarkdownEditor';
 import {
   Dialog,
   DialogContent,
@@ -173,12 +174,11 @@ function AddRecruitmentButton() {
           </div>
           <div>
             <Label htmlFor="description">{t('descriptionField')}</Label>
-            <textarea
+            <MarkdownEditor
               id="description"
               name="description"
-              maxLength={2000}
-              rows={3}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              minHeight={150}
+              preview="edit"
             />
           </div>
           <div>
@@ -242,13 +242,12 @@ function EditRecruitmentButton({ item }: { item: RecruitmentItem }) {
           </div>
           <div>
             <Label htmlFor="edit-description">{t('descriptionField')}</Label>
-            <textarea
+            <MarkdownEditor
               id="edit-description"
               name="description"
               defaultValue={item.description ?? ''}
-              maxLength={2000}
-              rows={3}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              minHeight={150}
+              preview="edit"
             />
           </div>
           <div>

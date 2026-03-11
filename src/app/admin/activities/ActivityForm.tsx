@@ -3,8 +3,8 @@
 import { useState, useActionState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
+import { MarkdownEditor } from '@/components/MarkdownEditor';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,7 +59,6 @@ export function ActivityForm({ types, tags, activity }: Props) {
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(
     new Set(activity?.tagIds ?? []),
   );
-  const [previewMode, setPreviewMode] = useState(false);
 
   function handleTypeChange(typeId: string) {
     setSelectedTypeId(typeId);
@@ -209,45 +208,15 @@ export function ActivityForm({ types, tags, activity }: Props) {
 
           {/* Markdown Guide */}
           <div>
-            <div className="mb-1 flex items-center justify-between">
-              <Label htmlFor="guideMarkdown">{t('guideMarkdown')}</Label>
-              <div className="flex gap-1">
-                <Button
-                  type="button"
-                  variant={!previewMode ? 'default' : 'outline'}
-                  size="xs"
-                  onClick={() => setPreviewMode(false)}
-                >
-                  {t('write')}
-                </Button>
-                <Button
-                  type="button"
-                  variant={previewMode ? 'default' : 'outline'}
-                  size="xs"
-                  onClick={() => setPreviewMode(true)}
-                >
-                  {t('preview')}
-                </Button>
-              </div>
-            </div>
-            {previewMode ? (
-              <div className="min-h-[200px] rounded-lg border border-border bg-background p-4 prose prose-sm max-w-none">
-                {guideMarkdown ? (
-                  <ReactMarkdown>{guideMarkdown}</ReactMarkdown>
-                ) : (
-                  <p className="text-muted-foreground">{t('nothingToPreview')}</p>
-                )}
-              </div>
-            ) : (
-              <textarea
-                id="guideMarkdown"
-                name="guideMarkdown"
-                value={guideMarkdown}
-                onChange={(e) => setGuideMarkdown(e.target.value)}
-                className="min-h-[200px] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                placeholder={t('guidePlaceholder')}
-              />
-            )}
+            <Label htmlFor="guideMarkdown" className="mb-1 block">{t('guideMarkdown')}</Label>
+            <MarkdownEditor
+              id="guideMarkdown"
+              name="guideMarkdown"
+              value={guideMarkdown}
+              onChange={setGuideMarkdown}
+              placeholder={t('guidePlaceholder')}
+              preview="live"
+            />
           </div>
 
           {/* Actions */}
