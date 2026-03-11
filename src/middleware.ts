@@ -36,14 +36,12 @@ export default auth((req) => {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
+     * Match only page routes. Exclude:
+     * - _next/static, _next/image (Next.js internals)
      * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-     * - api/auth (Auth.js routes handled internally)
-     * - api/health (public health-check endpoint)
-     * - public assets (SVGs, images)
+     * - api/* (all API routes handle their own auth; no locale detection needed)
+     * - Static assets by extension (.svg, .png, .jpg, .jpeg, .gif, .webp, .ico, .css, .js, .woff, .woff2)
      */
-    '/((?!_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|api/auth|api/health|.*\\.svg$|.*\\.png$|.*\\.jpg$|.*\\.ico$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|api/|.*\\.(?:svg|png|jpe?g|gif|webp|ico|css|js|woff2?)$).*)',
   ],
 };
