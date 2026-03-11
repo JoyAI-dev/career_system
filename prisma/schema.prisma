@@ -26,6 +26,8 @@ model User {
   updatedAt    DateTime @updatedAt
 
   responseSnapshots ResponseSnapshot[]
+  memberships       Membership[]
+  createdActivities Activity[]
 
   @@map("users")
 }
@@ -161,4 +163,93 @@ model ResponseAnswer {
   selectedOption AnswerOption     @relation(fields: [selectedOptionId], references: [id])
 
   @@map("response_answers")
+}
+
+// ─── Activity System ─────────────────────────────────────────────────
+
+enum ActivityStatus {
+  OPEN
+  FULL
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum MemberRole {
+  LEADER
+  MEMBER
+}
+
+model ActivityType {
+  id                 String  @id @default(cuid())
+  name               String  @unique
+  order              Int
+  prerequisiteTypeId String?
+  defaultCapacity    Int     @default(10)
+  isEnabled          Boolean @default(true)
+
+  prerequisiteType ActivityType?  @relation("TypePrerequisite", fields: [prerequisiteTypeId], references: [id])
+  dependentTypes   ActivityType[] @relation("TypePrerequisite")
+  activities       Activity[]
+
+  @@map("activity_types")
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  activityTags ActivityTag[]
+
+  @@map("tags")
+}
+
+model Activity {
+  id            String         @id @default(cuid())
+  typeId        String
+  title         String
+  capacity      Int
+  guideMarkdown String?
+  status        ActivityStatus @default(OPEN)
+  scheduledAt   DateTime?
+  location      String?
+  isOnline      Boolean        @default(false)
+  createdBy     String
+  createdAt     DateTime       @default(now())
+
+  type         ActivityType  @relation(fields: [typeId], references: [id])
+  creator      User          @relation(fields: [createdBy], references: [id])
+  activityTags ActivityTag[]
+  memberships  Membership[]
+
+  @@index([status])
+  @@index([typeId])
+  @@map("activities")
+}
+
+model ActivityTag {
+  activityId String
+  tagId      String
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([activityId, tagId])
+  @@index([tagId])
+  @@map("activity_tags")
+}
+
+model Membership {
+  id         String     @id @default(cuid())
+  activityId String
+  userId     String
+  role       MemberRole @default(MEMBER)
+  joinedAt   DateTime   @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, userId])
+  @@index([userId])
+  @@map("memberships")
 }
