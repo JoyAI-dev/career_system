@@ -426,7 +426,9 @@
       "statusFull": "Full",
       "statusScheduled": "Scheduled",
       "statusInProgress": "In Progress",
-      "statusCompleted": "Completed"
+      "statusCompleted": "Completed",
+      "activitiesTab": "Activities",
+      "tagsTab": "Tags"
     },
     "activityForm": {
       "activityType": "Activity Type",

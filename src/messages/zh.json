@@ -426,7 +426,9 @@
       "statusFull": "已满",
       "statusScheduled": "已安排",
       "statusInProgress": "进行中",
-      "statusCompleted": "已完成"
+      "statusCompleted": "已完成",
+      "activitiesTab": "活动",
+      "tagsTab": "标签"
     },
     "activityForm": {
       "activityType": "活动类型",
