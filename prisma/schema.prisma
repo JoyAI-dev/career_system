@@ -28,6 +28,7 @@ model User {
   responseSnapshots  ResponseSnapshot[]
   memberships        Membership[]
   createdActivities  Activity[]
+  activityComments   ActivityComment[]
   recruitmentInfos   RecruitmentInfo[]
   responseComments   ResponseComment[]
   notifications      Notification[]
@@ -237,10 +238,11 @@ model Activity {
   createdBy     String
   createdAt     DateTime       @default(now())
 
-  type         ActivityType  @relation(fields: [typeId], references: [id])
-  creator      User          @relation(fields: [createdBy], references: [id])
-  activityTags ActivityTag[]
-  memberships  Membership[]
+  type             ActivityType      @relation(fields: [typeId], references: [id])
+  creator          User              @relation(fields: [createdBy], references: [id])
+  activityTags     ActivityTag[]
+  memberships      Membership[]
+  activityComments ActivityComment[]
 
   @@index([status])
   @@index([typeId])
@@ -272,6 +274,20 @@ model Membership {
   @@unique([activityId, userId])
   @@index([userId])
   @@map("memberships")
+}
+
+model ActivityComment {
+  id         String   @id @default(cuid())
+  activityId String
+  userId     String
+  content    String
+  createdAt  DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([activityId, createdAt])
+  @@map("activity_comments")
 }
 
 // ─── Recruitment Info ───────────────────────────────────────────────

@@ -634,3 +634,60 @@ export async function completeMeeting(activityId: string): Promise<ActionState> 
   revalidatePath(ACTIVITIES_PATH);
   return { success: true };
 }
+
+/**
+ * Add a comment to an activity instance.
+ * Only members of the instance can post comments.
+ */
+export async function addActivityComment(
+  activityId: string,
+  content: string,
+): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const te = await getTranslations('serverErrors');
+
+  if (!content.trim()) {
+    return { errors: { _form: [te('commentRequired')] } };
+  }
+
+  // Verify user is a member of this activity instance
+  const membership = await prisma.membership.findUnique({
+    where: { activityId_userId: { activityId, userId } },
+  });
+  if (!membership) {
+    return { errors: { _form: [te('notMember')] } };
+  }
+
+  await prisma.activityComment.create({
+    data: { activityId, userId, content: content.trim() },
+  });
+
+  revalidatePath(ACTIVITIES_PATH);
+  return { success: true };
+}
+
+/**
+ * Get comments for an activity instance.
+ * Only members of the instance can read comments.
+ */
+export async function getActivityComments(activityId: string) {
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  // Verify user is a member of this activity instance
+  const membership = await prisma.membership.findUnique({
+    where: { activityId_userId: { activityId, userId } },
+  });
+  if (!membership) {
+    return [];
+  }
+
+  return prisma.activityComment.findMany({
+    where: { activityId },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      user: { select: { id: true, name: true, username: true } },
+    },
+  });
+}

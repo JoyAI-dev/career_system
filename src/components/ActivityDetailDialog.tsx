@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useActionState, useTransition } from 'react';
+import { useState, useEffect, useActionState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -22,6 +22,8 @@ import {
   scheduleMeeting,
   startMeeting,
   completeMeeting,
+  addActivityComment,
+  getActivityComments,
   type ActionState,
 } from '@/server/actions/activity';
 import { getAvailableActions, type TransitionAction } from '@/server/stateMachine';
@@ -44,6 +46,13 @@ type Activity = {
   isEligible: boolean;
   isMember?: boolean;
   memberRole?: string;
+};
+
+type Comment = {
+  id: string;
+  content: string;
+  createdAt: string;
+  user: { id: string; name: string | null; username: string };
 };
 
 type Props = {
@@ -97,6 +106,9 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
   const availableActions = joinByType
     ? []
     : getAvailableActions(activity.status, userRole ?? null);
+
+  // Show instance-scoped features only when viewing an actual instance (not type-level)
+  const showInstanceFeatures = !joinByType && activity.isMember;
 
   function handleJoin() {
     setError(null);
@@ -232,6 +244,24 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
             </div>
           )}
 
+          {/* Survey/questionnaire link for joined members */}
+          {showInstanceFeatures && (
+            <div className="border-t pt-4">
+              <Link href={`/questionnaire-update?activityId=${activity.id}`}>
+                <Button variant="outline" size="sm" className="w-full">
+                  {t('takeSurvey')}
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {/* Group comments for joined members (instance-scoped) */}
+          {showInstanceFeatures && (
+            <div className="border-t pt-4">
+              <CommentSection activityId={activity.id} />
+            </div>
+          )}
+
           {/* Post-completion questionnaire update prompt */}
           {activity.status === 'COMPLETED' && activity.isMember && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
@@ -290,6 +320,91 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function CommentSection({ activityId }: { activityId: string }) {
+  const t = useTranslations('activities');
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getActivityComments(activityId).then((data) => {
+      setComments(
+        data.map((c) => ({
+          ...c,
+          createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
+        })),
+      );
+    });
+  }, [activityId]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    setError(null);
+
+    startTransition(async () => {
+      const result = await addActivityComment(activityId, newComment);
+      if (result.errors?._form) {
+        setError(result.errors._form[0]);
+      } else {
+        setNewComment('');
+        // Refresh comments
+        const data = await getActivityComments(activityId);
+        setComments(
+          data.map((c) => ({
+            ...c,
+            createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
+          })),
+        );
+      }
+    });
+  }
+
+  return (
+    <div>
+      <h3 className="mb-3 text-sm font-medium">{t('groupComments')}</h3>
+
+      {/* Comment list */}
+      <div className="mb-3 max-h-48 space-y-2 overflow-y-auto">
+        {comments.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t('noComments')}</p>
+        ) : (
+          comments.map((comment) => (
+            <div key={comment.id} className="rounded-lg bg-muted/50 p-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium">
+                  {comment.user.name ?? comment.user.username}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(comment.createdAt).toLocaleString()}
+                </span>
+              </div>
+              <p className="mt-1 text-sm">{comment.content}</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Comment form */}
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <Input
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder={t('commentPlaceholder')}
+          className="text-sm"
+        />
+        <Button type="submit" size="sm" disabled={isPending || !newComment.trim()}>
+          {isPending ? '...' : t('send')}
+        </Button>
+      </form>
+      {error && (
+        <p className="mt-1 text-xs text-red-600">{error}</p>
+      )}
+    </div>
   );
 }
 
