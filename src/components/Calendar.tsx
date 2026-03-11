@@ -1,12 +1,13 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import zhCnLocale from '@fullcalendar/core/locales/zh-cn';
 import type { EventClickArg } from '@fullcalendar/core';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,8 @@ type RecruitmentEvent = {
   eventDate: string;
 };
 
+type ActivityType = { id: string; name: string };
+
 type SelectedItem =
   | { kind: 'activity'; data: CalendarEvent }
   | { kind: 'recruitment'; data: RecruitmentEvent };
@@ -39,6 +42,7 @@ type SelectedItem =
 type Props = {
   events: CalendarEvent[];
   recruitmentEvents?: RecruitmentEvent[];
+  activityTypes?: ActivityType[];
 };
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -51,52 +55,109 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }
 
 const RECRUITMENT_COLORS = { bg: '#fce7f3', border: '#ec4899', text: '#9d174d' };
 
-export function CalendarView({ events, recruitmentEvents = [] }: Props) {
+export function CalendarView({ events, recruitmentEvents = [], activityTypes = [] }: Props) {
   const calendarRef = useRef<FullCalendar>(null);
   const [selected, setSelected] = useState<SelectedItem | null>(null);
+  const [showActivities, setShowActivities] = useState(true);
+  const [showRecruitment, setShowRecruitment] = useState(true);
+  const [selectedTypeId, setSelectedTypeId] = useState<string>('all');
 
-  const activityCalendarEvents = events.map((event) => {
-    const colors = STATUS_COLORS[event.status] ?? STATUS_COLORS.SCHEDULED;
-    return {
-      id: `activity-${event.id}`,
-      title: event.title,
-      start: event.scheduledAt,
-      backgroundColor: colors.bg,
-      borderColor: colors.border,
-      textColor: colors.text,
-      extendedProps: { kind: 'activity' as const, data: event },
-    };
-  });
+  const filteredActivityEvents = useMemo(() => {
+    if (!showActivities) return [];
+    return events.filter((e) => selectedTypeId === 'all' || e.type.id === selectedTypeId);
+  }, [events, showActivities, selectedTypeId]);
 
-  const recruitmentCalendarEvents = recruitmentEvents.map((event) => ({
-    id: `recruitment-${event.id}`,
-    title: `${event.company} - ${event.title}`,
-    start: event.eventDate,
-    backgroundColor: RECRUITMENT_COLORS.bg,
-    borderColor: RECRUITMENT_COLORS.border,
-    textColor: RECRUITMENT_COLORS.text,
-    extendedProps: { kind: 'recruitment' as const, data: event },
-  }));
+  const filteredRecruitmentEvents = useMemo(() => {
+    if (!showRecruitment) return [];
+    return recruitmentEvents;
+  }, [recruitmentEvents, showRecruitment]);
 
-  const allEvents = [...activityCalendarEvents, ...recruitmentCalendarEvents];
+  const calendarEvents = useMemo(() => {
+    const activityItems = filteredActivityEvents.map((event) => {
+      const colors = STATUS_COLORS[event.status] ?? STATUS_COLORS.SCHEDULED;
+      return {
+        id: `activity-${event.id}`,
+        title: event.title,
+        start: event.scheduledAt,
+        backgroundColor: colors.bg,
+        borderColor: colors.border,
+        textColor: colors.text,
+        extendedProps: { kind: 'activity' as const, data: event },
+      };
+    });
+
+    const recruitmentItems = filteredRecruitmentEvents.map((event) => ({
+      id: `recruitment-${event.id}`,
+      title: `${event.company} - ${event.title}`,
+      start: event.eventDate,
+      backgroundColor: RECRUITMENT_COLORS.bg,
+      borderColor: RECRUITMENT_COLORS.border,
+      textColor: RECRUITMENT_COLORS.text,
+      extendedProps: { kind: 'recruitment' as const, data: event },
+    }));
+
+    return [...activityItems, ...recruitmentItems];
+  }, [filteredActivityEvents, filteredRecruitmentEvents]);
 
   function handleEventClick(info: EventClickArg) {
     const props = info.event.extendedProps as SelectedItem;
     setSelected(props);
   }
 
+  // Derive unique types from the user's events for the filter
+  const availableTypes = useMemo(() => {
+    const typeIds = new Set(events.map((e) => e.type.id));
+    return activityTypes.filter((t) => typeIds.has(t.id));
+  }, [events, activityTypes]);
+
   return (
     <>
-      <div className="mb-3 flex items-center gap-4 text-xs">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded" style={{ backgroundColor: STATUS_COLORS.SCHEDULED.border }} />
-          Activities
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded" style={{ backgroundColor: RECRUITMENT_COLORS.border }} />
-          Recruitment
-        </span>
+      {/* Filter toolbar */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showActivities ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowActivities(!showActivities)}
+          >
+            <span
+              className="mr-1.5 inline-block h-2.5 w-2.5 rounded"
+              style={{ backgroundColor: STATUS_COLORS.SCHEDULED.border }}
+            />
+            Activities
+          </Button>
+          <Button
+            variant={showRecruitment ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowRecruitment(!showRecruitment)}
+          >
+            <span
+              className="mr-1.5 inline-block h-2.5 w-2.5 rounded"
+              style={{ backgroundColor: RECRUITMENT_COLORS.border }}
+            />
+            Recruitment
+          </Button>
+        </div>
+
+        {showActivities && availableTypes.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Type:</span>
+            <select
+              value={selectedTypeId}
+              onChange={(e) => setSelectedTypeId(e.target.value)}
+              className="rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="all">All Types</option>
+              {availableTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
+
       <div className="rounded-lg border bg-card p-4">
         <FullCalendar
           ref={calendarRef}
@@ -108,7 +169,7 @@ export function CalendarView({ events, recruitmentEvents = [] }: Props) {
             center: 'title',
             right: 'dayGridMonth,timeGridWeek',
           }}
-          events={allEvents}
+          events={calendarEvents}
           eventClick={handleEventClick}
           height="auto"
           dayMaxEvents={3}
