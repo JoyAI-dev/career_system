@@ -1,9 +1,22 @@
+import { redirect } from 'next/navigation';
 import { SessionProvider } from '@/components/SessionProvider';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
+import { auth } from '@/lib/auth';
+import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 
-export default function MainLayout({ children }: { children: React.ReactNode }) {
+export default async function MainLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+
+  // Redirect non-admin users who haven't completed the questionnaire
+  if (session?.user && session.user.role !== 'ADMIN') {
+    const completed = await hasCompletedQuestionnaire(session.user.id);
+    if (!completed) {
+      redirect('/questionnaire');
+    }
+  }
+
   return (
     <SessionProvider>
       <div className="flex min-h-screen">

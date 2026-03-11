@@ -2,8 +2,9 @@
 
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdmin, requireAuth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 const ADMIN_PATH = '/admin/questionnaire';
 
@@ -777,6 +778,104 @@ export async function reorderAnswerOption(
 
   revalidatePath(ADMIN_PATH);
   return { success: true };
+}
+
+// ─── User Questionnaire Submission ───────────────────────────────────
+
+const submitQuestionnaireSchema = z.object({
+  versionId: z.string().min(1),
+  answers: z.record(z.string(), z.string()).refine(
+    (val) => Object.keys(val).length > 0,
+    'At least one answer is required',
+  ),
+});
+
+export async function submitQuestionnaire(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  const rawAnswers: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith('answer_') && typeof value === 'string') {
+      const questionId = key.replace('answer_', '');
+      rawAnswers[questionId] = value;
+    }
+  }
+
+  const parsed = submitQuestionnaireSchema.safeParse({
+    versionId: formData.get('versionId'),
+    answers: rawAnswers,
+  });
+  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
+
+  const { versionId, answers } = parsed.data;
+
+  // Verify the version is active
+  const version = await prisma.questionnaireVersion.findUnique({
+    where: { id: versionId },
+    select: { isActive: true },
+  });
+  if (!version?.isActive) {
+    return { errors: { _form: ['This questionnaire version is no longer active.'] } };
+  }
+
+  // Get all questions for this version to validate completeness
+  const allQuestions = await prisma.question.findMany({
+    where: {
+      dimension: {
+        topic: { versionId },
+      },
+    },
+    select: { id: true },
+  });
+
+  const questionIds = allQuestions.map((q) => q.id);
+  const answeredIds = Object.keys(answers);
+
+  // Check all questions are answered
+  const missing = questionIds.filter((id) => !answeredIds.includes(id));
+  if (missing.length > 0) {
+    return { errors: { _form: [`Please answer all questions. ${missing.length} remaining.`] } };
+  }
+
+  // Validate all selected options exist and belong to the right questions
+  const selectedOptionIds = Object.values(answers);
+  const validOptions = await prisma.answerOption.findMany({
+    where: { id: { in: selectedOptionIds } },
+    select: { id: true, questionId: true },
+  });
+
+  const optionMap = new Map(validOptions.map((o) => [o.id, o.questionId]));
+  for (const [questionId, optionId] of Object.entries(answers)) {
+    const ownerQuestion = optionMap.get(optionId);
+    if (!ownerQuestion || ownerQuestion !== questionId) {
+      return { errors: { _form: ['Invalid answer option selected.'] } };
+    }
+  }
+
+  // Create snapshot + answers in a single transaction
+  await prisma.$transaction(async (tx) => {
+    const snapshot = await tx.responseSnapshot.create({
+      data: {
+        userId,
+        versionId,
+        context: 'initial',
+      },
+    });
+
+    await tx.responseAnswer.createMany({
+      data: Object.entries(answers).map(([questionId, selectedOptionId]) => ({
+        snapshotId: snapshot.id,
+        questionId,
+        selectedOptionId,
+      })),
+    });
+  });
+
+  redirect('/dashboard');
 }
 
 export async function validateAnswerOptionsSum(questionId: string): Promise<ActionState> {

@@ -1,5 +1,40 @@
 import { prisma } from '@/lib/db';
 
+export async function hasCompletedQuestionnaire(userId: string) {
+  const snapshot = await prisma.responseSnapshot.findFirst({
+    where: { userId },
+    select: { id: true },
+  });
+  return !!snapshot;
+}
+
+export async function getActiveVersionWithStructure() {
+  return prisma.questionnaireVersion.findFirst({
+    where: { isActive: true },
+    include: {
+      topics: {
+        orderBy: { order: 'asc' },
+        include: {
+          dimensions: {
+            orderBy: { order: 'asc' },
+            include: {
+              questions: {
+                orderBy: { order: 'asc' },
+                include: {
+                  notes: true,
+                  answerOptions: {
+                    orderBy: { order: 'asc' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 export async function getQuestionnaireVersions() {
   return prisma.questionnaireVersion.findMany({
     orderBy: { version: 'desc' },
