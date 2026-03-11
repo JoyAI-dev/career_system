@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 /**
  * Integration tests for activity join/leave concurrency.
@@ -56,9 +56,9 @@ async function simulateJoin(activityId: string, userId: string): Promise<{ succe
   try {
     await prisma.$transaction(async (tx) => {
       // Lock activity row
-      const activities = await tx.$queryRawUnsafe<
+      const activities = await tx.$queryRaw<
         { id: string; capacity: number; status: string }[]
-      >('SELECT id, capacity, status FROM activities WHERE id = $1 FOR UPDATE', activityId);
+      >(Prisma.sql`SELECT id, capacity, status FROM activities WHERE id = ${activityId} FOR UPDATE`);
 
       if (activities.length === 0) throw new Error('Activity not found.');
       const activity = activities[0];

@@ -7,6 +7,7 @@ import { getUnlockedTypeIds } from '@/server/queries/activity';
 import { validateTransition, type TransitionAction } from '@/server/stateMachine';
 import { revalidatePath } from 'next/cache';
 import { notifyActivityMembers } from '@/server/notifications';
+import { Prisma } from '@prisma/client';
 import type { ActivityStatus, MemberRole } from '@prisma/client';
 
 const ADMIN_PATH = '/admin/activities';
@@ -189,11 +190,10 @@ export async function joinActivity(activityId: string): Promise<ActionState> {
   try {
     await prisma.$transaction(async (tx) => {
       // Lock the activity row for update to prevent concurrent joins exceeding capacity
-      const activities = await tx.$queryRawUnsafe<
+      const activities = await tx.$queryRaw<
         { id: string; typeId: string; capacity: number; status: string }[]
       >(
-        'SELECT id, "typeId", capacity, status FROM activities WHERE id = $1 FOR UPDATE',
-        activityId,
+        Prisma.sql`SELECT id, "typeId", capacity, status FROM activities WHERE id = ${activityId} FOR UPDATE`,
       );
 
       if (activities.length === 0) {
@@ -276,11 +276,10 @@ export async function leaveActivity(activityId: string): Promise<ActionState> {
   try {
     await prisma.$transaction(async (tx) => {
       // Lock activity row
-      const activities = await tx.$queryRawUnsafe<
+      const activities = await tx.$queryRaw<
         { id: string; capacity: number; status: string }[]
       >(
-        'SELECT id, capacity, status FROM activities WHERE id = $1 FOR UPDATE',
-        activityId,
+        Prisma.sql`SELECT id, capacity, status FROM activities WHERE id = ${activityId} FOR UPDATE`,
       );
 
       if (activities.length === 0) {
@@ -352,11 +351,10 @@ export async function scheduleMeeting(
 
   try {
     await prisma.$transaction(async (tx) => {
-      const activities = await tx.$queryRawUnsafe<
+      const activities = await tx.$queryRaw<
         { id: string; status: ActivityStatus }[]
       >(
-        'SELECT id, status FROM activities WHERE id = $1 FOR UPDATE',
-        parsed.data.activityId,
+        Prisma.sql`SELECT id, status FROM activities WHERE id = ${parsed.data.activityId} FOR UPDATE`,
       );
       if (activities.length === 0) throw new Error('Activity not found.');
       const activity = activities[0];
@@ -419,11 +417,10 @@ export async function startMeeting(activityId: string): Promise<ActionState> {
 
   try {
     await prisma.$transaction(async (tx) => {
-      const activities = await tx.$queryRawUnsafe<
+      const activities = await tx.$queryRaw<
         { id: string; status: ActivityStatus }[]
       >(
-        'SELECT id, status FROM activities WHERE id = $1 FOR UPDATE',
-        activityId,
+        Prisma.sql`SELECT id, status FROM activities WHERE id = ${activityId} FOR UPDATE`,
       );
       if (activities.length === 0) throw new Error('Activity not found.');
       const activity = activities[0];
@@ -459,11 +456,10 @@ export async function completeMeeting(activityId: string): Promise<ActionState> 
 
   try {
     await prisma.$transaction(async (tx) => {
-      const activities = await tx.$queryRawUnsafe<
+      const activities = await tx.$queryRaw<
         { id: string; status: ActivityStatus }[]
       >(
-        'SELECT id, status FROM activities WHERE id = $1 FOR UPDATE',
-        activityId,
+        Prisma.sql`SELECT id, status FROM activities WHERE id = ${activityId} FOR UPDATE`,
       );
       if (activities.length === 0) throw new Error('Activity not found.');
       const activity = activities[0];
