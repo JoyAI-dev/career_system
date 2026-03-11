@@ -6,7 +6,7 @@ import { requireAdmin } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 
-const ADMIN_PATH = '/admin/tags';
+const ADMIN_PATH = '/admin/activities';
 
 export type ActionState = {
   errors?: { [key: string]: string[] };

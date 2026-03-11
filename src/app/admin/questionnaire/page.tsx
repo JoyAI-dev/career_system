@@ -7,18 +7,25 @@ import {
 } from '@/server/queries/questionnaire';
 import { QuestionnaireManager } from './QuestionnaireManager';
 
-export default async function AdminQuestionnairePage() {
+export default async function AdminQuestionnairePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ v?: string }>;
+}) {
   const session = await auth();
   if (!session?.user || session.user.role !== 'ADMIN') {
     redirect('/');
   }
 
   const versions = await getQuestionnaireVersions();
+  const params = await searchParams;
 
-  // Load the active version structure, or the latest draft, or null
+  // Load the requested version, or fall back to draft, then active
   const activeVersion = versions.find((v: { isActive: boolean }) => v.isActive);
   const draftVersion = versions.find((v: { isActive: boolean }) => !v.isActive);
-  const selectedVersion = draftVersion ?? activeVersion;
+  const selectedVersion =
+    (params.v && versions.find((v) => v.id === params.v)) ||
+    (draftVersion ?? activeVersion);
 
   const [structure, t] = await Promise.all([
     selectedVersion ? getVersionStructure(selectedVersion.id) : Promise.resolve(null),
