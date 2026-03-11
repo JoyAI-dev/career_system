@@ -85,12 +85,17 @@ export async function register(
     throw error;
   }
 
-  // Auto-login after registration
-  await signIn('credentials', {
-    username,
-    password,
-    redirect: false,
-  });
+  // Auto-login after registration — if signIn fails, redirect to login
+  // so the user can log in manually (account is already created)
+  try {
+    await signIn('credentials', {
+      username,
+      password,
+      redirect: false,
+    });
+  } catch {
+    redirect('/login');
+  }
 
   redirect('/');
 }
