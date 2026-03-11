@@ -66,6 +66,21 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </Link>
+        <Link href="/admin/tags">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardHeader>
+              <CardTitle>Tags</CardTitle>
+              <CardDescription>
+                Manage activity tags
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create, edit, and delete tags used to categorize activities.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );

@@ -100,6 +100,17 @@ async function main() {
   }
 
   console.log('Seeded activity types with prerequisite chain');
+
+  // Seed default tags (idempotent via upsert)
+  const defaultTags = ['科技', '北京', '金融', '圆桌会议', 'AI', '创业', '设计', '教育'];
+  for (const tagName of defaultTags) {
+    await prisma.tag.upsert({
+      where: { name: tagName },
+      update: {},
+      create: { name: tagName },
+    });
+  }
+  console.log('Seeded default tags');
 }
 
 main()
