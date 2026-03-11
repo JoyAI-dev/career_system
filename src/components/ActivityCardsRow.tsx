@@ -23,6 +23,7 @@ type JoinedActivity = {
   isEligible: boolean;
   isMember: boolean;
   memberRole: MemberRole;
+  memberCompletedAt?: string | null;
 };
 
 interface ActivityCardsRowProps {

@@ -31,8 +31,8 @@ export async function getActivityById(id: string) {
 
 /**
  * Get activity type IDs the user has unlocked via progressive completion.
- * A type is unlocked if it has no prerequisite, or the user has been a member
- * of a COMPLETED activity of the prerequisite type.
+ * A type is unlocked if it has no prerequisite, or the user has personally
+ * finished (completedAt IS NOT NULL) an activity of the prerequisite type.
  */
 export async function getUnlockedTypeIds(userId: string): Promise<Set<string>> {
   const types = await prisma.activityType.findMany({
@@ -41,19 +41,19 @@ export async function getUnlockedTypeIds(userId: string): Promise<Set<string>> {
     select: { id: true, prerequisiteTypeId: true },
   });
 
-  // Get type IDs where user completed an activity
-  const completedMemberships = await prisma.membership.findMany({
+  // Get type IDs where user has personally finished (completedAt set)
+  const finishedMemberships = await prisma.membership.findMany({
     where: {
       userId,
-      activity: { status: 'COMPLETED' },
+      completedAt: { not: null },
     },
     select: { activity: { select: { typeId: true } } },
   });
-  const completedTypeIds = new Set(completedMemberships.map((m) => m.activity.typeId));
+  const finishedTypeIds = new Set(finishedMemberships.map((m) => m.activity.typeId));
 
   const unlocked = new Set<string>();
   for (const type of types) {
-    if (!type.prerequisiteTypeId || completedTypeIds.has(type.prerequisiteTypeId)) {
+    if (!type.prerequisiteTypeId || finishedTypeIds.has(type.prerequisiteTypeId)) {
       unlocked.add(type.id);
     }
   }
@@ -78,7 +78,7 @@ export async function getUserActivities(userId: string) {
         },
         memberships: {
           where: { userId },
-          select: { role: true },
+          select: { role: true, completedAt: true },
           take: 1,
         },
         _count: { select: { memberships: true } },
@@ -95,6 +95,7 @@ export async function getUserActivities(userId: string) {
       isEligible: unlockedTypeIds.has(activity.typeId),
       isMember: !!userMembership,
       memberRole: userMembership?.role ?? undefined,
+      memberCompletedAt: userMembership?.completedAt?.toISOString() ?? null,
     };
   });
 }
@@ -111,6 +112,8 @@ export interface ActivityProgressStep {
 /**
  * Get activity progress for the stepper component.
  * Returns ordered activity types with computed state (completed/current/locked).
+ * A type is "completed" when the user has a membership with completedAt set
+ * on any instance of that type.
  */
 export async function getActivityProgress(userId: string): Promise<ActivityProgressStep[]> {
   const types = await prisma.activityType.findMany({
@@ -119,23 +122,24 @@ export async function getActivityProgress(userId: string): Promise<ActivityProgr
     select: { id: true, name: true, order: true, prerequisiteTypeId: true },
   });
 
-  const completedMemberships = await prisma.membership.findMany({
+  // Use personal completedAt (not just activity status) for stepper state
+  const finishedMemberships = await prisma.membership.findMany({
     where: {
       userId,
-      activity: { status: 'COMPLETED' },
+      completedAt: { not: null },
     },
     select: { activity: { select: { typeId: true } } },
   });
-  const completedTypeIds = new Set(completedMemberships.map((m) => m.activity.typeId));
+  const finishedTypeIds = new Set(finishedMemberships.map((m) => m.activity.typeId));
 
   let foundCurrent = false;
   return types.map((type) => {
-    const isCompleted = completedTypeIds.has(type.id);
+    const isCompleted = finishedTypeIds.has(type.id);
     if (isCompleted) {
       return { typeId: type.id, typeName: type.name, order: type.order, state: 'completed' as const };
     }
 
-    const prereqMet = !type.prerequisiteTypeId || completedTypeIds.has(type.prerequisiteTypeId);
+    const prereqMet = !type.prerequisiteTypeId || finishedTypeIds.has(type.prerequisiteTypeId);
     if (prereqMet && !foundCurrent) {
       foundCurrent = true;
       return { typeId: type.id, typeName: type.name, order: type.order, state: 'current' as const };
@@ -150,10 +154,11 @@ export async function getUserJoinedActivities(userId: string) {
   const memberships = await prisma.membership.findMany({
     where: {
       userId,
-      activity: { status: { in: ['OPEN', 'FULL', 'SCHEDULED', 'IN_PROGRESS'] } },
+      activity: { status: { in: ['OPEN', 'FULL', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED'] } },
     },
     select: {
       role: true,
+      completedAt: true,
       activity: {
         include: {
           type: { select: { id: true, name: true } },
@@ -172,6 +177,7 @@ export async function getUserJoinedActivities(userId: string) {
     isEligible: true, // user is already a member so they're eligible
     isMember: true,
     memberRole: m.role,
+    memberCompletedAt: m.completedAt?.toISOString() ?? null,
   }));
 }
 

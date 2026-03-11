@@ -636,6 +636,51 @@ export async function completeMeeting(activityId: string): Promise<ActionState> 
 }
 
 /**
+ * Finish an activity — mark the user's membership as personally completed.
+ * Only allowed when the instance status is COMPLETED and the user hasn't finished yet.
+ */
+export async function finishActivity(activityId: string): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const te = await getTranslations('serverErrors');
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Verify instance is COMPLETED
+      const activity = await tx.activity.findUnique({
+        where: { id: activityId },
+        select: { status: true },
+      });
+      if (!activity) throw new Error(te('activityNotFound'));
+      if (activity.status !== 'COMPLETED') {
+        throw new Error(te('activityNotCompleted'));
+      }
+
+      // Verify caller is a member without completedAt
+      const membership = await tx.membership.findUnique({
+        where: { activityId_userId: { activityId, userId } },
+      });
+      if (!membership) throw new Error(te('notMember'));
+      if (membership.completedAt) {
+        throw new Error(te('alreadyFinished'));
+      }
+
+      await tx.membership.update({
+        where: { id: membership.id },
+        data: { completedAt: new Date() },
+      });
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : te('failedToFinish');
+    return { errors: { _form: [message] } };
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath(ACTIVITIES_PATH);
+  return { success: true };
+}
+
+/**
  * Add a comment to an activity instance.
  * Only members of the instance can post comments.
  */

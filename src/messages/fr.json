@@ -172,7 +172,10 @@
     "statusFull": "Complet",
     "statusScheduled": "Planifié",
     "statusInProgress": "En cours",
-    "statusCompleted": "Terminé"
+    "statusCompleted": "Terminé",
+    "finishActivity": "Terminer l'activité",
+    "finishing": "En cours...",
+    "alreadyFinished": "Vous avez déjà terminé cette activité."
   },
   "calendar": {
     "title": "Calendrier",
@@ -644,7 +647,10 @@
     "notificationActivityFull": "Activité complète",
     "notificationActivityFullMsg": "« {title} » a atteint sa capacité maximale. Le leader peut maintenant planifier une réunion.",
     "notificationMeetingScheduled": "Réunion planifiée",
-    "notificationMeetingScheduledMsg": "« {title} » est planifié pour {date}."
+    "notificationMeetingScheduledMsg": "« {title} » est planifié pour {date}.",
+    "activityNotCompleted": "L'activité doit être terminée avant de pouvoir la finaliser.",
+    "alreadyFinished": "Vous avez déjà terminé cette activité.",
+    "failedToFinish": "Impossible de terminer l'activité."
   },
   "errors": {
     "notFound": "Page non trouvée",

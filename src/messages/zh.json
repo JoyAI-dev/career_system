@@ -172,7 +172,10 @@
     "statusFull": "已满",
     "statusScheduled": "已安排",
     "statusInProgress": "进行中",
-    "statusCompleted": "已完成"
+    "statusCompleted": "已完成",
+    "finishActivity": "完成活动",
+    "finishing": "完成中...",
+    "alreadyFinished": "您已完成此活动。"
   },
   "calendar": {
     "title": "日历",
@@ -644,7 +647,10 @@
     "notificationActivityFull": "活动已满",
     "notificationActivityFullMsg": "「{title}」已达到满员。组长现在可以安排会议。",
     "notificationMeetingScheduled": "会议已安排",
-    "notificationMeetingScheduledMsg": "「{title}」已安排在{date}。"
+    "notificationMeetingScheduledMsg": "「{title}」已安排在{date}。",
+    "activityNotCompleted": "活动尚未完成，无法标记完成。",
+    "alreadyFinished": "您已完成此活动。",
+    "failedToFinish": "完成活动失败。"
   },
   "errors": {
     "notFound": "页面未找到",

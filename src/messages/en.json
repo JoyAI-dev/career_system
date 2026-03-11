@@ -172,7 +172,10 @@
     "statusFull": "Full",
     "statusScheduled": "Scheduled",
     "statusInProgress": "In Progress",
-    "statusCompleted": "Completed"
+    "statusCompleted": "Completed",
+    "finishActivity": "Finish Activity",
+    "finishing": "Finishing...",
+    "alreadyFinished": "You have already completed this activity."
   },
   "calendar": {
     "title": "Calendar",
@@ -644,7 +647,10 @@
     "notificationActivityFull": "Activity Full",
     "notificationActivityFullMsg": "\"{title}\" has reached full capacity. The leader can now schedule a meeting.",
     "notificationMeetingScheduled": "Meeting Scheduled",
-    "notificationMeetingScheduledMsg": "\"{title}\" has been scheduled for {date}."
+    "notificationMeetingScheduledMsg": "\"{title}\" has been scheduled for {date}.",
+    "activityNotCompleted": "Activity must be completed before you can finish it.",
+    "alreadyFinished": "You have already finished this activity.",
+    "failedToFinish": "Failed to finish activity."
   },
   "errors": {
     "notFound": "Page not found",

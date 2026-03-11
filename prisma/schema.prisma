@@ -262,11 +262,12 @@ model ActivityTag {
 }
 
 model Membership {
-  id         String     @id @default(cuid())
-  activityId String
-  userId     String
-  role       MemberRole @default(MEMBER)
-  joinedAt   DateTime   @default(now())
+  id          String     @id @default(cuid())
+  activityId  String
+  userId      String
+  role        MemberRole @default(MEMBER)
+  joinedAt    DateTime   @default(now())
+  completedAt DateTime?
 
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)

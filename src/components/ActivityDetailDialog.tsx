@@ -22,6 +22,7 @@ import {
   scheduleMeeting,
   startMeeting,
   completeMeeting,
+  finishActivity,
   addActivityComment,
   getActivityComments,
   type ActionState,
@@ -46,6 +47,7 @@ type Activity = {
   isEligible: boolean;
   isMember?: boolean;
   memberRole?: string;
+  memberCompletedAt?: string | null;
 };
 
 type Comment = {
@@ -110,6 +112,11 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
   // Show instance-scoped features only when viewing an actual instance (not type-level)
   const showInstanceFeatures = !joinByType && activity.isMember;
 
+  // Finish button: visible when instance is COMPLETED, user is member, and hasn't finished yet
+  const canFinish = showInstanceFeatures
+    && activity.status === 'COMPLETED'
+    && !activity.memberCompletedAt;
+
   function handleJoin() {
     setError(null);
     startTransition(async () => {
@@ -129,6 +136,18 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
     setError(null);
     startTransition(async () => {
       const result = await leaveActivity(activity!.id);
+      if (result.errors?._form) {
+        setError(result.errors._form[0]);
+      } else {
+        onClose();
+      }
+    });
+  }
+
+  function handleFinish() {
+    setError(null);
+    startTransition(async () => {
+      const result = await finishActivity(activity!.id);
       if (result.errors?._form) {
         setError(result.errors._form[0]);
       } else {
@@ -259,6 +278,26 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
           {showInstanceFeatures && (
             <div className="border-t pt-4">
               <CommentSection activityId={activity.id} />
+            </div>
+          )}
+
+          {/* Finish Activity button */}
+          {canFinish && (
+            <div className="border-t pt-4">
+              <Button
+                onClick={handleFinish}
+                disabled={isPending}
+                className="w-full"
+              >
+                {isPending ? t('finishing') : t('finishActivity')}
+              </Button>
+            </div>
+          )}
+
+          {/* Already finished badge */}
+          {showInstanceFeatures && activity.status === 'COMPLETED' && activity.memberCompletedAt && (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+              {t('alreadyFinished')}
             </div>
           )}
 
