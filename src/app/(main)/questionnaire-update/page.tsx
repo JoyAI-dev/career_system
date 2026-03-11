@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getActiveVersionWithStructure, getLatestSnapshotAnswers } from '@/server/queries/questionnaire';
 import { QuestionnaireUpdateFlow } from './QuestionnaireUpdateFlow';
+import { getTranslations } from 'next-intl/server';
 
 type SearchParams = Promise<{ activityId?: string }>;
 
@@ -15,17 +16,18 @@ export default async function QuestionnaireUpdatePage({
 
   const { activityId } = await searchParams;
 
-  const [version, previousAnswers] = await Promise.all([
+  const [version, previousAnswers, t] = await Promise.all([
     getActiveVersionWithStructure(),
     getLatestSnapshotAnswers(session.user.id),
+    getTranslations('questionnaire'),
   ]);
 
   if (!version) {
     return (
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Questionnaire Not Available</h1>
+        <h1 className="text-2xl font-bold">{t('notAvailable')}</h1>
         <p className="mt-2 text-muted-foreground">
-          No active questionnaire is currently configured. Please contact an administrator.
+          {t('notConfigured')}
         </p>
       </div>
     );

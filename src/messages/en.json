@@ -54,13 +54,59 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard"
+    "title": "Dashboard",
+    "welcome": "Welcome to the Career Exploration Platform."
   },
   "profile": {
-    "title": "Profile"
+    "title": "Profile",
+    "accountInfo": "Account Information",
+    "personalInfo": "Personal Information",
+    "updateDetails": "Update your personal details",
+    "studentId": "Student ID Verification",
+    "uploadStudentId": "Upload your student ID for verification",
+    "cognitiveReport": "Cognitive Boundary Report",
+    "cognitiveReportDesc": "View your cognitive exploration progress and growth trajectory.",
+    "viewReport": "View Report",
+    "completeQuestionnaire": "Complete the cognitive boundary questionnaire to view your report.",
+    "name": "Name",
+    "school": "School",
+    "major": "Major",
+    "grade": "Grade",
+    "selectGrade": "Select grade",
+    "saving": "Saving...",
+    "saveChanges": "Save Changes",
+    "updated": "Profile updated successfully.",
+    "studentIdImage": "Student ID Image",
+    "studentIdUploaded": "Student ID uploaded. Uploading a new file will replace the old one.",
+    "studentIdSuccess": "Student ID uploaded successfully.",
+    "selectFile": "Please select a file",
+    "invalidFileType": "Invalid file type. Supported: JPEG, PNG, WebP",
+    "fileTooLarge": "File too large. Maximum 5MB",
+    "acceptedFormats": "Accepted formats: JPEG, PNG, WebP. Maximum 5MB.",
+    "uploading": "Uploading...",
+    "uploadButton": "Upload Student ID"
   },
   "questionnaire": {
-    "title": "Questionnaire"
+    "title": "Career Exploration Questionnaire",
+    "description": "Answer all questions to help us understand your interests and strengths.",
+    "notAvailable": "Questionnaire Not Available",
+    "notConfigured": "No active questionnaire is currently configured. Please contact an administrator.",
+    "progress": "Progress",
+    "questionsCount": "{answered} / {total} questions",
+    "previous": "Previous",
+    "nextTopic": "Next Topic",
+    "submitting": "Submitting...",
+    "submit": "Submit Questionnaire",
+    "loadingChart": "Loading chart...",
+    "update": {
+      "title": "Update Your Cognitive Profile",
+      "descriptionWithActivity": "Reflect on your experience from <strong>{activity}</strong> and update your answers.",
+      "descriptionGeneric": "Review and update your questionnaire answers based on your recent experiences.",
+      "answersChanged": "{count} answer(s) changed from previous",
+      "changed": "Changed",
+      "submitUpdate": "Submit Update",
+      "submitUpdateWithCount": "Submit Update ({count} changed)"
+    }
   },
   "activities": {
     "title": "Activities"
@@ -69,7 +115,38 @@
     "title": "Calendar"
   },
   "cognitiveReport": {
-    "title": "Cognitive Report"
+    "title": "Cognitive Boundary Report",
+    "completeFirst": "Please complete the questionnaire first to view your cognitive boundary report.",
+    "backToProfile": "Back to Profile",
+    "compareSnapshots": "Compare Snapshots",
+    "compareDescription": "Select two snapshots to compare on the radar chart",
+    "snapshotA": "Snapshot A (Blue)",
+    "snapshotB": "Snapshot B (Green)",
+    "cognitiveOverview": "Cognitive Overview",
+    "comparingSnapshots": "Comparing \"{labelA}\" and \"{labelB}\".",
+    "singleAssessment": "Your cognitive boundary assessment.",
+    "overallScore": "Overall Score",
+    "change": "Change",
+    "mostImproved": "Most Improved",
+    "points": "pts",
+    "growthSummary": "Growth Summary",
+    "topicsRankedByChange": "Topics ranked by change",
+    "topicScores": "Topic Scores",
+    "assessmentBreakdown": "Assessment Breakdown",
+    "snapshotHistory": "Snapshot History",
+    "allAssessments": "All assessments and overall score trend",
+    "date": "Date",
+    "context": "Context",
+    "score": "Score",
+    "details": "Details",
+    "snapshotDetails": "Snapshot Details",
+    "backToReport": "Back to Report",
+    "initial": "Initial",
+    "assessment": "Assessment",
+    "afterActivity": "After {activity}",
+    "postActivityUpdate": "Post-activity update",
+    "comments": "{count, plural, =1 {1 comment} other {# comments}}",
+    "scoreLabel": "Score: {score}"
   },
   "notifications": {
     "title": "Notifications"

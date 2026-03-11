@@ -54,13 +54,59 @@
     }
   },
   "dashboard": {
-    "title": "Tableau de bord"
+    "title": "Tableau de bord",
+    "welcome": "Bienvenue sur la plateforme d'exploration de carrière."
   },
   "profile": {
-    "title": "Profil"
+    "title": "Profil",
+    "accountInfo": "Informations du compte",
+    "personalInfo": "Informations personnelles",
+    "updateDetails": "Mettre à jour vos informations personnelles",
+    "studentId": "Vérification de la carte étudiante",
+    "uploadStudentId": "Téléchargez votre carte étudiante pour vérification",
+    "cognitiveReport": "Rapport de frontière cognitive",
+    "cognitiveReportDesc": "Consultez votre progression d'exploration cognitive et votre trajectoire de croissance.",
+    "viewReport": "Voir le rapport",
+    "completeQuestionnaire": "Complétez le questionnaire de frontière cognitive pour consulter votre rapport.",
+    "name": "Nom",
+    "school": "École",
+    "major": "Spécialité",
+    "grade": "Niveau",
+    "selectGrade": "Sélectionner le niveau",
+    "saving": "Enregistrement...",
+    "saveChanges": "Enregistrer les modifications",
+    "updated": "Profil mis à jour avec succès.",
+    "studentIdImage": "Photo de la carte étudiante",
+    "studentIdUploaded": "Carte étudiante téléchargée. Le téléchargement d'un nouveau fichier remplacera l'ancien.",
+    "studentIdSuccess": "Carte étudiante téléchargée avec succès.",
+    "selectFile": "Veuillez sélectionner un fichier",
+    "invalidFileType": "Type de fichier invalide. Formats acceptés : JPEG, PNG, WebP",
+    "fileTooLarge": "Fichier trop volumineux. Maximum 5 Mo",
+    "acceptedFormats": "Formats acceptés : JPEG, PNG, WebP. Maximum 5 Mo.",
+    "uploading": "Téléchargement...",
+    "uploadButton": "Télécharger la carte étudiante"
   },
   "questionnaire": {
-    "title": "Questionnaire"
+    "title": "Questionnaire d'exploration de carrière",
+    "description": "Répondez à toutes les questions pour nous aider à comprendre vos intérêts et vos points forts.",
+    "notAvailable": "Questionnaire non disponible",
+    "notConfigured": "Aucun questionnaire actif n'est actuellement configuré. Veuillez contacter un administrateur.",
+    "progress": "Progression",
+    "questionsCount": "{answered} / {total} questions",
+    "previous": "Précédent",
+    "nextTopic": "Sujet suivant",
+    "submitting": "Soumission...",
+    "submit": "Soumettre le questionnaire",
+    "loadingChart": "Chargement du graphique...",
+    "update": {
+      "title": "Mettre à jour votre profil cognitif",
+      "descriptionWithActivity": "Réfléchissez à votre expérience de <strong>{activity}</strong> et mettez à jour vos réponses.",
+      "descriptionGeneric": "Révisez et mettez à jour vos réponses au questionnaire en fonction de vos expériences récentes.",
+      "answersChanged": "{count} réponse(s) modifiée(s) par rapport à la précédente",
+      "changed": "Modifié",
+      "submitUpdate": "Soumettre la mise à jour",
+      "submitUpdateWithCount": "Soumettre la mise à jour ({count} modifiée(s))"
+    }
   },
   "activities": {
     "title": "Activités"
@@ -69,7 +115,38 @@
     "title": "Calendrier"
   },
   "cognitiveReport": {
-    "title": "Rapport cognitif"
+    "title": "Rapport de frontière cognitive",
+    "completeFirst": "Veuillez d'abord compléter le questionnaire pour consulter votre rapport de frontière cognitive.",
+    "backToProfile": "Retour au profil",
+    "compareSnapshots": "Comparer les instantanés",
+    "compareDescription": "Sélectionnez deux instantanés à comparer sur le graphique radar",
+    "snapshotA": "Instantané A (Bleu)",
+    "snapshotB": "Instantané B (Vert)",
+    "cognitiveOverview": "Aperçu cognitif",
+    "comparingSnapshots": "Comparaison de « {labelA} » et « {labelB} ».",
+    "singleAssessment": "Votre évaluation de frontière cognitive.",
+    "overallScore": "Score global",
+    "change": "Changement",
+    "mostImproved": "Plus amélioré",
+    "points": "pts",
+    "growthSummary": "Résumé de croissance",
+    "topicsRankedByChange": "Sujets classés par changement",
+    "topicScores": "Scores par sujet",
+    "assessmentBreakdown": "Détail de l'évaluation",
+    "snapshotHistory": "Historique des instantanés",
+    "allAssessments": "Toutes les évaluations et tendance du score global",
+    "date": "Date",
+    "context": "Contexte",
+    "score": "Score",
+    "details": "Détails",
+    "snapshotDetails": "Détails de l'instantané",
+    "backToReport": "Retour au rapport",
+    "initial": "Initial",
+    "assessment": "Évaluation",
+    "afterActivity": "Après {activity}",
+    "postActivityUpdate": "Mise à jour post-activité",
+    "comments": "{count, plural, =1 {1 commentaire} other {# commentaires}}",
+    "scoreLabel": "Score : {score}"
   },
   "notifications": {
     "title": "Notifications"

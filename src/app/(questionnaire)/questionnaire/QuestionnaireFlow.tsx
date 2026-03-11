@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useActionState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { submitQuestionnaire, type ActionState } from '@/server/actions/questionnaire';
@@ -47,6 +48,7 @@ type Version = {
 };
 
 export function QuestionnaireFlow({ version }: { version: Version }) {
+  const t = useTranslations('questionnaire');
   const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [state, formAction] = useActionState<ActionState, FormData>(submitQuestionnaire, {});
@@ -99,17 +101,17 @@ export function QuestionnaireFlow({ version }: { version: Version }) {
     <div>
       {/* Header */}
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">Career Exploration Questionnaire</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Answer all questions to help us understand your interests and strengths.
+          {t('description')}
         </p>
       </div>
 
       {/* Progress bar */}
       <div className="mb-6">
         <div className="mb-2 flex items-center justify-between text-sm text-muted-foreground">
-          <span>Progress</span>
-          <span>{answeredCount} / {totalQuestions} questions</span>
+          <span>{t('progress')}</span>
+          <span>{t('questionsCount', { answered: answeredCount, total: totalQuestions })}</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
@@ -207,7 +209,7 @@ export function QuestionnaireFlow({ version }: { version: Version }) {
           onClick={goPrev}
           disabled={isFirstTopic}
         >
-          Previous
+          {t('previous')}
         </Button>
 
         {isLastTopic ? (
@@ -215,14 +217,14 @@ export function QuestionnaireFlow({ version }: { version: Version }) {
             onClick={handleSubmit}
             disabled={answeredCount < totalQuestions || isPending}
           >
-            {isPending ? 'Submitting...' : 'Submit Questionnaire'}
+            {isPending ? t('submitting') : t('submit')}
           </Button>
         ) : (
           <Button
             onClick={goNext}
             disabled={!allCurrentAnswered}
           >
-            Next Topic
+            {t('nextTopic')}
           </Button>
         )}
       </div>

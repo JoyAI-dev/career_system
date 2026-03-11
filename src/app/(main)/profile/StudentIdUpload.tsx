@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ type StudentIdUploadProps = {
 };
 
 export function StudentIdUpload({ hasUpload }: StudentIdUploadProps) {
+  const t = useTranslations('profile');
   const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [uploaded, setUploaded] = useState(hasUpload);
@@ -18,7 +20,7 @@ export function StudentIdUpload({ hasUpload }: StudentIdUploadProps) {
   async function handleUpload() {
     const file = fileInputRef.current?.files?.[0];
     if (!file) {
-      setErrorMessage('Please select a file');
+      setErrorMessage(t('selectFile'));
       setStatus('error');
       return;
     }
@@ -26,14 +28,14 @@ export function StudentIdUpload({ hasUpload }: StudentIdUploadProps) {
     // Client-side validation
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      setErrorMessage('Invalid file type. Allowed: JPEG, PNG, WebP');
+      setErrorMessage(t('invalidFileType'));
       setStatus('error');
       return;
     }
 
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      setErrorMessage('File too large. Maximum size is 5MB');
+      setErrorMessage(t('fileTooLarge'));
       setStatus('error');
       return;
     }
@@ -68,17 +70,17 @@ export function StudentIdUpload({ hasUpload }: StudentIdUploadProps) {
 
   return (
     <div className="space-y-3">
-      <Label htmlFor="student-id">Student ID Image</Label>
+      <Label htmlFor="student-id">{t('studentIdImage')}</Label>
 
       {uploaded && status !== 'success' && (
         <p className="text-sm text-muted-foreground">
-          A student ID has been uploaded. Upload a new file to replace it.
+          {t('studentIdUploaded')}
         </p>
       )}
 
       {status === 'success' && (
         <div className="rounded-md bg-green-50 p-3 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-400">
-          Student ID uploaded successfully.
+          {t('studentIdSuccess')}
         </div>
       )}
 
@@ -96,7 +98,7 @@ export function StudentIdUpload({ hasUpload }: StudentIdUploadProps) {
         disabled={status === 'uploading'}
       />
       <p className="text-xs text-muted-foreground">
-        Accepted formats: JPEG, PNG, WebP. Max size: 5MB.
+        {t('acceptedFormats')}
       </p>
 
       <Button
@@ -105,7 +107,7 @@ export function StudentIdUpload({ hasUpload }: StudentIdUploadProps) {
         disabled={status === 'uploading'}
         variant="outline"
       >
-        {status === 'uploading' ? 'Uploading...' : 'Upload Student ID'}
+        {status === 'uploading' ? t('uploading') : t('uploadButton')}
       </Button>
     </div>
   );

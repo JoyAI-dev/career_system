@@ -7,6 +7,7 @@ import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 import { ProfileForm } from './ProfileForm';
 import { StudentIdUpload } from './StudentIdUpload';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getTranslations } from 'next-intl/server';
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -14,10 +15,11 @@ export default async function ProfilePage() {
     redirect('/login');
   }
 
-  const [user, gradeOptions, hasCompleted] = await Promise.all([
+  const [user, gradeOptions, hasCompleted, t] = await Promise.all([
     getUserProfile(session.user.id),
     getActiveGradeOptions(),
     hasCompletedQuestionnaire(session.user.id),
+    getTranslations('profile'),
   ]);
 
   if (!user) {
@@ -26,20 +28,20 @@ export default async function ProfilePage() {
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold tracking-tight">Profile</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">{t('title')}</h1>
 
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Account Information</CardTitle>
+            <CardTitle>{t('accountInfo')}</CardTitle>
             <CardDescription>Username: {user.username}</CardDescription>
           </CardHeader>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-            <CardDescription>Update your profile details</CardDescription>
+            <CardTitle>{t('personalInfo')}</CardTitle>
+            <CardDescription>{t('updateDetails')}</CardDescription>
           </CardHeader>
           <CardContent>
             <ProfileForm user={user} gradeOptions={gradeOptions} />
@@ -48,8 +50,8 @@ export default async function ProfilePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Student ID Verification</CardTitle>
-            <CardDescription>Upload your student ID for verification</CardDescription>
+            <CardTitle>{t('studentId')}</CardTitle>
+            <CardDescription>{t('uploadStudentId')}</CardDescription>
           </CardHeader>
           <CardContent>
             <StudentIdUpload hasUpload={!!user.studentIdUrl} />
@@ -58,9 +60,9 @@ export default async function ProfilePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Cognitive Boundary Report</CardTitle>
+            <CardTitle>{t('cognitiveReport')}</CardTitle>
             <CardDescription>
-              View your cognitive exploration progress and growth over time.
+              {t('cognitiveReportDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -69,11 +71,11 @@ export default async function ProfilePage() {
                 href="/cognitive-report"
                 className={buttonVariants({ variant: 'default' })}
               >
-                View Report
+                {t('viewReport')}
               </Link>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Complete the cognitive boundary questionnaire to unlock your report.
+                {t('completeQuestionnaire')}
               </p>
             )}
           </CardContent>

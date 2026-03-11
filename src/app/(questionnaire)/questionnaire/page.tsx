@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { hasCompletedQuestionnaire, getActiveVersionWithStructure } from '@/server/queries/questionnaire';
 import { QuestionnaireFlow } from './QuestionnaireFlow';
+import { getTranslations } from 'next-intl/server';
 
 export default async function QuestionnairePage() {
   const session = await auth();
@@ -15,13 +16,17 @@ export default async function QuestionnairePage() {
     redirect('/dashboard');
   }
 
-  const version = await getActiveVersionWithStructure();
+  const [version, t] = await Promise.all([
+    getActiveVersionWithStructure(),
+    getTranslations('questionnaire'),
+  ]);
+
   if (!version) {
     return (
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Questionnaire Not Available</h1>
+        <h1 className="text-2xl font-bold">{t('notAvailable')}</h1>
         <p className="mt-2 text-muted-foreground">
-          No active questionnaire is currently configured. Please contact an administrator.
+          {t('notConfigured')}
         </p>
       </div>
     );

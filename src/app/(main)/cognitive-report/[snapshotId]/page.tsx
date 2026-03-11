@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { getSnapshotAnswersWithComments } from '@/server/queries/comment';
 import { SnapshotDetailClient } from './SnapshotDetailClient';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 
 type Props = {
   params: Promise<{ snapshotId: string }>;
@@ -30,7 +31,10 @@ export default async function SnapshotDetailPage({ params }: Props) {
     notFound();
   }
 
-  const answersWithComments = await getSnapshotAnswersWithComments(snapshotId);
+  const [answersWithComments, t] = await Promise.all([
+    getSnapshotAnswersWithComments(snapshotId),
+    getTranslations('cognitiveReport'),
+  ]);
 
   // Group by topic > dimension
   type AnswerRow = (typeof answersWithComments)[number];
@@ -85,7 +89,7 @@ export default async function SnapshotDetailPage({ params }: Props) {
     <div className="container mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Snapshot Details</h1>
+          <h1 className="text-2xl font-bold">{t('snapshotDetails')}</h1>
           <p className="text-sm text-muted-foreground">
             {new Date(snapshot.completedAt).toLocaleDateString('en-US', {
               year: 'numeric',
@@ -93,7 +97,7 @@ export default async function SnapshotDetailPage({ params }: Props) {
               day: 'numeric',
             })}
             {snapshot.context && snapshot.context !== 'initial' && (
-              <> &middot; {activityTag || 'Post-activity update'}</>
+              <> &middot; {activityTag || t('postActivityUpdate')}</>
             )}
           </p>
         </div>
@@ -101,7 +105,7 @@ export default async function SnapshotDetailPage({ params }: Props) {
           href="/cognitive-report"
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          Back to Report
+          {t('backToReport')}
         </Link>
       </div>
 

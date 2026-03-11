@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useActionState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { submitQuestionnaireUpdate, type ActionState } from '@/server/actions/questionnaire';
@@ -55,6 +56,9 @@ type Props = {
 };
 
 export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, activityTitle }: Props) {
+  const t = useTranslations('questionnaire');
+  const tUpdate = useTranslations('questionnaire.update');
+  const tCommon = useTranslations('common');
   const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>(previousAnswers);
   const [state, formAction] = useActionState<ActionState, FormData>(submitQuestionnaireUpdate, {});
@@ -109,19 +113,22 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
     <div>
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Update Your Cognitive Profile</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{tUpdate('title')}</h1>
         {activityTitle ? (
-          <p className="mt-1 text-sm text-muted-foreground">
-            Reflect on your experience from <strong>{activityTitle}</strong> and update your answers.
-          </p>
+          <p
+            className="mt-1 text-sm text-muted-foreground"
+            dangerouslySetInnerHTML={{
+              __html: tUpdate('descriptionWithActivity', { activity: activityTitle }),
+            }}
+          />
         ) : (
           <p className="mt-1 text-sm text-muted-foreground">
-            Review and update your questionnaire answers based on your recent experiences.
+            {tUpdate('descriptionGeneric')}
           </p>
         )}
         {changedCount > 0 && (
           <p className="mt-1 text-xs text-primary">
-            {changedCount} answer{changedCount !== 1 ? 's' : ''} changed from previous
+            {tUpdate('answersChanged', { count: changedCount })}
           </p>
         )}
       </div>
@@ -129,8 +136,8 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
       {/* Progress bar */}
       <div className="mb-6">
         <div className="mb-2 flex items-center justify-between text-sm text-muted-foreground">
-          <span>Progress</span>
-          <span>{answeredCount} / {totalQuestions} questions</span>
+          <span>{t('progress')}</span>
+          <span>{t('questionsCount', { answered: answeredCount, total: totalQuestions })}</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
@@ -181,7 +188,7 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm">{question.title}</CardTitle>
                       {wasChanged && (
-                        <span className="text-xs text-primary">Changed</span>
+                        <span className="text-xs text-primary">{tUpdate('changed')}</span>
                       )}
                     </div>
                     {question.notes.length > 0 && (
@@ -237,10 +244,10 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
             onClick={goPrev}
             disabled={isFirstTopic}
           >
-            Previous
+            {t('previous')}
           </Button>
           <Link href={activityId ? '/activities' : '/cognitive-report'}>
-            <Button variant="ghost" size="sm">Cancel</Button>
+            <Button variant="ghost" size="sm">{tCommon('cancel')}</Button>
           </Link>
         </div>
 
@@ -249,14 +256,14 @@ export function QuestionnaireUpdateFlow({ version, previousAnswers, activityId, 
             onClick={handleSubmit}
             disabled={answeredCount < totalQuestions || isPending}
           >
-            {isPending ? 'Submitting...' : `Submit Update${changedCount > 0 ? ` (${changedCount} changed)` : ''}`}
+            {isPending ? t('submitting') : changedCount > 0 ? tUpdate('submitUpdateWithCount', { count: changedCount }) : tUpdate('submitUpdate')}
           </Button>
         ) : (
           <Button
             onClick={goNext}
             disabled={!allCurrentAnswered}
           >
-            Next Topic
+            {t('nextTopic')}
           </Button>
         )}
       </div>

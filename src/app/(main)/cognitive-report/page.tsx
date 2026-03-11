@@ -5,6 +5,7 @@ import { getSnapshotScores } from '@/server/scoring';
 import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { CognitiveReportClient } from './CognitiveReportClient';
+import { getTranslations } from 'next-intl/server';
 
 export default async function CognitiveReportPage() {
   const session = await auth();
@@ -12,16 +13,19 @@ export default async function CognitiveReportPage() {
     redirect('/login');
   }
 
-  const snapshotMeta = await getUserSnapshotIds(session.user.id);
+  const [snapshotMeta, t] = await Promise.all([
+    getUserSnapshotIds(session.user.id),
+    getTranslations('cognitiveReport'),
+  ]);
 
   if (snapshotMeta.length === 0) {
     return (
       <div className="container mx-auto max-w-3xl px-4 py-8">
-        <h1 className="mb-4 text-3xl font-bold tracking-tight">Cognitive Boundary Report</h1>
+        <h1 className="mb-4 text-3xl font-bold tracking-tight">{t('title')}</h1>
         <Card>
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground">
-              Complete the questionnaire first to see your cognitive boundary report.
+              {t('completeFirst')}
             </p>
           </CardContent>
         </Card>
@@ -42,12 +46,12 @@ export default async function CognitiveReportPage() {
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Cognitive Boundary Report</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <Link
           href="/profile"
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          Back to Profile
+          {t('backToProfile')}
         </Link>
       </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnswerComments } from '@/components/AnswerComments';
 
@@ -45,6 +46,7 @@ type Props = {
 };
 
 export function SnapshotDetailClient({ grouped, activityTag }: Props) {
+  const t = useTranslations('cognitiveReport');
   const [expandedAnswers, setExpandedAnswers] = useState<Set<string>>(new Set());
 
   function toggleAnswer(answerId: string) {
@@ -91,13 +93,13 @@ export function SnapshotDetailClient({ grouped, activityTag }: Props) {
                               {answer.question.title}
                             </p>
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              {answer.selectedOption.label} (score: {answer.selectedOption.score})
+                              {answer.selectedOption.label} ({t('scoreLabel', { score: answer.selectedOption.score })})
                             </p>
                           </div>
                           <div className="ml-2 flex items-center gap-2">
                             {commentCount > 0 && (
                               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                {commentCount} {commentCount === 1 ? 'comment' : 'comments'}
+                                {t('comments', { count: commentCount })}
                               </span>
                             )}
                             <span className="text-xs text-muted-foreground">

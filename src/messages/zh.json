@@ -54,13 +54,59 @@
     }
   },
   "dashboard": {
-    "title": "仪表板"
+    "title": "首页",
+    "welcome": "欢迎来到职业探索平台。"
   },
   "profile": {
-    "title": "个人资料"
+    "title": "个人资料",
+    "accountInfo": "账户信息",
+    "personalInfo": "个人信息",
+    "updateDetails": "更新您的个人资料",
+    "studentId": "学生证验证",
+    "uploadStudentId": "上传学生证进行验证",
+    "cognitiveReport": "认知边界报告",
+    "cognitiveReportDesc": "查看您的认知探索进展和成长轨迹。",
+    "viewReport": "查看报告",
+    "completeQuestionnaire": "完成认知边界问卷后即可查看报告。",
+    "name": "姓名",
+    "school": "学校",
+    "major": "专业",
+    "grade": "年级",
+    "selectGrade": "选择年级",
+    "saving": "保存中...",
+    "saveChanges": "保存更改",
+    "updated": "资料更新成功。",
+    "studentIdImage": "学生证照片",
+    "studentIdUploaded": "学生证已上传，上传新文件将替换旧文件。",
+    "studentIdSuccess": "学生证上传成功。",
+    "selectFile": "请选择文件",
+    "invalidFileType": "文件类型无效，支持：JPEG、PNG、WebP",
+    "fileTooLarge": "文件过大，最大5MB",
+    "acceptedFormats": "支持格式：JPEG、PNG、WebP，最大5MB。",
+    "uploading": "上传中...",
+    "uploadButton": "上传学生证"
   },
   "questionnaire": {
-    "title": "问卷调查"
+    "title": "职业探索问卷",
+    "description": "回答所有问题，帮助我们了解您的兴趣和优势。",
+    "notAvailable": "问卷暂不可用",
+    "notConfigured": "当前没有配置有效的问卷，请联系管理员。",
+    "progress": "进度",
+    "questionsCount": "{answered} / {total} 题",
+    "previous": "上一步",
+    "nextTopic": "下一主题",
+    "submitting": "提交中...",
+    "submit": "提交问卷",
+    "loadingChart": "加载图表中...",
+    "update": {
+      "title": "更新认知档案",
+      "descriptionWithActivity": "回顾您在 <strong>{activity}</strong> 中的体验，更新您的答案。",
+      "descriptionGeneric": "根据您最近的经历，回顾并更新您的问卷答案。",
+      "answersChanged": "{count} 个答案与上次不同",
+      "changed": "已更改",
+      "submitUpdate": "提交更新",
+      "submitUpdateWithCount": "提交更新（{count} 项变更）"
+    }
   },
   "activities": {
     "title": "活动"
@@ -69,7 +115,38 @@
     "title": "日历"
   },
   "cognitiveReport": {
-    "title": "认知报告"
+    "title": "认知边界报告",
+    "completeFirst": "请先完成问卷后查看认知边界报告。",
+    "backToProfile": "返回个人资料",
+    "compareSnapshots": "对比快照",
+    "compareDescription": "选择两个快照在雷达图上对比",
+    "snapshotA": "快照 A（蓝色）",
+    "snapshotB": "快照 B（绿色）",
+    "cognitiveOverview": "认知状态概览",
+    "comparingSnapshots": "对比「{labelA}」和「{labelB}」。",
+    "singleAssessment": "您的认知边界评估。",
+    "overallScore": "总分",
+    "change": "变化",
+    "mostImproved": "进步最大",
+    "points": "分",
+    "growthSummary": "成长摘要",
+    "topicsRankedByChange": "按变化排名的主题",
+    "topicScores": "主题分数",
+    "assessmentBreakdown": "评估明细",
+    "snapshotHistory": "快照历史",
+    "allAssessments": "所有评估及总分趋势",
+    "date": "日期",
+    "context": "背景",
+    "score": "分数",
+    "details": "详情",
+    "snapshotDetails": "快照详情",
+    "backToReport": "返回报告",
+    "initial": "初始",
+    "assessment": "评估",
+    "afterActivity": "完成{activity}后",
+    "postActivityUpdate": "活动后更新",
+    "comments": "{count, plural, =1 {1 条评论} other {# 条评论}}",
+    "scoreLabel": "得分：{score}"
   },
   "notifications": {
     "title": "通知"
