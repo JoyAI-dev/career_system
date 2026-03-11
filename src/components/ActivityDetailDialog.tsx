@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useActionState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
 import {
@@ -21,7 +22,7 @@ import {
   completeMeeting,
   type ActionState,
 } from '@/server/actions/activity';
-import { getAvailableActions, getActionLabel, type TransitionAction } from '@/server/stateMachine';
+import { getAvailableActions, type TransitionAction } from '@/server/stateMachine';
 import type { ActivityStatus, MemberRole } from '@prisma/client';
 
 type Tag = { id: string; name: string };
@@ -56,7 +57,23 @@ const STATUS_COLORS: Record<string, string> = {
   COMPLETED: 'bg-gray-100 text-gray-800',
 };
 
+const STATUS_KEYS: Record<string, string> = {
+  OPEN: 'statusOpen',
+  FULL: 'statusFull',
+  SCHEDULED: 'statusScheduled',
+  IN_PROGRESS: 'statusInProgress',
+  COMPLETED: 'statusCompleted',
+};
+
+const ACTION_KEYS: Record<string, string> = {
+  SCHEDULE: 'scheduleMeeting',
+  START: 'startMeeting',
+  COMPLETE: 'completeMeeting',
+};
+
 export function ActivityDetailDialog({ activity, onClose }: Props) {
+  const t = useTranslations('activities');
+  const tCommon = useTranslations('common');
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
@@ -84,7 +101,7 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
   }
 
   function handleLeave() {
-    if (!confirm('Are you sure you want to leave this activity?')) return;
+    if (!confirm(t('confirmLeave'))) return;
     setError(null);
     startTransition(async () => {
       const result = await leaveActivity(activity!.id);
@@ -102,8 +119,8 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
       return;
     }
     const confirmMsg = action === 'START'
-      ? 'Start this meeting now?'
-      : 'Mark this meeting as completed?';
+      ? t('confirmStart')
+      : t('confirmComplete');
     if (!confirm(confirmMsg)) return;
 
     setError(null);
@@ -134,11 +151,11 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
             <span
               className={`rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_COLORS[activity.status] ?? ''}`}
             >
-              {activity.status === 'IN_PROGRESS' ? 'In Progress' : activity.status}
+              {t(STATUS_KEYS[activity.status] ?? 'statusOpen')}
             </span>
             {activity.isMember && (
               <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-                {activity.memberRole === 'LEADER' ? 'Leader' : 'Joined'}
+                {activity.memberRole === 'LEADER' ? t('leader') : t('joined')}
               </span>
             )}
           </div>
@@ -146,12 +163,12 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
           {/* Details */}
           <div className="space-y-1 text-sm text-muted-foreground">
             <p>
-              Members: {activity._count.memberships}/{activity.capacity}
+              {t('members', { current: activity._count.memberships, capacity: activity.capacity })}
             </p>
-            {activity.location && <p>Location: {activity.location}</p>}
-            {activity.isOnline && <p>Online activity</p>}
+            {activity.location && <p>{t('location', { location: activity.location })}</p>}
+            {activity.isOnline && <p>{t('onlineActivity')}</p>}
             {activity.scheduledAt && (
-              <p>Scheduled: {new Date(activity.scheduledAt).toLocaleString()}</p>
+              <p>{t('scheduled', { date: new Date(activity.scheduledAt).toLocaleString() })}</p>
             )}
           </div>
 
@@ -172,7 +189,7 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
           {/* Locked notice */}
           {isLocked && (
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-              This activity is locked. Complete the prerequisite activity type to unlock.
+              {t('lockedNotice')}
             </div>
           )}
 
@@ -196,7 +213,7 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
           {/* Markdown guide */}
           {activity.guideMarkdown && (
             <div className="border-t pt-4">
-              <h3 className="mb-2 text-sm font-medium">Activity Guide</h3>
+              <h3 className="mb-2 text-sm font-medium">{t('guide')}</h3>
               <div className="prose prose-sm max-w-none">
                 <ReactMarkdown>{activity.guideMarkdown}</ReactMarkdown>
               </div>
@@ -206,12 +223,12 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
           {/* Post-completion questionnaire update prompt */}
           {activity.status === 'COMPLETED' && activity.isMember && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-              <h3 className="mb-1 text-sm font-medium text-primary">Update Your Cognitive Profile</h3>
+              <h3 className="mb-1 text-sm font-medium text-primary">{t('updateCognitiveProfile')}</h3>
               <p className="mb-3 text-xs text-muted-foreground">
-                Reflect on what you learned from this activity and update your questionnaire answers.
+                {t('reflectOnLearning')}
               </p>
               <Link href={`/questionnaire-update?activityId=${activity.id}`}>
-                <Button size="sm">Update Questionnaire</Button>
+                <Button size="sm">{t('updateQuestionnaire')}</Button>
               </Link>
             </div>
           )}
@@ -227,7 +244,7 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
                   onClick={() => handleAction(action)}
                   disabled={isPending}
                 >
-                  {isPending ? '...' : getActionLabel(action)}
+                  {isPending ? '...' : t(ACTION_KEYS[action] ?? 'join')}
                 </Button>
               ))}
             </div>
@@ -240,30 +257,23 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
               onClick={handleLeave}
               disabled={isPending}
             >
-              {isPending ? 'Leaving...' : 'Leave'}
+              {isPending ? t('leaving') : t('leave')}
             </Button>
           ) : !activity.isMember && !isLocked ? (
             <Button
               onClick={handleJoin}
               disabled={!canJoin || isPending}
-              title={
-                isFull
-                  ? 'Activity is full'
-                  : activity.status !== 'OPEN'
-                    ? 'Activity is not open for joining'
-                    : 'Join this activity'
-              }
             >
               {isPending
-                ? 'Joining...'
+                ? t('joining')
                 : isFull
-                  ? 'Full'
+                  ? t('full')
                   : activity.status !== 'OPEN'
-                    ? activity.status
-                    : 'Join'}
+                    ? t(STATUS_KEYS[activity.status] ?? 'statusOpen')
+                    : t('join')}
             </Button>
           ) : isLocked ? (
-            <Button disabled>Locked</Button>
+            <Button disabled>{t('locked')}</Button>
           ) : null}
         </DialogFooter>
       </DialogContent>
@@ -282,6 +292,8 @@ function ScheduleForm({
   onError: (msg: string) => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations('activities');
+  const tCommon = useTranslations('common');
   const [state, formAction] = useActionState<ActionState, FormData>(scheduleMeeting, {});
   const [isPending, startTransition] = useTransition();
 
@@ -305,10 +317,10 @@ function ScheduleForm({
 
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-4">
-      <h3 className="mb-3 text-sm font-medium">Schedule Meeting</h3>
+      <h3 className="mb-3 text-sm font-medium">{t('scheduleMeeting')}</h3>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <Label htmlFor="scheduledAt">Date & Time</Label>
+          <Label htmlFor="scheduledAt">{t('dateTime')}</Label>
           <Input
             id="scheduledAt"
             name="scheduledAt"
@@ -317,7 +329,7 @@ function ScheduleForm({
           />
         </div>
         <div>
-          <Label htmlFor="schedule-location">Location</Label>
+          <Label htmlFor="schedule-location">{t('locationLabel')}</Label>
           <Input
             id="schedule-location"
             name="location"
@@ -332,14 +344,14 @@ function ScheduleForm({
             value="true"
             className="size-4 rounded border-border"
           />
-          <Label htmlFor="schedule-isOnline">Online meeting</Label>
+          <Label htmlFor="schedule-isOnline">{t('onlineMeeting')}</Label>
         </div>
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={isPending}>
-            {isPending ? 'Scheduling...' : 'Confirm Schedule'}
+            {isPending ? t('scheduling') : t('confirmSchedule')}
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={onCancel}>
-            Cancel
+            {tCommon('cancel')}
           </Button>
         </div>
       </form>

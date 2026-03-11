@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ActivityStatus } from '@prisma/client';
 
@@ -30,7 +31,16 @@ const STATUS_COLORS: Record<string, string> = {
   IN_PROGRESS: 'bg-secondary text-secondary-foreground',
 };
 
+const STATUS_KEYS: Record<string, string> = {
+  OPEN: 'statusOpen',
+  FULL: 'statusFull',
+  SCHEDULED: 'statusScheduled',
+  IN_PROGRESS: 'statusInProgress',
+  COMPLETED: 'statusCompleted',
+};
+
 export function ActivityCard({ activity, onClick }: Props) {
+  const t = useTranslations('activities');
   const isLocked = !activity.isEligible;
 
   return (
@@ -47,7 +57,7 @@ export function ActivityCard({ activity, onClick }: Props) {
           <span
             className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_COLORS[activity.status] ?? ''}`}
           >
-            {activity.status === 'IN_PROGRESS' ? 'In Progress' : activity.status}
+            {t(STATUS_KEYS[activity.status] ?? 'statusOpen')}
           </span>
         </div>
         <p className="text-xs text-muted-foreground">{activity.type.name}</p>
@@ -70,16 +80,16 @@ export function ActivityCard({ activity, onClick }: Props) {
         {/* Member count */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            Members: {activity._count.memberships}/{activity.capacity}
+            {t('members', { current: activity._count.memberships, capacity: activity.capacity })}
           </span>
           {isLocked && (
             <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
-              Locked
+              {t('locked')}
             </span>
           )}
           {activity.isMember && (
             <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-              {activity.memberRole === 'LEADER' ? 'Leader' : 'Joined'}
+              {activity.memberRole === 'LEADER' ? t('leader') : t('joined')}
             </span>
           )}
         </div>

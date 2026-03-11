@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Bell } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,15 +12,19 @@ import {
   type NotificationItem,
 } from '@/server/actions/notification';
 
-function relativeTime(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+function useRelativeTime() {
+  const t = useTranslations('notifications');
+
+  return function relativeTime(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const minutes = Math.floor(diff / 60_000);
+    if (minutes < 1) return t('justNow');
+    if (minutes < 60) return t('minutesAgo', { minutes });
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t('hoursAgo', { hours });
+    const days = Math.floor(hours / 24);
+    return t('daysAgo', { days });
+  };
 }
 
 function notificationHref(type: string): string {
@@ -35,6 +40,8 @@ function notificationHref(type: string): string {
 }
 
 export function NotificationList({ notifications }: { notifications: NotificationItem[] }) {
+  const t = useTranslations('notifications');
+  const relativeTime = useRelativeTime();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const hasUnread = notifications.some((n) => !n.isRead);
@@ -60,7 +67,7 @@ export function NotificationList({ notifications }: { notifications: Notificatio
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
           <Bell className="mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">No notifications yet</p>
+          <p className="text-sm text-muted-foreground">{t('empty')}</p>
         </CardContent>
       </Card>
     );
@@ -76,7 +83,7 @@ export function NotificationList({ notifications }: { notifications: Notificatio
             onClick={handleMarkAllRead}
             disabled={isPending}
           >
-            Mark all as read
+            {t('markAllRead')}
           </Button>
         </div>
       )}

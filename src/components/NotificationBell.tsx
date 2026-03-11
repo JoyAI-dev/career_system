@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -20,17 +21,6 @@ import {
 
 const POLL_INTERVAL = 30_000; // 30 seconds
 
-function relativeTime(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 function notificationHref(type: string): string {
   switch (type) {
     case 'ACTIVITY_FULL':
@@ -44,11 +34,23 @@ function notificationHref(type: string): string {
 }
 
 export function NotificationBell({ initialCount = 0 }: { initialCount?: number }) {
+  const t = useTranslations('notifications');
   const [unreadCount, setUnreadCount] = useState(initialCount);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  function relativeTime(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const minutes = Math.floor(diff / 60_000);
+    if (minutes < 1) return t('justNow');
+    if (minutes < 60) return t('minutesAgo', { minutes });
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t('hoursAgo', { hours });
+    const days = Math.floor(hours / 24);
+    return t('daysAgo', { days });
+  }
 
   // Poll for unread count
   useEffect(() => {
@@ -113,7 +115,7 @@ export function NotificationBell({ initialCount = 0 }: { initialCount?: number }
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger
         className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-        aria-label="Notifications"
+        aria-label={t('title')}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -124,7 +126,7 @@ export function NotificationBell({ initialCount = 0 }: { initialCount?: number }
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between px-2">
-          <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('title')}</DropdownMenuLabel>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -133,7 +135,7 @@ export function NotificationBell({ initialCount = 0 }: { initialCount?: number }
               onClick={handleMarkAllRead}
               disabled={isPending}
             >
-              Mark all read
+              {t('markAllRead')}
             </Button>
           )}
         </div>
@@ -141,7 +143,7 @@ export function NotificationBell({ initialCount = 0 }: { initialCount?: number }
         <div className="max-h-80 overflow-y-auto">
           {notifications.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-              No notifications yet
+              {t('empty')}
             </div>
           ) : (
             notifications.map((notification) => (
@@ -180,7 +182,7 @@ export function NotificationBell({ initialCount = 0 }: { initialCount?: number }
               }}
               className="flex w-full items-center justify-center px-3 py-2 text-xs font-medium text-primary hover:bg-accent"
             >
-              View all notifications
+              {t('viewAll')}
             </button>
           </>
         )}

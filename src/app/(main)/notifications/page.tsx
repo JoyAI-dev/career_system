@@ -2,12 +2,16 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { getNotifications } from '@/server/queries/notification';
 import { NotificationList } from './NotificationList';
+import { getTranslations } from 'next-intl/server';
 
 export default async function NotificationsPage() {
   const session = await auth();
   if (!session?.user) redirect('/login');
 
-  const notifications = await getNotifications(session.user.id, { take: 50 });
+  const [notifications, t] = await Promise.all([
+    getNotifications(session.user.id, { take: 50 }),
+    getTranslations('notifications'),
+  ]);
 
   const serialized = notifications.map((n: { id: string; type: unknown; title: string; message: string; isRead: boolean; createdAt: Date }) => ({
     id: n.id,
@@ -20,7 +24,7 @@ export default async function NotificationsPage() {
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold tracking-tight">Notifications</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">{t('title')}</h1>
       <NotificationList notifications={serialized} />
     </div>
   );

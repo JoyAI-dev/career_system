@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { Menu, LogOut } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -19,6 +20,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export function Header({ initialUnreadCount = 0 }: { initialUnreadCount?: number }) {
   const { data: session } = useSession();
+  const t = useTranslations('header');
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const username = session?.user?.username ?? 'User';
@@ -30,10 +32,10 @@ export function Header({ initialUnreadCount = 0 }: { initialUnreadCount?: number
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetTrigger className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring outline-none md:hidden">
           <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle navigation</span>
+          <span className="sr-only">{t('toggleNavigation')}</span>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
-          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <SheetTitle className="sr-only">{t('navigation')}</SheetTitle>
           <Sidebar onNavigate={() => setSheetOpen(false)} />
         </SheetContent>
       </Sheet>
@@ -58,14 +60,14 @@ export function Header({ initialUnreadCount = 0 }: { initialUnreadCount?: number
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium">{username}</p>
               <p className="text-xs text-muted-foreground">
-                {session?.user?.role === 'ADMIN' ? 'Administrator' : 'Student'}
+                {session?.user?.role === 'ADMIN' ? t('administrator') : t('student')}
               </p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
             <LogOut className="h-4 w-4" />
-            Log out
+            {t('logOut')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

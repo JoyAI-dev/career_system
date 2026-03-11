@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import {
   LayoutDashboard,
   Activity,
@@ -13,19 +14,20 @@ import {
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/activities', label: 'Activities', icon: Activity },
-  { href: '/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/profile', label: 'Profile', icon: User },
+  { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
+  { href: '/activities', labelKey: 'activities', icon: Activity },
+  { href: '/calendar', labelKey: 'calendar', icon: Calendar },
+  { href: '/profile', labelKey: 'profile', icon: User },
 ];
 
 const adminItems = [
-  { href: '/admin', label: 'Admin', icon: ShieldCheck },
+  { href: '/admin', labelKey: 'admin', icon: ShieldCheck },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const t = useTranslations('nav');
   const isAdmin = session?.user?.role === 'ADMIN';
 
   const items = isAdmin ? [...navItems, ...adminItems] : navItems;
@@ -33,8 +35,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1 px-3 py-4">
       <div className="mb-4 px-3">
-        <h2 className="text-lg font-semibold tracking-tight">Career Explorer</h2>
-        <p className="text-xs text-muted-foreground">Student Platform</p>
+        <h2 className="text-lg font-semibold tracking-tight">{t('appName')}</h2>
+        <p className="text-xs text-muted-foreground">{t('subtitle')}</p>
       </div>
       {items.map((item) => {
         const isActive =
@@ -52,7 +54,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             )}
           >
             <item.icon className="h-4 w-4" />
-            {item.label}
+            {t(item.labelKey)}
           </Link>
         );
       })}

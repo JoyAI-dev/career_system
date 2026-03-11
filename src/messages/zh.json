@@ -109,10 +109,60 @@
     }
   },
   "activities": {
-    "title": "活动"
+    "title": "活动",
+    "allTypes": "所有类型",
+    "allTags": "所有标签",
+    "count": "{count, plural, =1 {1 个活动} other {# 个活动}}",
+    "noResults": "没有找到匹配的活动。",
+    "join": "加入",
+    "joining": "加入中...",
+    "leave": "离开",
+    "leaving": "离开中...",
+    "full": "已满",
+    "locked": "未解锁",
+    "lockedNotice": "此活动已锁定。完成前置活动类型后即可解锁。",
+    "leader": "组长",
+    "joined": "已加入",
+    "members": "成员：{current}/{capacity}",
+    "guide": "活动指南",
+    "location": "地点：{location}",
+    "onlineActivity": "线上活动",
+    "scheduled": "预定：{date}",
+    "updateCognitiveProfile": "更新认知档案",
+    "reflectOnLearning": "回顾本次活动所学，更新您的问卷答案。",
+    "updateQuestionnaire": "更新问卷",
+    "confirmLeave": "确定要离开这个活动吗？",
+    "confirmStart": "现在开始这个会议吗？",
+    "confirmComplete": "确认完成这个会议吗？",
+    "scheduleMeeting": "安排会议",
+    "startMeeting": "开始会议",
+    "completeMeeting": "完成会议",
+    "dateTime": "日期和时间",
+    "locationLabel": "地点",
+    "onlineMeeting": "线上会议",
+    "confirmSchedule": "确认安排",
+    "scheduling": "安排中...",
+    "statusOpen": "开放",
+    "statusFull": "已满",
+    "statusScheduled": "已安排",
+    "statusInProgress": "进行中",
+    "statusCompleted": "已完成"
   },
   "calendar": {
-    "title": "日历"
+    "title": "日历",
+    "loading": "加载日历中...",
+    "activities": "活动",
+    "recruitment": "招聘",
+    "type": "类型：",
+    "allTypes": "所有类型",
+    "status": "状态：",
+    "time": "时间：",
+    "location": "地点：",
+    "online": "线上",
+    "company": "公司：",
+    "date": "日期：",
+    "description": "描述：",
+    "viewInActivities": "在活动中查看"
   },
   "cognitiveReport": {
     "title": "认知边界报告",
@@ -149,7 +199,23 @@
     "scoreLabel": "得分：{score}"
   },
   "notifications": {
-    "title": "通知"
+    "title": "通知",
+    "empty": "暂无通知",
+    "markAllRead": "全部标为已读",
+    "viewAll": "查看所有通知",
+    "justNow": "刚刚",
+    "minutesAgo": "{minutes}分钟前",
+    "hoursAgo": "{hours}小时前",
+    "daysAgo": "{days}天前"
+  },
+  "nav": {
+    "appName": "职业探索",
+    "subtitle": "学生平台",
+    "dashboard": "首页",
+    "activities": "活动",
+    "calendar": "日历",
+    "profile": "个人资料",
+    "admin": "管理"
   },
   "admin": {
     "dashboard": {

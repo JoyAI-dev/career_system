@@ -109,10 +109,60 @@
     }
   },
   "activities": {
-    "title": "Activities"
+    "title": "Activities",
+    "allTypes": "All Types",
+    "allTags": "All Tags",
+    "count": "{count, plural, =1 {1 activity} other {# activities}}",
+    "noResults": "No activities found matching your filters.",
+    "join": "Join",
+    "joining": "Joining...",
+    "leave": "Leave",
+    "leaving": "Leaving...",
+    "full": "Full",
+    "locked": "Locked",
+    "lockedNotice": "This activity is locked. Complete the prerequisite activity type to unlock.",
+    "leader": "Leader",
+    "joined": "Joined",
+    "members": "Members: {current}/{capacity}",
+    "guide": "Activity Guide",
+    "location": "Location: {location}",
+    "onlineActivity": "Online activity",
+    "scheduled": "Scheduled: {date}",
+    "updateCognitiveProfile": "Update Your Cognitive Profile",
+    "reflectOnLearning": "Reflect on what you learned from this activity and update your questionnaire answers.",
+    "updateQuestionnaire": "Update Questionnaire",
+    "confirmLeave": "Are you sure you want to leave this activity?",
+    "confirmStart": "Start this meeting now?",
+    "confirmComplete": "Mark this meeting as completed?",
+    "scheduleMeeting": "Schedule Meeting",
+    "startMeeting": "Start Meeting",
+    "completeMeeting": "Complete Meeting",
+    "dateTime": "Date & Time",
+    "locationLabel": "Location",
+    "onlineMeeting": "Online meeting",
+    "confirmSchedule": "Confirm Schedule",
+    "scheduling": "Scheduling...",
+    "statusOpen": "Open",
+    "statusFull": "Full",
+    "statusScheduled": "Scheduled",
+    "statusInProgress": "In Progress",
+    "statusCompleted": "Completed"
   },
   "calendar": {
-    "title": "Calendar"
+    "title": "Calendar",
+    "loading": "Loading calendar...",
+    "activities": "Activities",
+    "recruitment": "Recruitment",
+    "type": "Type:",
+    "allTypes": "All Types",
+    "status": "Status:",
+    "time": "Time:",
+    "location": "Location:",
+    "online": "Online",
+    "company": "Company:",
+    "date": "Date:",
+    "description": "Description:",
+    "viewInActivities": "View in Activities"
   },
   "cognitiveReport": {
     "title": "Cognitive Boundary Report",
@@ -149,7 +199,23 @@
     "scoreLabel": "Score: {score}"
   },
   "notifications": {
-    "title": "Notifications"
+    "title": "Notifications",
+    "empty": "No notifications yet",
+    "markAllRead": "Mark all as read",
+    "viewAll": "View all notifications",
+    "justNow": "Just now",
+    "minutesAgo": "{minutes}m ago",
+    "hoursAgo": "{hours}h ago",
+    "daysAgo": "{days}d ago"
+  },
+  "nav": {
+    "appName": "Career Explorer",
+    "subtitle": "Student Platform",
+    "dashboard": "Dashboard",
+    "activities": "Activities",
+    "calendar": "Calendar",
+    "profile": "Profile",
+    "admin": "Admin"
   },
   "admin": {
     "dashboard": {

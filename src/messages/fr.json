@@ -109,10 +109,60 @@
     }
   },
   "activities": {
-    "title": "Activités"
+    "title": "Activités",
+    "allTypes": "Tous les types",
+    "allTags": "Tous les tags",
+    "count": "{count, plural, =1 {1 activité} other {# activités}}",
+    "noResults": "Aucune activité ne correspond à vos filtres.",
+    "join": "Rejoindre",
+    "joining": "Inscription...",
+    "leave": "Quitter",
+    "leaving": "Départ...",
+    "full": "Complet",
+    "locked": "Verrouillé",
+    "lockedNotice": "Cette activité est verrouillée. Complétez le type d'activité prérequis pour la débloquer.",
+    "leader": "Responsable",
+    "joined": "Inscrit",
+    "members": "Membres : {current}/{capacity}",
+    "guide": "Guide d'activité",
+    "location": "Lieu : {location}",
+    "onlineActivity": "Activité en ligne",
+    "scheduled": "Prévu : {date}",
+    "updateCognitiveProfile": "Mettre à jour votre profil cognitif",
+    "reflectOnLearning": "Réfléchissez à ce que vous avez appris lors de cette activité et mettez à jour vos réponses.",
+    "updateQuestionnaire": "Mettre à jour le questionnaire",
+    "confirmLeave": "Êtes-vous sûr de vouloir quitter cette activité ?",
+    "confirmStart": "Démarrer cette réunion maintenant ?",
+    "confirmComplete": "Marquer cette réunion comme terminée ?",
+    "scheduleMeeting": "Planifier une réunion",
+    "startMeeting": "Démarrer la réunion",
+    "completeMeeting": "Terminer la réunion",
+    "dateTime": "Date et heure",
+    "locationLabel": "Lieu",
+    "onlineMeeting": "Réunion en ligne",
+    "confirmSchedule": "Confirmer la planification",
+    "scheduling": "Planification...",
+    "statusOpen": "Ouvert",
+    "statusFull": "Complet",
+    "statusScheduled": "Planifié",
+    "statusInProgress": "En cours",
+    "statusCompleted": "Terminé"
   },
   "calendar": {
-    "title": "Calendrier"
+    "title": "Calendrier",
+    "loading": "Chargement du calendrier...",
+    "activities": "Activités",
+    "recruitment": "Recrutement",
+    "type": "Type :",
+    "allTypes": "Tous les types",
+    "status": "Statut :",
+    "time": "Heure :",
+    "location": "Lieu :",
+    "online": "En ligne",
+    "company": "Entreprise :",
+    "date": "Date :",
+    "description": "Description :",
+    "viewInActivities": "Voir dans les activités"
   },
   "cognitiveReport": {
     "title": "Rapport de frontière cognitive",
@@ -149,7 +199,23 @@
     "scoreLabel": "Score : {score}"
   },
   "notifications": {
-    "title": "Notifications"
+    "title": "Notifications",
+    "empty": "Aucune notification",
+    "markAllRead": "Tout marquer comme lu",
+    "viewAll": "Voir toutes les notifications",
+    "justNow": "À l'instant",
+    "minutesAgo": "Il y a {minutes} min",
+    "hoursAgo": "Il y a {hours} h",
+    "daysAgo": "Il y a {days} j"
+  },
+  "nav": {
+    "appName": "Exploration Carrière",
+    "subtitle": "Plateforme étudiante",
+    "dashboard": "Tableau de bord",
+    "activities": "Activités",
+    "calendar": "Calendrier",
+    "profile": "Profil",
+    "admin": "Administration"
   },
   "admin": {
     "dashboard": {

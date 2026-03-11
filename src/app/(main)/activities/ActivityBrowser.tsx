@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ActivityCard } from '@/components/ActivityCard';
 import { ActivityDetailDialog } from '@/components/ActivityDetailDialog';
 import type { ActivityStatus } from '@prisma/client';
@@ -34,6 +35,7 @@ type Props = {
 };
 
 export function ActivityBrowser({ activities, types, tags }: Props) {
+  const t = useTranslations('activities');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [tagFilter, setTagFilter] = useState('ALL');
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
@@ -55,7 +57,7 @@ export function ActivityBrowser({ activities, types, tags }: Props) {
           aria-label="Filter by activity type"
           className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <option value="ALL">All Types</option>
+          <option value="ALL">{t('allTypes')}</option>
           {types.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
@@ -68,7 +70,7 @@ export function ActivityBrowser({ activities, types, tags }: Props) {
           aria-label="Filter by tag"
           className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <option value="ALL">All Tags</option>
+          <option value="ALL">{t('allTags')}</option>
           {tags.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
@@ -76,14 +78,14 @@ export function ActivityBrowser({ activities, types, tags }: Props) {
           ))}
         </select>
         <span className="text-sm text-muted-foreground">
-          {filtered.length} {filtered.length === 1 ? 'activity' : 'activities'}
+          {t('count', { count: filtered.length })}
         </span>
       </div>
 
       {/* Card Grid */}
       {filtered.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground">
-          No activities found matching your filters.
+          {t('noResults')}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

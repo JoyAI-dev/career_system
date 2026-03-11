@@ -1,10 +1,13 @@
 'use client';
 
 import { useRef, useState, useMemo } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import zhCnLocale from '@fullcalendar/core/locales/zh-cn';
+import enLocale from '@fullcalendar/core/locales/en-au';
+import frLocale from '@fullcalendar/core/locales/fr';
 import type { EventClickArg } from '@fullcalendar/core';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -14,6 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+
+const FC_LOCALES: Record<string, typeof zhCnLocale> = {
+  zh: zhCnLocale,
+  en: enLocale,
+  fr: frLocale,
+};
 
 type CalendarEvent = {
   id: string;
@@ -53,9 +62,20 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }
   OPEN: { bg: '#d1fae5', border: '#10b981', text: '#065f46' },
 };
 
+const STATUS_KEYS: Record<string, string> = {
+  OPEN: 'statusOpen',
+  FULL: 'statusFull',
+  SCHEDULED: 'statusScheduled',
+  IN_PROGRESS: 'statusInProgress',
+  COMPLETED: 'statusCompleted',
+};
+
 const RECRUITMENT_COLORS = { bg: '#fce7f3', border: '#ec4899', text: '#9d174d' };
 
 export function CalendarView({ events, recruitmentEvents = [], activityTypes = [] }: Props) {
+  const t = useTranslations('calendar');
+  const tAct = useTranslations('activities');
+  const locale = useLocale();
   const calendarRef = useRef<FullCalendar>(null);
   const [selected, setSelected] = useState<SelectedItem | null>(null);
   const [showActivities, setShowActivities] = useState(true);
@@ -124,7 +144,7 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
               className="mr-1.5 inline-block h-2.5 w-2.5 rounded"
               style={{ backgroundColor: STATUS_COLORS.SCHEDULED.border }}
             />
-            Activities
+            {t('activities')}
           </Button>
           <Button
             variant={showRecruitment ? 'default' : 'outline'}
@@ -135,19 +155,19 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
               className="mr-1.5 inline-block h-2.5 w-2.5 rounded"
               style={{ backgroundColor: RECRUITMENT_COLORS.border }}
             />
-            Recruitment
+            {t('recruitment')}
           </Button>
         </div>
 
         {showActivities && availableTypes.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Type:</span>
+            <span className="text-xs text-muted-foreground">{t('type')}</span>
             <select
               value={selectedTypeId}
               onChange={(e) => setSelectedTypeId(e.target.value)}
               className="rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="all">All Types</option>
+              <option value="all">{t('allTypes')}</option>
               {availableTypes.map((type) => (
                 <option key={type.id} value={type.id}>
                   {type.name}
@@ -163,7 +183,7 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin]}
           initialView="dayGridMonth"
-          locale={zhCnLocale}
+          locale={FC_LOCALES[locale] ?? zhCnLocale}
           headerToolbar={{
             left: 'prev,next today',
             center: 'title',
@@ -192,11 +212,11 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
               </DialogHeader>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Type:</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('type')}</span>
                   <span className="text-sm">{selected.data.type.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('status')}</span>
                   <span
                     className="rounded px-1.5 py-0.5 text-xs font-medium"
                     style={{
@@ -204,27 +224,20 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
                       color: STATUS_COLORS[selected.data.status]?.text,
                     }}
                   >
-                    {selected.data.status === 'IN_PROGRESS' ? 'In Progress' : selected.data.status}
+                    {tAct(STATUS_KEYS[selected.data.status] ?? 'statusOpen')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Time:</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('time')}</span>
                   <span className="text-sm">
-                    {new Date(selected.data.scheduledAt).toLocaleString('zh-CN', {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false,
-                    })}
+                    {new Date(selected.data.scheduledAt).toLocaleString()}
                   </span>
                 </div>
                 {(selected.data.location || selected.data.isOnline) && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-muted-foreground">Location:</span>
+                    <span className="text-sm font-medium text-muted-foreground">{t('location')}</span>
                     <span className="text-sm">
-                      {selected.data.isOnline ? 'Online' : selected.data.location}
+                      {selected.data.isOnline ? t('online') : selected.data.location}
                     </span>
                   </div>
                 )}
@@ -233,7 +246,7 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
                     href="/activities"
                     className="text-sm text-primary underline-offset-4 hover:underline"
                   >
-                    View in Activities
+                    {t('viewInActivities')}
                   </Link>
                 </div>
               </div>
@@ -246,25 +259,18 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
               </DialogHeader>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Company:</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('company')}</span>
                   <span className="text-sm">{selected.data.company}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Date:</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('date')}</span>
                   <span className="text-sm">
-                    {new Date(selected.data.eventDate).toLocaleString('zh-CN', {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false,
-                    })}
+                    {new Date(selected.data.eventDate).toLocaleString()}
                   </span>
                 </div>
                 {selected.data.description && (
                   <div>
-                    <span className="text-sm font-medium text-muted-foreground">Description:</span>
+                    <span className="text-sm font-medium text-muted-foreground">{t('description')}</span>
                     <p className="mt-1 text-sm whitespace-pre-wrap">{selected.data.description}</p>
                   </div>
                 )}
@@ -276,7 +282,7 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
                       color: RECRUITMENT_COLORS.text,
                     }}
                   >
-                    Recruitment
+                    {t('recruitment')}
                   </span>
                 </div>
               </div>
