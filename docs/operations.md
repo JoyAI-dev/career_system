@@ -54,8 +54,8 @@ Configure these in the Vercel dashboard (Settings → Environment Variables):
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string (Supabase pooler recommended) |
-| `NEXTAUTH_SECRET` | Random secret for Auth.js session encryption |
-| `NEXTAUTH_URL` | Production URL (e.g., `https://your-app.vercel.app`) |
+| `AUTH_SECRET` | Random secret for Auth.js v5 session encryption (`openssl rand -base64 32`) |
+| `AUTH_URL` | Production URL (e.g., `https://your-app.vercel.app`) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only) |
 | `NEXT_PUBLIC_APP_URL` | Public-facing app URL |

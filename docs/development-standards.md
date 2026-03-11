@@ -139,8 +139,8 @@ Error:   { error: { code: string, message: string, details?: unknown } }
 
 ### Required Variables
 - `DATABASE_URL` — PostgreSQL connection string
-- `NEXTAUTH_SECRET` — Auth.js secret
-- `NEXTAUTH_URL` — App URL
+- `AUTH_SECRET` — Auth.js v5 session secret
+- `AUTH_URL` — App URL
 
 ### Rules
 - Never commit `.env.local`

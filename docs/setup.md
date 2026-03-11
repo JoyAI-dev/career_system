@@ -33,9 +33,9 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Auth.js
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-random-secret
+# Auth.js (v5)
+AUTH_URL=http://localhost:3000
+AUTH_SECRET=your-random-secret
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
