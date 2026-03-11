@@ -69,7 +69,9 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Welcome to the Career Exploration Platform."
+    "welcome": "Welcome to the Career Exploration Platform.",
+    "activitiesHint": "Your joined group activities will show in the calendar below. Complete each step to unlock the next.",
+    "noJoinedActivities": "You haven't joined any activities yet. Browse activities to get started!"
   },
   "profile": {
     "title": "Profile",

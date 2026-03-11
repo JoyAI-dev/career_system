@@ -69,7 +69,9 @@
   },
   "dashboard": {
     "title": "Tableau de bord",
-    "welcome": "Bienvenue sur la plateforme d'exploration de carrière."
+    "welcome": "Bienvenue sur la plateforme d'exploration de carrière.",
+    "activitiesHint": "Vos activités de groupe rejointes apparaîtront dans le calendrier ci-dessous. Complétez chaque étape pour débloquer la suivante.",
+    "noJoinedActivities": "Vous n'avez encore rejoint aucune activité. Parcourez les activités pour commencer !"
   },
   "profile": {
     "title": "Profil",

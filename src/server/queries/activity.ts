@@ -145,6 +145,36 @@ export async function getActivityProgress(userId: string): Promise<ActivityProgr
   });
 }
 
+/** Get activities the user has joined (active memberships) for the cards row */
+export async function getUserJoinedActivities(userId: string) {
+  const memberships = await prisma.membership.findMany({
+    where: {
+      userId,
+      activity: { status: { in: ['OPEN', 'FULL', 'SCHEDULED', 'IN_PROGRESS'] } },
+    },
+    select: {
+      role: true,
+      activity: {
+        include: {
+          type: { select: { id: true, name: true } },
+          activityTags: {
+            include: { tag: { select: { id: true, name: true } } },
+          },
+          _count: { select: { memberships: true } },
+        },
+      },
+    },
+    orderBy: { joinedAt: 'desc' },
+  });
+
+  return memberships.map((m) => ({
+    ...m.activity,
+    isEligible: true, // user is already a member so they're eligible
+    isMember: true,
+    memberRole: m.role,
+  }));
+}
+
 /** Get activity detail with full info for the detail popup */
 export async function getActivityDetail(id: string) {
   return prisma.activity.findUnique({
