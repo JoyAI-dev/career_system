@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import type { UserListItem } from '@/server/queries/admin';
 
 type Props = {
+  tab: 'admin' | 'student';
   users: UserListItem[];
   total: number;
   page: number;
@@ -18,11 +19,13 @@ type Props = {
   sortOrder: string;
 };
 
-export function UserTable({ users, total, page, totalPages, query, sortBy, sortOrder }: Props) {
+export function UserTable({ tab, users, total, page, totalPages, query, sortBy, sortOrder }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState(query);
   const t = useTranslations('admin.users');
   const locale = useLocale();
+
+  const isStudent = tab === 'student';
 
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString(locale, {
@@ -34,7 +37,7 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
 
   function buildUrl(overrides: Record<string, string | number>) {
     const params = new URLSearchParams();
-    const values = { q: query, page: String(page), sort: sortBy, order: sortOrder, ...overrides };
+    const values = { q: query, page: String(page), sort: sortBy, order: sortOrder, tab, ...overrides };
     for (const [k, v] of Object.entries(values)) {
       if (v) params.set(k, String(v));
     }
@@ -50,6 +53,8 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
     const newOrder = sortBy === field && sortOrder === 'asc' ? 'desc' : 'asc';
     router.push(buildUrl({ sort: field, order: newOrder, page: 1 }));
   }
+
+  const colCount = isStudent ? 7 : 5;
 
   return (
     <div className="space-y-4">
@@ -69,7 +74,7 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
             size="sm"
             onClick={() => {
               setSearch('');
-              router.push('/admin/users');
+              router.push(`/admin/users?tab=${tab}`);
             }}
           >
             {t('clear')}
@@ -93,9 +98,15 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
                     {t('username')} {sortBy === 'username' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">{t('name')}</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">{t('school')}</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">{t('role')}</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">{t('questionnaireStatus')}</th>
+                  {isStudent && (
+                    <th className="px-4 py-3 font-medium text-muted-foreground">{t('school')}</th>
+                  )}
+                  {isStudent && (
+                    <th className="px-4 py-3 font-medium text-muted-foreground">{t('questionnaireStatus')}</th>
+                  )}
+                  {isStudent && (
+                    <th className="px-4 py-3 font-medium text-muted-foreground">{t('score')}</th>
+                  )}
                   <th
                     className="cursor-pointer px-4 py-3 font-medium text-muted-foreground hover:text-foreground"
                     onClick={() => handleSort('createdAt')}
@@ -110,21 +121,25 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
                   <tr key={user.id} className="border-b last:border-0 hover:bg-muted/50">
                     <td className="px-4 py-3 font-medium">{user.username}</td>
                     <td className="px-4 py-3 text-muted-foreground">{user.name || '—'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{user.school || '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        user.role === 'ADMIN'
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs ${user.hasSnapshot ? 'text-green-600' : 'text-muted-foreground'}`}>
-                        {user.hasSnapshot ? t('completed') : t('pending')}
-                      </span>
-                    </td>
+                    {isStudent && (
+                      <td className="px-4 py-3 text-muted-foreground">{user.school || '—'}</td>
+                    )}
+                    {isStudent && (
+                      <td className="px-4 py-3">
+                        <span className={`text-xs ${user.hasSnapshot ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          {user.hasSnapshot ? t('completed') : t('pending')}
+                        </span>
+                      </td>
+                    )}
+                    {isStudent && (
+                      <td className="px-4 py-3">
+                        {user.overallScore !== null ? (
+                          <span className="text-xs font-medium">{user.overallScore}</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(user.createdAt)}</td>
                     <td className="px-4 py-3 text-right">
                       <Link
@@ -138,7 +153,7 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
                 ))}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={colCount} className="px-4 py-8 text-center text-muted-foreground">
                       {t('noUsers')}
                     </td>
                   </tr>

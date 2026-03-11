@@ -103,15 +103,18 @@ export type UserListItem = {
   role: string;
   createdAt: string;
   hasSnapshot: boolean;
+  overallScore: number | null;
 };
 
 export async function searchUsers({
   query,
+  role,
   page = 1,
   sortBy = 'createdAt',
   sortOrder = 'desc',
 }: {
   query?: string;
+  role?: 'ADMIN' | 'USER';
   page?: number;
   sortBy?: 'createdAt' | 'username';
   sortOrder?: 'asc' | 'desc';
@@ -119,16 +122,19 @@ export async function searchUsers({
   const take = 20;
   const skip = (page - 1) * take;
 
-  const where: Prisma.UserWhereInput = query
-    ? {
-        OR: [
-          { username: { contains: query, mode: 'insensitive' as const } },
-          { school: { contains: query, mode: 'insensitive' as const } },
-          { major: { contains: query, mode: 'insensitive' as const } },
-          { name: { contains: query, mode: 'insensitive' as const } },
-        ],
-      }
-    : {};
+  const conditions: Prisma.UserWhereInput[] = [];
+  if (role) conditions.push({ role });
+  if (query) {
+    conditions.push({
+      OR: [
+        { username: { contains: query, mode: 'insensitive' as const } },
+        { school: { contains: query, mode: 'insensitive' as const } },
+        { major: { contains: query, mode: 'insensitive' as const } },
+        { name: { contains: query, mode: 'insensitive' as const } },
+      ],
+    });
+  }
+  const where: Prisma.UserWhereInput = conditions.length > 0 ? { AND: conditions } : {};
 
   const orderBy = { [sortBy]: sortOrder };
 
@@ -148,23 +154,69 @@ export async function searchUsers({
         role: true,
         createdAt: true,
         _count: { select: { responseSnapshots: true } },
+        responseSnapshots: {
+          orderBy: { completedAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            answers: {
+              select: {
+                questionId: true,
+                selectedOption: { select: { score: true } },
+              },
+            },
+            version: {
+              select: {
+                topics: {
+                  select: {
+                    dimensions: {
+                      select: {
+                        questions: { select: { id: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     }),
     prisma.user.count({ where }),
   ]);
 
   return {
-    users: users.map((u) => ({
-      id: u.id,
-      username: u.username,
-      name: u.name,
-      school: u.school,
-      major: u.major,
-      grade: u.grade,
-      role: String(u.role),
-      createdAt: u.createdAt.toISOString(),
-      hasSnapshot: u._count.responseSnapshots > 0,
-    })),
+    users: users.map((u) => {
+      let overallScore: number | null = null;
+      const snapshot = u.responseSnapshots[0];
+      if (snapshot) {
+        const answerMap = new Map(
+          snapshot.answers.map((a) => [a.questionId, a.selectedOption.score]),
+        );
+        const topics = snapshot.version.topics;
+        const topicAvgs = topics.map((topic) => {
+          const questionIds = topic.dimensions.flatMap((d) => d.questions.map((q) => q.id));
+          if (questionIds.length === 0) return 0;
+          const sum = questionIds.reduce((s, qid) => s + (answerMap.get(qid) ?? 0), 0);
+          return sum / questionIds.length;
+        });
+        overallScore = topicAvgs.length > 0
+          ? Math.round((topicAvgs.reduce((s, v) => s + v, 0) / topicAvgs.length) * 100) / 100
+          : null;
+      }
+      return {
+        id: u.id,
+        username: u.username,
+        name: u.name,
+        school: u.school,
+        major: u.major,
+        grade: u.grade,
+        role: String(u.role),
+        createdAt: u.createdAt.toISOString(),
+        hasSnapshot: u._count.responseSnapshots > 0,
+        overallScore,
+      };
+    }),
     total,
   };
 }

@@ -320,7 +320,10 @@
       "studentIdTitle": "Student ID",
       "viewStudentId": "View Student ID Document",
       "loadingStudentId": "Loading...",
-      "failedLoadStudentId": "Failed to load student ID"
+      "failedLoadStudentId": "Failed to load student ID",
+      "studentTab": "Students",
+      "adminTab": "Admins",
+      "score": "Score"
     },
     "questionnaire": {
       "title": "Questionnaire Management",

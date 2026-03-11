@@ -1,6 +1,6 @@
 import { requireAdmin } from '@/lib/auth';
 import { searchUsers } from '@/server/queries/admin';
-import { UserTable } from './UserTable';
+import { UserTabs } from './UserTabs';
 import { getTranslations } from 'next-intl/server';
 
 type SearchParams = Promise<{
@@ -8,6 +8,7 @@ type SearchParams = Promise<{
   page?: string;
   sort?: string;
   order?: string;
+  tab?: string;
 }>;
 
 export default async function AdminUsersPage({
@@ -19,17 +20,20 @@ export default async function AdminUsersPage({
   const [params, t] = await Promise.all([searchParams, getTranslations('admin.users')]);
 
   const query = params.q || undefined;
+  const activeTab = params.tab === 'admin' ? 'admin' : 'student';
   const page = parseInt(params.page || '1', 10);
   const sortBy = (params.sort === 'username' ? 'username' : 'createdAt') as 'createdAt' | 'username';
   const sortOrder = (params.order === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc';
 
-  const { users, total } = await searchUsers({ query, page, sortBy, sortOrder });
+  const role = activeTab === 'admin' ? 'ADMIN' as const : 'USER' as const;
+  const { users, total } = await searchUsers({ query, role, page, sortBy, sortOrder });
   const totalPages = Math.ceil(total / 20);
 
   return (
     <div>
       <h1 className="mb-6 text-3xl font-bold tracking-tight">{t('title')}</h1>
-      <UserTable
+      <UserTabs
+        activeTab={activeTab}
         users={users}
         total={total}
         page={page}

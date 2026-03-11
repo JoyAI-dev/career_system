@@ -320,7 +320,10 @@
       "studentIdTitle": "Carte étudiante",
       "viewStudentId": "Voir le document de carte étudiante",
       "loadingStudentId": "Chargement...",
-      "failedLoadStudentId": "Impossible de charger la carte étudiante"
+      "failedLoadStudentId": "Impossible de charger la carte étudiante",
+      "studentTab": "Étudiants",
+      "adminTab": "Administrateurs",
+      "score": "Score"
     },
     "questionnaire": {
       "title": "Gestion du questionnaire",

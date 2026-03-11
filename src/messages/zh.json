@@ -320,7 +320,10 @@
       "studentIdTitle": "学生证",
       "viewStudentId": "查看学生证文件",
       "loadingStudentId": "加载中...",
-      "failedLoadStudentId": "加载学生证失败"
+      "failedLoadStudentId": "加载学生证失败",
+      "studentTab": "学生",
+      "adminTab": "管理员",
+      "score": "评分"
     },
     "questionnaire": {
       "title": "问卷管理",
