@@ -6,6 +6,7 @@ import { requireAdmin, requireAuth, auth } from '@/lib/auth';
 import { getUnlockedTypeIds } from '@/server/queries/activity';
 import { validateTransition, type TransitionAction } from '@/server/stateMachine';
 import { revalidatePath } from 'next/cache';
+import { notifyActivityMembers } from '@/server/notifications';
 import type { ActivityStatus, MemberRole } from '@prisma/client';
 
 const ADMIN_PATH = '/admin/activities';
@@ -237,6 +238,21 @@ export async function joinActivity(activityId: string): Promise<ActionState> {
           where: { id: activityId },
           data: { status: 'FULL' },
         });
+
+        // Fetch activity title for notification
+        const activityData = await tx.activity.findUnique({
+          where: { id: activityId },
+          select: { title: true },
+        });
+        const title = activityData?.title ?? 'Activity';
+
+        await notifyActivityMembers(
+          activityId,
+          'ACTIVITY_FULL',
+          'Activity Full',
+          `"${title}" has reached full capacity. The leader can now schedule a meeting.`,
+          tx,
+        );
       }
     });
   } catch (error) {
@@ -362,6 +378,28 @@ export async function scheduleMeeting(
           isOnline: parsed.data.isOnline ?? false,
         },
       });
+
+      // Fetch activity title for notification
+      const activityData = await tx.activity.findUnique({
+        where: { id: parsed.data.activityId },
+        select: { title: true },
+      });
+      const title = activityData?.title ?? 'Activity';
+      const dateStr = parsed.data.scheduledAt.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      await notifyActivityMembers(
+        parsed.data.activityId,
+        'TIME_CONFIRMED',
+        'Meeting Scheduled',
+        `"${title}" has been scheduled for ${dateStr}.`,
+        tx,
+        userId,
+      );
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to schedule meeting.';

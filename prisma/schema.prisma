@@ -30,6 +30,7 @@ model User {
   createdActivities  Activity[]
   recruitmentInfos   RecruitmentInfo[]
   responseComments   ResponseComment[]
+  notifications      Notification[]
 
   @@map("users")
 }
@@ -287,4 +288,28 @@ model RecruitmentInfo {
 
   @@index([eventDate])
   @@map("recruitment_info")
+}
+
+// ─── Notifications ──────────────────────────────────────────────────
+
+enum NotificationType {
+  ACTIVITY_FULL
+  TIME_CONFIRMED
+  NEW_COMMENT
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }

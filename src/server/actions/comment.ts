@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { createNotification } from '@/server/notifications';
 
 export type ActionState = {
   errors?: { [key: string]: string[] };
@@ -46,6 +47,17 @@ export async function addComment(
       activityTag: parsed.data.activityTag ?? null,
     },
   });
+
+  // Notify answer owner if commenter is different (future-proofing for shared comments)
+  const ownerId = answer.snapshot.userId;
+  if (ownerId !== session.user.id) {
+    await createNotification({
+      userId: ownerId,
+      type: 'NEW_COMMENT',
+      title: 'New Comment',
+      message: `Someone commented on your questionnaire answer.`,
+    });
+  }
 
   revalidatePath('/cognitive-report');
   return { success: true };
