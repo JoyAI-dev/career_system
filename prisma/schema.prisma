@@ -25,6 +25,8 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  responseSnapshots ResponseSnapshot[]
+
   @@map("users")
 }
 
@@ -51,4 +53,111 @@ model LoginAttempt {
   firstAttempt DateTime @default(now())
 
   @@map("login_attempts")
+}
+
+// ─── Versioned Questionnaire System ─────────────────────────────────
+
+model QuestionnaireVersion {
+  id        String   @id @default(cuid())
+  version   Int      @unique
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  topics    Topic[]
+  snapshots ResponseSnapshot[]
+
+  @@map("questionnaire_versions")
+}
+
+model Topic {
+  id        String @id @default(cuid())
+  versionId String
+  name      String
+  order     Int
+
+  version    QuestionnaireVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  dimensions Dimension[]
+
+  @@index([versionId])
+  @@map("topics")
+}
+
+model Dimension {
+  id      String @id @default(cuid())
+  topicId String
+  name    String
+  order   Int
+
+  topic     Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  questions Question[]
+
+  @@map("dimensions")
+}
+
+model Question {
+  id          String @id @default(cuid())
+  dimensionId String
+  title       String
+  order       Int
+
+  dimension      Dimension        @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+  notes          QuestionNote[]
+  answerOptions  AnswerOption[]
+  responseAnswers ResponseAnswer[]
+
+  @@map("questions")
+}
+
+model QuestionNote {
+  id         String @id @default(cuid())
+  questionId String
+  label      String
+  content    String
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("question_notes")
+}
+
+model AnswerOption {
+  id         String @id @default(cuid())
+  questionId String
+  label      String
+  score      Int
+
+  question        Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  responseAnswers ResponseAnswer[]
+
+  @@map("answer_options")
+}
+
+// ─── Response Snapshots (Immutable) ─────────────────────────────────
+
+model ResponseSnapshot {
+  id          String   @id @default(cuid())
+  userId      String
+  versionId   String
+  completedAt DateTime @default(now())
+  context     String?
+  activityId  String?
+
+  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  version QuestionnaireVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  answers ResponseAnswer[]
+
+  @@index([userId])
+  @@map("response_snapshots")
+}
+
+model ResponseAnswer {
+  id               String @id @default(cuid())
+  snapshotId       String
+  questionId       String
+  selectedOptionId String
+
+  snapshot       ResponseSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  question       Question         @relation(fields: [questionId], references: [id])
+  selectedOption AnswerOption     @relation(fields: [selectedOptionId], references: [id])
+
+  @@map("response_answers")
 }
