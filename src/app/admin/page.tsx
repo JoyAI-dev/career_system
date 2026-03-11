@@ -5,7 +5,22 @@ export default function AdminPage() {
   return (
     <div>
       <h1 className="mb-6 text-3xl font-bold tracking-tight">Admin Panel</h1>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Link href="/admin/questionnaire">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardHeader>
+              <CardTitle>Questionnaire</CardTitle>
+              <CardDescription>
+                Manage cognitive boundary questionnaire
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create and manage versioned questionnaire structure with topics, dimensions, and questions.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         <Link href="/admin/grades">
           <Card className="transition-shadow hover:shadow-md">
             <CardHeader>
