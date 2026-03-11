@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/auth';
 import { searchUsers } from '@/server/queries/admin';
 import { UserTable } from './UserTable';
+import { getTranslations } from 'next-intl/server';
 
 type SearchParams = Promise<{
   q?: string;
@@ -15,7 +16,7 @@ export default async function AdminUsersPage({
   searchParams: SearchParams;
 }) {
   await requireAdmin();
-  const params = await searchParams;
+  const [params, t] = await Promise.all([searchParams, getTranslations('admin.users')]);
 
   const query = params.q || undefined;
   const page = parseInt(params.page || '1', 10);
@@ -27,7 +28,7 @@ export default async function AdminUsersPage({
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-bold tracking-tight">User Management</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">{t('title')}</h1>
       <UserTable
         users={users}
         total={total}

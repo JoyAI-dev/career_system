@@ -2,6 +2,7 @@
 
 import { useState, useActionState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,6 +46,7 @@ type Props = {
 export function ActivityForm({ types, tags, activity }: Props) {
   const isEdit = !!activity;
   const router = useRouter();
+  const t = useTranslations('admin.activityForm');
   const [state, formAction] = useActionState<ActionState, FormData>(
     isEdit ? updateActivity : createActivity,
     {},
@@ -102,7 +104,7 @@ export function ActivityForm({ types, tags, activity }: Props) {
 
           {/* Activity Type */}
           <div>
-            <Label htmlFor="typeId">Activity Type</Label>
+            <Label htmlFor="typeId">{t('activityType')}</Label>
             <select
               id="typeId"
               name="typeId"
@@ -111,7 +113,7 @@ export function ActivityForm({ types, tags, activity }: Props) {
               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
               required
             >
-              <option value="">Select a type...</option>
+              <option value="">{t('selectType')}</option>
               {types.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -125,7 +127,7 @@ export function ActivityForm({ types, tags, activity }: Props) {
 
           {/* Title */}
           <div>
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t('title')}</Label>
             <Input
               id="title"
               name="title"
@@ -140,7 +142,7 @@ export function ActivityForm({ types, tags, activity }: Props) {
 
           {/* Capacity */}
           <div>
-            <Label htmlFor="capacity">Capacity</Label>
+            <Label htmlFor="capacity">{t('capacity')}</Label>
             <Input
               id="capacity"
               name="capacity"
@@ -157,12 +159,12 @@ export function ActivityForm({ types, tags, activity }: Props) {
 
           {/* Location */}
           <div>
-            <Label htmlFor="location">Location</Label>
+            <Label htmlFor="location">{t('location')}</Label>
             <Input
               id="location"
               name="location"
               defaultValue={activity?.location ?? ''}
-              placeholder="Optional"
+              placeholder={t('optional')}
             />
           </div>
 
@@ -176,12 +178,12 @@ export function ActivityForm({ types, tags, activity }: Props) {
               defaultChecked={activity?.isOnline ?? false}
               className="size-4 rounded border-border"
             />
-            <Label htmlFor="isOnline">Online activity</Label>
+            <Label htmlFor="isOnline">{t('onlineActivity')}</Label>
           </div>
 
           {/* Tags */}
           <div>
-            <Label>Tags</Label>
+            <Label>{t('tags')}</Label>
             <div className="mt-1 flex flex-wrap gap-2">
               {tags.map((tag) => (
                 <button
@@ -199,7 +201,7 @@ export function ActivityForm({ types, tags, activity }: Props) {
               ))}
               {tags.length === 0 && (
                 <span className="text-xs text-muted-foreground">
-                  No tags available. Create tags in admin first.
+                  {t('noTags')}
                 </span>
               )}
             </div>
@@ -208,7 +210,7 @@ export function ActivityForm({ types, tags, activity }: Props) {
           {/* Markdown Guide */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <Label htmlFor="guideMarkdown">Guide (Markdown)</Label>
+              <Label htmlFor="guideMarkdown">{t('guideMarkdown')}</Label>
               <div className="flex gap-1">
                 <Button
                   type="button"
@@ -216,7 +218,7 @@ export function ActivityForm({ types, tags, activity }: Props) {
                   size="xs"
                   onClick={() => setPreviewMode(false)}
                 >
-                  Write
+                  {t('write')}
                 </Button>
                 <Button
                   type="button"
@@ -224,7 +226,7 @@ export function ActivityForm({ types, tags, activity }: Props) {
                   size="xs"
                   onClick={() => setPreviewMode(true)}
                 >
-                  Preview
+                  {t('preview')}
                 </Button>
               </div>
             </div>
@@ -233,7 +235,7 @@ export function ActivityForm({ types, tags, activity }: Props) {
                 {guideMarkdown ? (
                   <ReactMarkdown>{guideMarkdown}</ReactMarkdown>
                 ) : (
-                  <p className="text-muted-foreground">Nothing to preview</p>
+                  <p className="text-muted-foreground">{t('nothingToPreview')}</p>
                 )}
               </div>
             ) : (
@@ -243,7 +245,7 @@ export function ActivityForm({ types, tags, activity }: Props) {
                 value={guideMarkdown}
                 onChange={(e) => setGuideMarkdown(e.target.value)}
                 className="min-h-[200px] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                placeholder="Write activity guide in Markdown..."
+                placeholder={t('guidePlaceholder')}
               />
             )}
           </div>
@@ -253,18 +255,18 @@ export function ActivityForm({ types, tags, activity }: Props) {
             <Button type="submit" disabled={isPending}>
               {isPending
                 ? isEdit
-                  ? 'Saving...'
-                  : 'Creating...'
+                  ? t('saving')
+                  : t('creating')
                 : isEdit
-                  ? 'Save Changes'
-                  : 'Create Activity'}
+                  ? t('saveChanges')
+                  : t('createActivity')}
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => router.push('/admin/activities')}
             >
-              Cancel
+              {t('cancel')}
             </Button>
           </div>
         </form>

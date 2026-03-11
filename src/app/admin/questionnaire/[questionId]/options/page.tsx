@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
+import { getTranslations } from 'next-intl/server';
 import { getQuestionWithOptions } from '@/server/queries/questionnaire';
 import { AnswerOptionsEditor } from './AnswerOptionsEditor';
 
@@ -23,6 +24,7 @@ export default async function AnswerOptionsPage({
 
   const version = question.dimension.topic.version;
   const isDraft = !version.isActive;
+  const t = await getTranslations('admin.questionnaire.options');
 
   return (
     <div>
@@ -31,11 +33,11 @@ export default async function AnswerOptionsPage({
           href="/admin/questionnaire"
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          &larr; Back to Questionnaire
+          &larr; {t('backToQuestionnaire')}
         </Link>
       </div>
       <h1 className="mb-2 text-3xl font-bold tracking-tight">
-        Answer Options
+        {t('title')}
       </h1>
       <p className="mb-6 text-muted-foreground">
         <span className="font-medium">{question.dimension.topic.name}</span>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useActionState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,7 @@ type Props = {
 };
 
 export function ActivityTypeManager({ types }: Props) {
+  const t = useTranslations('admin.activityTypes');
   return (
     <div className="space-y-4">
       <AddActivityTypeButton types={types} />
@@ -45,7 +47,7 @@ export function ActivityTypeManager({ types }: Props) {
       {types.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            No activity types configured. Add one to get started.
+            {t('noTypes')}
           </CardContent>
         </Card>
       ) : (
@@ -77,6 +79,7 @@ function ActivityTypeRow({
   isLast: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations('admin.activityTypes');
 
   function handleReorder(direction: 'up' | 'down') {
     startTransition(() => {
@@ -126,14 +129,14 @@ function ActivityTypeRow({
             <span className="font-medium">{type.name}</span>
             {!type.isEnabled && (
               <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                Disabled
+                {t('disabled')}
               </span>
             )}
           </div>
           <div className="flex gap-4 text-xs text-muted-foreground">
-            <span>Capacity: {type.defaultCapacity}</span>
+            <span>{t('capacity', { count: type.defaultCapacity })}</span>
             {type.prerequisiteType && (
-              <span>Requires: {type.prerequisiteType.name}</span>
+              <span>{t('requires', { name: type.prerequisiteType.name })}</span>
             )}
           </div>
         </div>
@@ -146,7 +149,7 @@ function ActivityTypeRow({
             onClick={handleToggle}
             disabled={isPending}
           >
-            {type.isEnabled ? 'Disable' : 'Enable'}
+            {type.isEnabled ? t('disable') : t('enable')}
           </Button>
           <EditActivityTypeButton type={type} types={types} />
           <Button
@@ -155,7 +158,7 @@ function ActivityTypeRow({
             onClick={handleDelete}
             disabled={isPending}
           >
-            Delete
+            {t('delete')}
           </Button>
         </div>
       </CardContent>
@@ -167,6 +170,7 @@ function AddActivityTypeButton({ types }: { types: ActivityType[] }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(createActivityType, {});
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations('admin.activityTypes');
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -179,21 +183,21 @@ function AddActivityTypeButton({ types }: { types: ActivityType[] }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>Add Activity Type</DialogTrigger>
+      <DialogTrigger render={<Button />}>{t('addActivityType')}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Activity Type</DialogTitle>
+          <DialogTitle>{t('addActivityType')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">{t('name')}</Label>
             <Input id="name" name="name" required />
             {state.errors?.name && (
               <p className="mt-1 text-xs text-destructive">{state.errors.name[0]}</p>
             )}
           </div>
           <div>
-            <Label htmlFor="defaultCapacity">Default Capacity</Label>
+            <Label htmlFor="defaultCapacity">{t('defaultCapacity')}</Label>
             <Input
               id="defaultCapacity"
               name="defaultCapacity"
@@ -204,13 +208,13 @@ function AddActivityTypeButton({ types }: { types: ActivityType[] }) {
             />
           </div>
           <div>
-            <Label htmlFor="prerequisiteTypeId">Prerequisite Type</Label>
+            <Label htmlFor="prerequisiteTypeId">{t('prerequisiteType')}</Label>
             <select
               id="prerequisiteTypeId"
               name="prerequisiteTypeId"
               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
             >
-              <option value="">None</option>
+              <option value="">{t('none')}</option>
               {types.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
@@ -218,10 +222,10 @@ function AddActivityTypeButton({ types }: { types: ActivityType[] }) {
           </div>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" type="button" />}>
-              Cancel
+              {t('cancel')}
             </DialogClose>
             <Button type="submit" disabled={isPending}>
-              {isPending ? 'Creating...' : 'Create'}
+              {isPending ? t('creating') : t('create')}
             </Button>
           </DialogFooter>
         </form>
@@ -234,6 +238,7 @@ function EditActivityTypeButton({ type, types }: { type: ActivityType; types: Ac
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(updateActivityType, {});
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations('admin.activityTypes');
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -247,21 +252,21 @@ function EditActivityTypeButton({ type, types }: { type: ActivityType; types: Ac
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="ghost" size="xs" />}>Edit</DialogTrigger>
+      <DialogTrigger render={<Button variant="ghost" size="xs" />}>{t('edit')}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Activity Type</DialogTitle>
+          <DialogTitle>{t('editActivityType')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="edit-name">Name</Label>
+            <Label htmlFor="edit-name">{t('name')}</Label>
             <Input id="edit-name" name="name" defaultValue={type.name} required />
             {state.errors?.name && (
               <p className="mt-1 text-xs text-destructive">{state.errors.name[0]}</p>
             )}
           </div>
           <div>
-            <Label htmlFor="edit-capacity">Default Capacity</Label>
+            <Label htmlFor="edit-capacity">{t('defaultCapacity')}</Label>
             <Input
               id="edit-capacity"
               name="defaultCapacity"
@@ -272,14 +277,14 @@ function EditActivityTypeButton({ type, types }: { type: ActivityType; types: Ac
             />
           </div>
           <div>
-            <Label htmlFor="edit-prereq">Prerequisite Type</Label>
+            <Label htmlFor="edit-prereq">{t('prerequisiteType')}</Label>
             <select
               id="edit-prereq"
               name="prerequisiteTypeId"
               defaultValue={type.prerequisiteTypeId ?? ''}
               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
             >
-              <option value="">None</option>
+              <option value="">{t('none')}</option>
               {types
                 .filter((t) => t.id !== type.id)
                 .map((t) => (
@@ -292,10 +297,10 @@ function EditActivityTypeButton({ type, types }: { type: ActivityType; types: Ac
           </div>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" type="button" />}>
-              Cancel
+              {t('cancel')}
             </DialogClose>
             <Button type="submit" disabled={isPending}>
-              {isPending ? 'Saving...' : 'Save'}
+              {isPending ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
         </form>

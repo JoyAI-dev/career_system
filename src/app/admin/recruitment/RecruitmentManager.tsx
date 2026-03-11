@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useActionState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,19 +37,22 @@ type Props = {
   items: RecruitmentItem[];
 };
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-}
-
 function toInputDate(dateStr: string) {
   return new Date(dateStr).toISOString().slice(0, 16);
 }
 
 export function RecruitmentManager({ items }: Props) {
+  const t = useTranslations('admin.recruitment');
+  const locale = useLocale();
+
+  function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString(locale, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  }
+
   return (
     <div className="space-y-4">
       <AddRecruitmentButton />
@@ -55,7 +60,7 @@ export function RecruitmentManager({ items }: Props) {
       {items.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            No recruitment info yet. Add one to get started.
+            {t('noRecruitment')}
           </CardContent>
         </Card>
       ) : (
@@ -63,15 +68,15 @@ export function RecruitmentManager({ items }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium">Title</th>
-                <th className="px-4 py-3 text-left font-medium">Company</th>
-                <th className="px-4 py-3 text-left font-medium">Event Date</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
+                <th className="px-4 py-3 text-left font-medium">{t('titleColumn')}</th>
+                <th className="px-4 py-3 text-left font-medium">{t('company')}</th>
+                <th className="px-4 py-3 text-left font-medium">{t('eventDate')}</th>
+                <th className="px-4 py-3 text-right font-medium">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
-                <RecruitmentRow key={item.id} item={item} />
+                <RecruitmentRow key={item.id} item={item} formatDate={formatDate} />
               ))}
             </tbody>
           </table>
@@ -81,9 +86,10 @@ export function RecruitmentManager({ items }: Props) {
   );
 }
 
-function RecruitmentRow({ item }: { item: RecruitmentItem }) {
+function RecruitmentRow({ item, formatDate }: { item: RecruitmentItem; formatDate: (d: string) => string }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations('admin.recruitment');
 
   function handleDelete() {
     if (!confirm(`Delete "${item.title}"?`)) return;
@@ -117,7 +123,7 @@ function RecruitmentRow({ item }: { item: RecruitmentItem }) {
             onClick={handleDelete}
             disabled={isPending}
           >
-            Delete
+            {t('delete')}
           </Button>
         </div>
         {error && (
@@ -132,6 +138,7 @@ function AddRecruitmentButton() {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(createRecruitment, {});
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations('admin.recruitment');
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -144,28 +151,28 @@ function AddRecruitmentButton() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>Add Recruitment</DialogTrigger>
+      <DialogTrigger render={<Button />}>{t('addRecruitment')}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Recruitment Info</DialogTitle>
+          <DialogTitle>{t('addRecruitmentInfo')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t('titleField')}</Label>
             <Input id="title" name="title" maxLength={200} required />
             {state.errors?.title && (
               <p className="mt-1 text-xs text-destructive">{state.errors.title[0]}</p>
             )}
           </div>
           <div>
-            <Label htmlFor="company">Company</Label>
+            <Label htmlFor="company">{t('companyField')}</Label>
             <Input id="company" name="company" maxLength={200} required />
             {state.errors?.company && (
               <p className="mt-1 text-xs text-destructive">{state.errors.company[0]}</p>
             )}
           </div>
           <div>
-            <Label htmlFor="description">Description (optional)</Label>
+            <Label htmlFor="description">{t('descriptionField')}</Label>
             <textarea
               id="description"
               name="description"
@@ -175,7 +182,7 @@ function AddRecruitmentButton() {
             />
           </div>
           <div>
-            <Label htmlFor="eventDate">Event Date & Time</Label>
+            <Label htmlFor="eventDate">{t('eventDateTime')}</Label>
             <Input id="eventDate" name="eventDate" type="datetime-local" required />
             {state.errors?.eventDate && (
               <p className="mt-1 text-xs text-destructive">{state.errors.eventDate[0]}</p>
@@ -183,10 +190,10 @@ function AddRecruitmentButton() {
           </div>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" type="button" />}>
-              Cancel
+              {t('cancel')}
             </DialogClose>
             <Button type="submit" disabled={isPending}>
-              {isPending ? 'Creating...' : 'Create'}
+              {isPending ? t('creating') : t('create')}
             </Button>
           </DialogFooter>
         </form>
@@ -199,6 +206,7 @@ function EditRecruitmentButton({ item }: { item: RecruitmentItem }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(updateRecruitment, {});
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations('admin.recruitment');
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -212,28 +220,28 @@ function EditRecruitmentButton({ item }: { item: RecruitmentItem }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="ghost" size="xs" />}>Edit</DialogTrigger>
+      <DialogTrigger render={<Button variant="ghost" size="xs" />}>{t('edit')}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Recruitment Info</DialogTitle>
+          <DialogTitle>{t('editRecruitmentInfo')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="edit-title">Title</Label>
+            <Label htmlFor="edit-title">{t('titleField')}</Label>
             <Input id="edit-title" name="title" defaultValue={item.title} maxLength={200} required />
             {state.errors?.title && (
               <p className="mt-1 text-xs text-destructive">{state.errors.title[0]}</p>
             )}
           </div>
           <div>
-            <Label htmlFor="edit-company">Company</Label>
+            <Label htmlFor="edit-company">{t('companyField')}</Label>
             <Input id="edit-company" name="company" defaultValue={item.company} maxLength={200} required />
             {state.errors?.company && (
               <p className="mt-1 text-xs text-destructive">{state.errors.company[0]}</p>
             )}
           </div>
           <div>
-            <Label htmlFor="edit-description">Description (optional)</Label>
+            <Label htmlFor="edit-description">{t('descriptionField')}</Label>
             <textarea
               id="edit-description"
               name="description"
@@ -244,7 +252,7 @@ function EditRecruitmentButton({ item }: { item: RecruitmentItem }) {
             />
           </div>
           <div>
-            <Label htmlFor="edit-eventDate">Event Date & Time</Label>
+            <Label htmlFor="edit-eventDate">{t('eventDateTime')}</Label>
             <Input
               id="edit-eventDate"
               name="eventDate"
@@ -258,10 +266,10 @@ function EditRecruitmentButton({ item }: { item: RecruitmentItem }) {
           </div>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" type="button" />}>
-              Cancel
+              {t('cancel')}
             </DialogClose>
             <Button type="submit" disabled={isPending}>
-              {isPending ? 'Saving...' : 'Save'}
+              {isPending ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
         </form>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState, useTransition, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,6 +51,8 @@ export function AnswerOptionsEditor({
   const [addOpen, setAddOpen] = useState(false);
   const [editOption, setEditOption] = useState<AnswerOption | null>(null);
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations('admin.questionnaire.options');
+  const tc = useTranslations('common');
 
   const scoreSum = useMemo(
     () => options.reduce((sum, opt) => sum + opt.score, 0),
@@ -88,20 +91,20 @@ export function AnswerOptionsEditor({
         <CardContent className="flex items-center justify-between py-4">
           <div>
             <p className="text-sm text-muted-foreground">
-              v{versionNumber} — {isDraft ? 'Draft (Editable)' : 'Published (Read Only)'}
+              v{versionNumber} — {isDraft ? t('draftEditable') : t('publishedReadOnly')}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">Score Total</p>
+            <p className="text-sm text-muted-foreground">{t('scoreTotal')}</p>
             <p className={`text-2xl font-bold ${sumColor}`}>
               {scoreSum} / 100
             </p>
             {scoreSum === 100 && (
-              <p className="text-xs text-green-600 dark:text-green-400">Valid</p>
+              <p className="text-xs text-green-600 dark:text-green-400">{t('valid')}</p>
             )}
             {scoreSum !== 100 && (
               <p className="text-xs text-destructive">
-                {scoreSum < 100 ? `Need ${100 - scoreSum} more` : `${scoreSum - 100} over`}
+                {scoreSum < 100 ? t('needMore', { count: 100 - scoreSum }) : t('over', { count: scoreSum - 100 })}
               </p>
             )}
           </div>
@@ -112,15 +115,15 @@ export function AnswerOptionsEditor({
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Options ({options.length})</CardTitle>
+            <CardTitle className="text-lg">{t('optionsCount', { count: options.length })}</CardTitle>
             {isDraft && (
               <Dialog open={addOpen} onOpenChange={setAddOpen}>
                 <DialogTrigger className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-                  Add Option
+                  {t('addOption')}
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Add Answer Option</DialogTitle>
+                    <DialogTitle>{t('addAnswerOption')}</DialogTitle>
                   </DialogHeader>
                   <form action={addAction} className="space-y-4">
                     <input type="hidden" name="questionId" value={questionId} />
@@ -130,7 +133,7 @@ export function AnswerOptionsEditor({
                       </p>
                     )}
                     <div className="space-y-2">
-                      <Label htmlFor="add-label">Label</Label>
+                      <Label htmlFor="add-label">{t('label')}</Label>
                       <Input id="add-label" name="label" required />
                       {addState.errors?.label && (
                         <p className="text-sm text-destructive">
@@ -139,7 +142,7 @@ export function AnswerOptionsEditor({
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="add-score">Score (0-100)</Label>
+                      <Label htmlFor="add-score">{t('scoreRange')}</Label>
                       <Input
                         id="add-score"
                         name="score"
@@ -156,7 +159,7 @@ export function AnswerOptionsEditor({
                       )}
                     </div>
                     <Button type="submit" disabled={addPending}>
-                      {addPending ? 'Adding...' : 'Add Option'}
+                      {addPending ? t('adding') : t('addOption')}
                     </Button>
                   </form>
                 </DialogContent>
@@ -168,9 +171,9 @@ export function AnswerOptionsEditor({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Label</TableHead>
-                <TableHead className="w-24 text-right">Score</TableHead>
-                {isDraft && <TableHead className="w-32 text-right">Actions</TableHead>}
+                <TableHead>{t('label')}</TableHead>
+                <TableHead className="w-24 text-right">{t('score')}</TableHead>
+                {isDraft && <TableHead className="w-32 text-right">{t('actions')}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -186,7 +189,7 @@ export function AnswerOptionsEditor({
                           size="sm"
                           onClick={() => setEditOption(option)}
                         >
-                          Edit
+                          {tc('edit')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -194,14 +197,14 @@ export function AnswerOptionsEditor({
                           className="text-destructive"
                           disabled={isPending}
                           onClick={() => {
-                            if (confirm(`Delete "${option.label}"?`)) {
+                            if (confirm(t('confirmDeleteOption', { label: option.label }))) {
                               startTransition(async () => {
                                 await deleteAnswerOption(option.id);
                               });
                             }
                           }}
                         >
-                          Delete
+                          {tc('delete')}
                         </Button>
                       </div>
                     </TableCell>
@@ -214,7 +217,7 @@ export function AnswerOptionsEditor({
                     colSpan={isDraft ? 3 : 2}
                     className="text-center text-muted-foreground"
                   >
-                    No answer options configured.
+                    {t('noOptions')}
                   </TableCell>
                 </TableRow>
               )}
@@ -230,7 +233,7 @@ export function AnswerOptionsEditor({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Answer Option</DialogTitle>
+            <DialogTitle>{t('editAnswerOption')}</DialogTitle>
           </DialogHeader>
           {editOption && (
             <form action={editAction} className="space-y-4">
@@ -241,7 +244,7 @@ export function AnswerOptionsEditor({
                 </p>
               )}
               <div className="space-y-2">
-                <Label htmlFor="edit-label">Label</Label>
+                <Label htmlFor="edit-label">{t('label')}</Label>
                 <Input
                   id="edit-label"
                   name="label"
@@ -255,7 +258,7 @@ export function AnswerOptionsEditor({
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-score">Score (0-100)</Label>
+                <Label htmlFor="edit-score">{t('scoreRange')}</Label>
                 <Input
                   id="edit-score"
                   name="score"
@@ -272,7 +275,7 @@ export function AnswerOptionsEditor({
                 )}
               </div>
               <Button type="submit" disabled={editPending}>
-                {editPending ? 'Saving...' : 'Save'}
+                {editPending ? t('saving') : t('save')}
               </Button>
             </form>
           )}

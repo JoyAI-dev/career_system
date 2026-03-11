@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { changeUserRole } from '@/server/actions/admin';
 
@@ -14,6 +15,7 @@ export function RoleToggle({ userId, currentRole, username }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const t = useTranslations('admin.users');
 
   const newRole = currentRole === 'ADMIN' ? 'USER' : 'ADMIN';
 
@@ -38,7 +40,7 @@ export function RoleToggle({ userId, currentRole, username }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm">
-            Current role:{' '}
+            {t('currentRole')}{' '}
             <span className={`font-semibold ${currentRole === 'ADMIN' ? 'text-primary' : ''}`}>
               {currentRole}
             </span>
@@ -52,7 +54,7 @@ export function RoleToggle({ userId, currentRole, username }: Props) {
               onClick={() => setConfirming(false)}
               disabled={isPending}
             >
-              Cancel
+              {t('cancel')}
             </Button>
           )}
           <Button
@@ -62,10 +64,10 @@ export function RoleToggle({ userId, currentRole, username }: Props) {
             disabled={isPending}
           >
             {isPending
-              ? 'Changing...'
+              ? t('changing')
               : confirming
-                ? `Confirm: Make ${username} ${newRole}`
-                : `Change to ${newRole}`}
+                ? t('confirmMake', { username, role: newRole })
+                : t('changeTo', { role: newRole })}
           </Button>
         </div>
       </div>

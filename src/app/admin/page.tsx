@@ -2,54 +2,59 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDashboardStats } from '@/server/queries/admin';
 import { requireAdmin } from '@/lib/auth';
+import { getTranslations, getLocale } from 'next-intl/server';
 
 type RecentUser = { id: string; username: string; name: string | null; school: string | null; createdAt: string };
 type NearCapacityActivity = { id: string; title: string; members: number; capacity: number };
 
-const STATUS_LABELS: Record<string, string> = {
-  OPEN: 'Open',
-  FULL: 'Full',
-  SCHEDULED: 'Scheduled',
-  IN_PROGRESS: 'In Progress',
-  COMPLETED: 'Completed',
+const STATUS_KEYS: Record<string, string> = {
+  OPEN: 'statusOpen',
+  FULL: 'statusFull',
+  SCHEDULED: 'statusScheduled',
+  IN_PROGRESS: 'statusInProgress',
+  COMPLETED: 'statusCompleted',
 };
 
 const ADMIN_LINKS = [
-  { href: '/admin/users', label: 'Users', desc: 'User management and roles' },
-  { href: '/admin/questionnaire', label: 'Questionnaire', desc: 'Manage cognitive questionnaire' },
-  { href: '/admin/activities', label: 'Activities', desc: 'Create and manage activities' },
-  { href: '/admin/activity-types', label: 'Activity Types', desc: 'Progressive activity types' },
-  { href: '/admin/tags', label: 'Tags', desc: 'Activity categorization tags' },
-  { href: '/admin/recruitment', label: 'Recruitment', desc: 'Recruitment event publishing' },
-  { href: '/admin/grades', label: 'Grade Options', desc: 'Student grade levels' },
-  { href: '/admin/settings', label: 'Settings', desc: 'Platform-wide configuration' },
+  { href: '/admin/users', labelKey: 'linkUsers', descKey: 'linkUsersDesc' },
+  { href: '/admin/questionnaire', labelKey: 'linkQuestionnaire', descKey: 'linkQuestionnaireDesc' },
+  { href: '/admin/activities', labelKey: 'linkActivities', descKey: 'linkActivitiesDesc' },
+  { href: '/admin/activity-types', labelKey: 'linkActivityTypes', descKey: 'linkActivityTypesDesc' },
+  { href: '/admin/tags', labelKey: 'linkTags', descKey: 'linkTagsDesc' },
+  { href: '/admin/recruitment', labelKey: 'linkRecruitment', descKey: 'linkRecruitmentDesc' },
+  { href: '/admin/grades', labelKey: 'linkGrades', descKey: 'linkGradesDesc' },
+  { href: '/admin/settings', labelKey: 'linkSettings', descKey: 'linkSettingsDesc' },
 ];
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export default async function AdminPage() {
   await requireAdmin();
-  const stats = await getDashboardStats();
+  const [stats, t, locale] = await Promise.all([
+    getDashboardStats(),
+    getTranslations('admin.dashboard'),
+    getLocale(),
+  ]);
+
+  function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString(locale, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
 
   const totalActivities = Object.values(stats.statusCounts).reduce((a, b) => a + b, 0);
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+      <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
 
       {/* Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Students
+              {t('totalStudents')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -60,7 +65,7 @@ export default async function AdminPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Activities
+              {t('totalActivities')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -71,7 +76,7 @@ export default async function AdminPage() {
                   key={status}
                   className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium"
                 >
-                  {STATUS_LABELS[status] || status}: {count}
+                  {t(STATUS_KEYS[status] || status)}: {count}
                 </span>
               ))}
             </div>
@@ -81,13 +86,13 @@ export default async function AdminPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Questionnaire Completion
+              {t('questionnaireCompletion')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{stats.completionRate}%</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {stats.totalSnapshots} total submissions
+              {t('totalSubmissions', { count: stats.totalSnapshots })}
             </p>
           </CardContent>
         </Card>
@@ -95,13 +100,13 @@ export default async function AdminPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Near Capacity
+              {t('nearCapacity')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{stats.nearCapacity.length}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              activities at 80%+ capacity
+              {t('activitiesAtCapacity')}
             </p>
           </CardContent>
         </Card>
@@ -111,11 +116,11 @@ export default async function AdminPage() {
         {/* Recent Registrations */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Registrations</CardTitle>
+            <CardTitle>{t('recentRegistrations')}</CardTitle>
           </CardHeader>
           <CardContent>
             {stats.recentUsers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No registrations yet</p>
+              <p className="text-sm text-muted-foreground">{t('noRegistrations')}</p>
             ) : (
               <div className="space-y-3">
                 {stats.recentUsers.map((user: RecentUser) => (
@@ -144,12 +149,12 @@ export default async function AdminPage() {
         {/* Activities Nearing Capacity */}
         <Card>
           <CardHeader>
-            <CardTitle>Activities Nearing Capacity</CardTitle>
+            <CardTitle>{t('activitiesNearingCapacity')}</CardTitle>
           </CardHeader>
           <CardContent>
             {stats.nearCapacity.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No activities nearing capacity
+                {t('noNearCapacity')}
               </p>
             ) : (
               <div className="space-y-3">
@@ -183,14 +188,14 @@ export default async function AdminPage() {
 
       {/* Quick Links */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold">Quick Links</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t('quickLinks')}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {ADMIN_LINKS.map((link) => (
             <Link key={link.href} href={link.href}>
               <Card className="transition-shadow hover:shadow-md">
                 <CardContent className="p-4">
-                  <p className="text-sm font-medium">{link.label}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{link.desc}</p>
+                  <p className="text-sm font-medium">{t(link.labelKey)}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{t(link.descKey)}</p>
                 </CardContent>
               </Card>
             </Link>

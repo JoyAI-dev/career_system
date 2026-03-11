@@ -3,17 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { UserListItem } from '@/server/queries/admin';
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 type Props = {
   users: UserListItem[];
@@ -28,6 +21,16 @@ type Props = {
 export function UserTable({ users, total, page, totalPages, query, sortBy, sortOrder }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState(query);
+  const t = useTranslations('admin.users');
+  const locale = useLocale();
+
+  function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString(locale, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
 
   function buildUrl(overrides: Record<string, string | number>) {
     const params = new URLSearchParams();
@@ -55,10 +58,10 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by username, name, school, major..."
+          placeholder={t('searchPlaceholder')}
           className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
-        <Button type="submit" size="sm">Search</Button>
+        <Button type="submit" size="sm">{t('search')}</Button>
         {query && (
           <Button
             type="button"
@@ -69,12 +72,12 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
               router.push('/admin/users');
             }}
           >
-            Clear
+            {t('clear')}
           </Button>
         )}
       </form>
 
-      <p className="text-sm text-muted-foreground">{total} users found</p>
+      <p className="text-sm text-muted-foreground">{t('usersFound', { count: total })}</p>
 
       {/* Table */}
       <Card>
@@ -87,17 +90,17 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
                     className="cursor-pointer px-4 py-3 font-medium text-muted-foreground hover:text-foreground"
                     onClick={() => handleSort('username')}
                   >
-                    Username {sortBy === 'username' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    {t('username')} {sortBy === 'username' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Name</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">School</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Role</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Questionnaire</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground">{t('name')}</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground">{t('school')}</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground">{t('role')}</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground">{t('questionnaireStatus')}</th>
                   <th
                     className="cursor-pointer px-4 py-3 font-medium text-muted-foreground hover:text-foreground"
                     onClick={() => handleSort('createdAt')}
                   >
-                    Registered {sortBy === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    {t('registered')} {sortBy === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -119,7 +122,7 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs ${user.hasSnapshot ? 'text-green-600' : 'text-muted-foreground'}`}>
-                        {user.hasSnapshot ? 'Completed' : 'Pending'}
+                        {user.hasSnapshot ? t('completed') : t('pending')}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(user.createdAt)}</td>
@@ -128,7 +131,7 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
                         href={`/admin/users/${user.id}`}
                         className="text-xs text-primary hover:underline"
                       >
-                        View
+                        {t('view')}
                       </Link>
                     </td>
                   </tr>
@@ -136,7 +139,7 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
                 {users.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                      No users found
+                      {t('noUsers')}
                     </td>
                   </tr>
                 )}
@@ -150,7 +153,7 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Page {page} of {totalPages}
+            {t('pageOf', { page, totalPages })}
           </p>
           <div className="flex gap-2">
             <Button
@@ -159,7 +162,7 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
               disabled={page <= 1}
               onClick={() => router.push(buildUrl({ page: page - 1 }))}
             >
-              Previous
+              {t('previous')}
             </Button>
             <Button
               variant="outline"
@@ -167,7 +170,7 @@ export function UserTable({ users, total, page, totalPages, query, sortBy, sortO
               disabled={page >= totalPages}
               onClick={() => router.push(buildUrl({ page: page + 1 }))}
             >
-              Next
+              {t('next')}
             </Button>
           </div>
         </div>

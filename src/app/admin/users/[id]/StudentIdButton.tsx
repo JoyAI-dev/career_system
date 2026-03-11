@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
 export function StudentIdButton({ userId }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations('admin.users');
 
   async function handleClick() {
     setLoading(true);
@@ -18,12 +20,12 @@ export function StudentIdButton({ userId }: Props) {
       const res = await fetch(`/api/admin/student-id?userId=${encodeURIComponent(userId)}`);
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error?.message || 'Failed to load student ID');
+        setError(data.error?.message || t('failedLoadStudentId'));
         return;
       }
       window.open(data.url, '_blank', 'noopener,noreferrer');
     } catch {
-      setError('Failed to load student ID');
+      setError(t('failedLoadStudentId'));
     } finally {
       setLoading(false);
     }
@@ -32,7 +34,7 @@ export function StudentIdButton({ userId }: Props) {
   return (
     <div className="space-y-2">
       <Button variant="outline" size="sm" onClick={handleClick} disabled={loading}>
-        {loading ? 'Loading...' : 'View Student ID Document'}
+        {loading ? t('loadingStudentId') : t('viewStudentId')}
       </Button>
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

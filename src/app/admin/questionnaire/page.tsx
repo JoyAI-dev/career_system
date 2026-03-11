@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
+import { getTranslations } from 'next-intl/server';
 import {
   getQuestionnaireVersions,
   getVersionStructure,
@@ -19,14 +20,15 @@ export default async function AdminQuestionnairePage() {
   const draftVersion = versions.find((v: { isActive: boolean }) => !v.isActive);
   const selectedVersion = draftVersion ?? activeVersion;
 
-  const structure = selectedVersion
-    ? await getVersionStructure(selectedVersion.id)
-    : null;
+  const [structure, t] = await Promise.all([
+    selectedVersion ? getVersionStructure(selectedVersion.id) : Promise.resolve(null),
+    getTranslations('admin.questionnaire'),
+  ]);
 
   return (
     <div>
       <h1 className="mb-6 text-3xl font-bold tracking-tight">
-        Questionnaire Management
+        {t('title')}
       </h1>
       <QuestionnaireManager
         versions={versions}

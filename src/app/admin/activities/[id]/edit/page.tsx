@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
+import { getTranslations } from 'next-intl/server';
 import { getActivityById } from '@/server/queries/activity';
 import { getActivityTypes } from '@/server/queries/activityType';
 import { getTags } from '@/server/queries/tag';
@@ -14,10 +15,11 @@ export default async function EditActivityPage({
 
   const { id } = await params;
 
-  const [activity, types, tags] = await Promise.all([
+  const [activity, types, tags, t] = await Promise.all([
     getActivityById(id),
     getActivityTypes(),
     getTags(),
+    getTranslations('admin.activities'),
   ]);
 
   if (!activity) notFound();
@@ -27,7 +29,7 @@ export default async function EditActivityPage({
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Edit Activity</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight">{t('editActivity')}</h1>
       <ActivityForm
         types={enabledTypes}
         tags={tags}

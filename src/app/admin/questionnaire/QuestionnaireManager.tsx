@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -107,6 +108,7 @@ export function QuestionnaireManager({
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [selectedVersionId, setSelectedVersionId] = useState(initialVersionId);
+  const t = useTranslations('admin.questionnaire');
 
   const selectedVersion = versions.find((v) => v.id === selectedVersionId);
   const isDraft = selectedVersion && !selectedVersion.isActive;
@@ -117,7 +119,7 @@ export function QuestionnaireManager({
       {/* Version Bar */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Version Management</CardTitle>
+          <CardTitle className="text-lg">{t('versionManagement')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-3">
@@ -131,10 +133,10 @@ export function QuestionnaireManager({
                 window.location.href = `/admin/questionnaire?v=${e.target.value}`;
               }}
             >
-              {versions.length === 0 && <option value="">No versions</option>}
+              {versions.length === 0 && <option value="">{t('noVersions')}</option>}
               {versions.map((v) => (
                 <option key={v.id} value={v.id}>
-                  v{v.version} {v.isActive ? '(Active)' : '(Draft)'}
+                  v{v.version} ({v.isActive ? t('active') : t('draft')})
                 </option>
               ))}
             </select>
@@ -151,7 +153,7 @@ export function QuestionnaireManager({
                   })
                 }
               >
-                {isPending ? 'Creating...' : 'Create New Draft'}
+                {isPending ? t('creating') : t('createNewDraft')}
               </Button>
             )}
 
@@ -163,13 +165,13 @@ export function QuestionnaireManager({
                   disabled={isPending}
                   onClick={() =>
                     startTransition(async () => {
-                      if (confirm('Publish this version? It will become the active questionnaire.')) {
+                      if (confirm(t('confirmPublish'))) {
                         await publishVersion(selectedVersionId);
                       }
                     })
                   }
                 >
-                  {isPending ? 'Publishing...' : 'Publish Version'}
+                  {isPending ? t('publishing') : t('publishVersion')}
                 </Button>
                 <Button
                   variant="destructive"
@@ -177,13 +179,13 @@ export function QuestionnaireManager({
                   disabled={isPending}
                   onClick={() =>
                     startTransition(async () => {
-                      if (confirm('Delete this draft version? This cannot be undone.')) {
+                      if (confirm(t('confirmDeleteDraft'))) {
                         await deleteDraftVersion(selectedVersionId);
                       }
                     })
                   }
                 >
-                  Delete Draft
+                  {t('deleteDraft')}
                 </Button>
               </>
             )}
@@ -196,20 +198,20 @@ export function QuestionnaireManager({
                 disabled={isPending}
                 onClick={() =>
                   startTransition(async () => {
-                    if (confirm('Set this version as active?')) {
+                    if (confirm(t('confirmSetActive'))) {
                       await setActiveVersion(selectedVersionId);
                     }
                   })
                 }
               >
-                Set as Active
+                {t('setAsActive')}
               </Button>
             )}
           </div>
 
           {versions.length === 0 && (
             <p className="mt-3 text-sm text-muted-foreground">
-              No questionnaire versions exist yet. Create a new draft to get started.
+              {t('noVersionsHint')}
             </p>
           )}
         </CardContent>
@@ -220,14 +222,14 @@ export function QuestionnaireManager({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">
-              Structure — v{structure.version}
+              {t('structure')} — v{structure.version}
               {structure.isActive ? (
                 <span className="ml-2 text-sm font-normal text-green-600 dark:text-green-400">
-                  (Active — Read Only)
+                  ({t('activeReadOnly')})
                 </span>
               ) : (
                 <span className="ml-2 text-sm font-normal text-amber-600 dark:text-amber-400">
-                  (Draft — Editable)
+                  ({t('draftEditable')})
                 </span>
               )}
             </h2>
@@ -237,7 +239,7 @@ export function QuestionnaireManager({
           {structure.topics.length === 0 && (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
-                No topics yet. Add a topic to start building the questionnaire.
+                {t('noVersionsHint')}
               </CardContent>
             </Card>
           )}
@@ -261,6 +263,7 @@ export function QuestionnaireManager({
 
 function AddTopicButton({ versionId }: { versionId: string }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations('admin.questionnaire');
   const [state, action, pending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
       const result = await createTopic(prev, formData);
@@ -273,11 +276,11 @@ function AddTopicButton({ versionId }: { versionId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-        Add Topic
+        {t('addTopic')}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Topic</DialogTitle>
+          <DialogTitle>{t('addTopic')}</DialogTitle>
         </DialogHeader>
         <form action={action} className="space-y-4">
           <input type="hidden" name="versionId" value={versionId} />
@@ -285,11 +288,11 @@ function AddTopicButton({ versionId }: { versionId: string }) {
             <p className="text-sm text-destructive">{state.errors.name[0]}</p>
           )}
           <div className="space-y-2">
-            <Label htmlFor="topic-name">Topic Name</Label>
+            <Label htmlFor="topic-name">{t('topicName')}</Label>
             <Input id="topic-name" name="name" required />
           </div>
           <Button type="submit" disabled={pending}>
-            {pending ? 'Adding...' : 'Add Topic'}
+            {pending ? t('adding') : t('addTopic')}
           </Button>
         </form>
       </DialogContent>
@@ -313,6 +316,7 @@ function TopicSection({
   const [expanded, setExpanded] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
+  const t = useTranslations('admin.questionnaire');
 
   const [editState, editAction, editPending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
@@ -335,7 +339,7 @@ function TopicSection({
             <span className="text-lg">{expanded ? '▼' : '▶'}</span>
             <CardTitle className="text-lg">{topic.name}</CardTitle>
             <span className="text-sm text-muted-foreground">
-              ({topic.dimensions.length} dimension{topic.dimensions.length !== 1 ? 's' : ''})
+              ({t('dimensionCount', { count: topic.dimensions.length })})
             </span>
           </button>
           {isDraft && (
@@ -368,11 +372,11 @@ function TopicSection({
                 <DialogTrigger
                   render={<Button variant="ghost" size="sm" />}
                 >
-                  Edit
+                  {t('edit')}
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Edit Topic</DialogTitle>
+                    <DialogTitle>{t('editTopic')}</DialogTitle>
                   </DialogHeader>
                   <form action={editAction} className="space-y-4">
                     <input type="hidden" name="id" value={topic.id} />
@@ -380,7 +384,7 @@ function TopicSection({
                       <p className="text-sm text-destructive">{editState.errors.name[0]}</p>
                     )}
                     <div className="space-y-2">
-                      <Label htmlFor={`edit-topic-${topic.id}`}>Topic Name</Label>
+                      <Label htmlFor={`edit-topic-${topic.id}`}>{t('topicName')}</Label>
                       <Input
                         id={`edit-topic-${topic.id}`}
                         name="name"
@@ -389,7 +393,7 @@ function TopicSection({
                       />
                     </div>
                     <Button type="submit" disabled={editPending}>
-                      {editPending ? 'Saving...' : 'Save'}
+                      {editPending ? t('saving') : t('save')}
                     </Button>
                   </form>
                 </DialogContent>
@@ -400,14 +404,14 @@ function TopicSection({
                 className="text-destructive"
                 disabled={isPending}
                 onClick={() => {
-                  if (confirm(`Delete topic "${topic.name}" and all its contents?`)) {
+                  if (confirm(t('confirmDeleteTopic', { name: topic.name }))) {
                     startTransition(async () => {
                       await deleteTopic(topic.id);
                     });
                   }
                 }}
               >
-                Delete
+                {t('delete')}
               </Button>
             </div>
           )}
@@ -418,7 +422,7 @@ function TopicSection({
           {isDraft && <AddDimensionButton topicId={topic.id} />}
           {topic.dimensions.length === 0 && (
             <p className="py-2 text-sm text-muted-foreground">
-              No dimensions yet.
+              {t('noDimensions')}
             </p>
           )}
           {topic.dimensions.map((dim, dimIdx) => (
@@ -440,6 +444,7 @@ function TopicSection({
 
 function AddDimensionButton({ topicId }: { topicId: string }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations('admin.questionnaire');
   const [state, action, pending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
       const result = await createDimension(prev, formData);
@@ -452,11 +457,11 @@ function AddDimensionButton({ topicId }: { topicId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent">
-        + Add Dimension
+        + {t('addDimension')}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Dimension</DialogTitle>
+          <DialogTitle>{t('addDimension')}</DialogTitle>
         </DialogHeader>
         <form action={action} className="space-y-4">
           <input type="hidden" name="topicId" value={topicId} />
@@ -464,11 +469,11 @@ function AddDimensionButton({ topicId }: { topicId: string }) {
             <p className="text-sm text-destructive">{state.errors.name[0]}</p>
           )}
           <div className="space-y-2">
-            <Label htmlFor="dim-name">Dimension Name</Label>
+            <Label htmlFor="dim-name">{t('dimensionName')}</Label>
             <Input id="dim-name" name="name" required />
           </div>
           <Button type="submit" disabled={pending}>
-            {pending ? 'Adding...' : 'Add Dimension'}
+            {pending ? t('adding') : t('addDimension')}
           </Button>
         </form>
       </DialogContent>
@@ -492,6 +497,7 @@ function DimensionSection({
   const [expanded, setExpanded] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
+  const t = useTranslations('admin.questionnaire');
 
   const [editState, editAction, editPending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
@@ -513,7 +519,7 @@ function DimensionSection({
           <span className="text-sm">{expanded ? '▼' : '▶'}</span>
           <span className="font-medium">{dimension.name}</span>
           <span className="text-sm text-muted-foreground">
-            ({dimension.questions.length} question{dimension.questions.length !== 1 ? 's' : ''})
+            ({t('questionCount', { count: dimension.questions.length })})
           </span>
         </button>
         {isDraft && (
@@ -546,11 +552,11 @@ function DimensionSection({
               <DialogTrigger
                 render={<Button variant="ghost" size="xs" />}
               >
-                Edit
+                {t('edit')}
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Edit Dimension</DialogTitle>
+                  <DialogTitle>{t('editDimension')}</DialogTitle>
                 </DialogHeader>
                 <form action={editAction} className="space-y-4">
                   <input type="hidden" name="id" value={dimension.id} />
@@ -558,7 +564,7 @@ function DimensionSection({
                     <p className="text-sm text-destructive">{editState.errors.name[0]}</p>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor={`edit-dim-${dimension.id}`}>Dimension Name</Label>
+                    <Label htmlFor={`edit-dim-${dimension.id}`}>{t('dimensionName')}</Label>
                     <Input
                       id={`edit-dim-${dimension.id}`}
                       name="name"
@@ -567,7 +573,7 @@ function DimensionSection({
                     />
                   </div>
                   <Button type="submit" disabled={editPending}>
-                    {editPending ? 'Saving...' : 'Save'}
+                    {editPending ? t('saving') : t('save')}
                   </Button>
                 </form>
               </DialogContent>
@@ -578,14 +584,14 @@ function DimensionSection({
               className="text-destructive"
               disabled={isPending}
               onClick={() => {
-                if (confirm(`Delete dimension "${dimension.name}" and all its questions?`)) {
+                if (confirm(t('confirmDeleteDimension', { name: dimension.name }))) {
                   startTransition(async () => {
                     await deleteDimension(dimension.id);
                   });
                 }
               }}
             >
-              Delete
+              {t('delete')}
             </Button>
           </div>
         )}
@@ -594,7 +600,7 @@ function DimensionSection({
         <div className="mt-3 space-y-2 pl-5">
           {isDraft && <AddQuestionButton dimensionId={dimension.id} />}
           {dimension.questions.length === 0 && (
-            <p className="py-1 text-sm text-muted-foreground">No questions yet.</p>
+            <p className="py-1 text-sm text-muted-foreground">{t('noQuestions')}</p>
           )}
           {dimension.questions.map((q, qIdx) => (
             <QuestionItem
@@ -615,6 +621,7 @@ function DimensionSection({
 
 function AddQuestionButton({ dimensionId }: { dimensionId: string }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations('admin.questionnaire');
   const [state, action, pending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
       const result = await createQuestion(prev, formData);
@@ -627,11 +634,11 @@ function AddQuestionButton({ dimensionId }: { dimensionId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger className="inline-flex h-7 items-center justify-center rounded-md border border-input bg-background px-2 text-xs font-medium hover:bg-accent">
-        + Add Question
+        + {t('addQuestion')}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Question</DialogTitle>
+          <DialogTitle>{t('addQuestion')}</DialogTitle>
         </DialogHeader>
         <form action={action} className="space-y-4">
           <input type="hidden" name="dimensionId" value={dimensionId} />
@@ -639,11 +646,11 @@ function AddQuestionButton({ dimensionId }: { dimensionId: string }) {
             <p className="text-sm text-destructive">{state.errors.title[0]}</p>
           )}
           <div className="space-y-2">
-            <Label htmlFor="q-title">Question Title</Label>
+            <Label htmlFor="q-title">{t('questionTitle')}</Label>
             <Input id="q-title" name="title" required />
           </div>
           <Button type="submit" disabled={pending}>
-            {pending ? 'Adding...' : 'Add Question'}
+            {pending ? t('adding') : t('addQuestion')}
           </Button>
         </form>
       </DialogContent>
@@ -667,6 +674,7 @@ function QuestionItem({
   const [isPending, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
   const [notesExpanded, setNotesExpanded] = useState(false);
+  const t = useTranslations('admin.questionnaire');
 
   const optionsSum = question.answerOptions.reduce((sum, o) => sum + o.score, 0);
 
@@ -691,7 +699,7 @@ function QuestionItem({
                 className="text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => setNotesExpanded(!notesExpanded)}
               >
-                {notesExpanded ? '▼' : '▶'} {question.notes.length} note{question.notes.length !== 1 ? 's' : ''}
+                {notesExpanded ? '▼' : '▶'} {t('noteCount', { count: question.notes.length })}
               </button>
             )}
             <Link
@@ -704,7 +712,7 @@ function QuestionItem({
                     : 'text-muted-foreground'
               }`}
             >
-              {question.answerOptions.length} option{question.answerOptions.length !== 1 ? 's' : ''} (sum: {optionsSum})
+              {t('optionCount', { count: question.answerOptions.length })} ({t('optionSum', { sum: optionsSum })})
             </Link>
           </div>
         </div>
@@ -738,11 +746,11 @@ function QuestionItem({
               <DialogTrigger
                 render={<Button variant="ghost" size="xs" />}
               >
-                Edit
+                {t('edit')}
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Edit Question</DialogTitle>
+                  <DialogTitle>{t('editQuestion')}</DialogTitle>
                 </DialogHeader>
                 <form action={editAction} className="space-y-4">
                   <input type="hidden" name="id" value={question.id} />
@@ -750,7 +758,7 @@ function QuestionItem({
                     <p className="text-sm text-destructive">{editState.errors.title[0]}</p>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor={`edit-q-${question.id}`}>Question Title</Label>
+                    <Label htmlFor={`edit-q-${question.id}`}>{t('questionTitle')}</Label>
                     <Input
                       id={`edit-q-${question.id}`}
                       name="title"
@@ -759,7 +767,7 @@ function QuestionItem({
                     />
                   </div>
                   <Button type="submit" disabled={editPending}>
-                    {editPending ? 'Saving...' : 'Save'}
+                    {editPending ? t('saving') : t('save')}
                   </Button>
                 </form>
               </DialogContent>
@@ -771,14 +779,14 @@ function QuestionItem({
               className="text-destructive"
               disabled={isPending}
               onClick={() => {
-                if (confirm('Delete this question?')) {
+                if (confirm(t('confirmDeleteQuestion'))) {
                   startTransition(async () => {
                     await deleteQuestion(question.id);
                   });
                 }
               }}
             >
-              Delete
+              {t('delete')}
             </Button>
           </div>
         )}
@@ -801,6 +809,7 @@ function QuestionItem({
 
 function AddNoteButton({ questionId }: { questionId: string }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations('admin.questionnaire');
   const [state, action, pending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
       const result = await createQuestionNote(prev, formData);
@@ -815,11 +824,11 @@ function AddNoteButton({ questionId }: { questionId: string }) {
       <DialogTrigger
         render={<Button variant="ghost" size="xs" />}
       >
-        + Note
+        + {t('addNote')}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Note</DialogTitle>
+          <DialogTitle>{t('addNote')}</DialogTitle>
         </DialogHeader>
         <form action={action} className="space-y-4">
           <input type="hidden" name="questionId" value={questionId} />
@@ -827,14 +836,14 @@ function AddNoteButton({ questionId }: { questionId: string }) {
             <p className="text-sm text-destructive">{state.errors.label[0]}</p>
           )}
           <div className="space-y-2">
-            <Label htmlFor="note-label">Label</Label>
+            <Label htmlFor="note-label">{t('noteLabel')}</Label>
             <Input id="note-label" name="label" required />
           </div>
           {state.errors?.content && (
             <p className="text-sm text-destructive">{state.errors.content[0]}</p>
           )}
           <div className="space-y-2">
-            <Label htmlFor="note-content">Content</Label>
+            <Label htmlFor="note-content">{t('noteContent')}</Label>
             <textarea
               id="note-content"
               name="content"
@@ -844,7 +853,7 @@ function AddNoteButton({ questionId }: { questionId: string }) {
             />
           </div>
           <Button type="submit" disabled={pending}>
-            {pending ? 'Adding...' : 'Add Note'}
+            {pending ? t('adding') : t('addNote')}
           </Button>
         </form>
       </DialogContent>
@@ -857,6 +866,7 @@ function AddNoteButton({ questionId }: { questionId: string }) {
 function NoteItem({ note, isDraft }: { note: QuestionNote; isDraft: boolean }) {
   const [isPending, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
+  const t = useTranslations('admin.questionnaire');
 
   const [editState, editAction, editPending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
@@ -879,11 +889,11 @@ function NoteItem({ note, isDraft }: { note: QuestionNote; isDraft: boolean }) {
             <DialogTrigger
               render={<Button variant="ghost" size="xs" />}
             >
-              Edit
+              {t('edit')}
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Edit Note</DialogTitle>
+                <DialogTitle>{t('editNote')}</DialogTitle>
               </DialogHeader>
               <form action={editAction} className="space-y-4">
                 <input type="hidden" name="id" value={note.id} />
@@ -891,7 +901,7 @@ function NoteItem({ note, isDraft }: { note: QuestionNote; isDraft: boolean }) {
                   <p className="text-sm text-destructive">{editState.errors.label[0]}</p>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor={`edit-note-${note.id}-label`}>Label</Label>
+                  <Label htmlFor={`edit-note-${note.id}-label`}>{t('noteLabel')}</Label>
                   <Input
                     id={`edit-note-${note.id}-label`}
                     name="label"
@@ -903,7 +913,7 @@ function NoteItem({ note, isDraft }: { note: QuestionNote; isDraft: boolean }) {
                   <p className="text-sm text-destructive">{editState.errors.content[0]}</p>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor={`edit-note-${note.id}-content`}>Content</Label>
+                  <Label htmlFor={`edit-note-${note.id}-content`}>{t('noteContent')}</Label>
                   <textarea
                     id={`edit-note-${note.id}-content`}
                     name="content"
@@ -914,7 +924,7 @@ function NoteItem({ note, isDraft }: { note: QuestionNote; isDraft: boolean }) {
                   />
                 </div>
                 <Button type="submit" disabled={editPending}>
-                  {editPending ? 'Saving...' : 'Save'}
+                  {editPending ? t('saving') : t('save')}
                 </Button>
               </form>
             </DialogContent>
@@ -925,14 +935,14 @@ function NoteItem({ note, isDraft }: { note: QuestionNote; isDraft: boolean }) {
             className="text-destructive"
             disabled={isPending}
             onClick={() => {
-              if (confirm('Delete this note?')) {
+              if (confirm(t('confirmDeleteNote'))) {
                 startTransition(async () => {
                   await deleteQuestionNote(note.id);
                 });
               }
             }}
           >
-            Delete
+            {t('delete')}
           </Button>
         </div>
       )}

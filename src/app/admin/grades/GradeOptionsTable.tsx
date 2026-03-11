@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,6 +38,7 @@ type GradeOption = {
 export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
   const [addOpen, setAddOpen] = useState(false);
   const [editOption, setEditOption] = useState<GradeOption | null>(null);
+  const t = useTranslations('admin.grades');
 
   const [addState, addAction, addPending] = useActionState<GradeOptionState, FormData>(
     async (prev, formData) => {
@@ -59,28 +61,28 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Grade Options</h2>
+        <h2 className="text-xl font-semibold">{t('gradeOptions')}</h2>
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogTrigger className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            Add Grade
+            {t('addGrade')}
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Grade Option</DialogTitle>
+              <DialogTitle>{t('addGradeOption')}</DialogTitle>
             </DialogHeader>
             <form action={addAction} className="space-y-4">
               {addState.errors?._form && (
                 <p className="text-sm text-destructive">{addState.errors._form.join(', ')}</p>
               )}
               <div className="space-y-2">
-                <Label htmlFor="add-label">Label</Label>
+                <Label htmlFor="add-label">{t('label')}</Label>
                 <Input id="add-label" name="label" required />
                 {addState.errors?.label && (
                   <p className="text-sm text-destructive">{addState.errors.label[0]}</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="add-order">Order</Label>
+                <Label htmlFor="add-order">{t('order')}</Label>
                 <Input
                   id="add-order"
                   name="order"
@@ -94,7 +96,7 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
               </div>
               <input type="hidden" name="isActive" value="true" />
               <Button type="submit" disabled={addPending}>
-                {addPending ? 'Adding...' : 'Add'}
+                {addPending ? t('adding') : t('add')}
               </Button>
             </form>
           </DialogContent>
@@ -104,10 +106,10 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Order</TableHead>
-            <TableHead>Label</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>{t('order')}</TableHead>
+            <TableHead>{t('label')}</TableHead>
+            <TableHead>{t('status')}</TableHead>
+            <TableHead className="text-right">{t('actions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -123,7 +125,7 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
                       : 'text-muted-foreground'
                   }
                 >
-                  {option.isActive ? 'Active' : 'Inactive'}
+                  {option.isActive ? t('active') : t('inactive')}
                 </span>
               </TableCell>
               <TableCell className="text-right">
@@ -149,7 +151,7 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
                     size="sm"
                     onClick={() => setEditOption(option)}
                   >
-                    Edit
+                    {t('edit')}
                   </Button>
                   <Button
                     variant="ghost"
@@ -161,7 +163,7 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
                       }
                     }}
                   >
-                    Delete
+                    {t('delete')}
                   </Button>
                 </div>
               </TableCell>
@@ -170,7 +172,7 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
           {options.length === 0 && (
             <TableRow>
               <TableCell colSpan={4} className="text-center text-muted-foreground">
-                No grade options configured.
+                {t('noGrades')}
               </TableCell>
             </TableRow>
           )}
@@ -181,7 +183,7 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
       <Dialog open={!!editOption} onOpenChange={(open) => !open && setEditOption(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Grade Option</DialogTitle>
+            <DialogTitle>{t('editGradeOption')}</DialogTitle>
           </DialogHeader>
           {editOption && (
             <form action={editAction} className="space-y-4">
@@ -190,7 +192,7 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
                 <p className="text-sm text-destructive">{editState.errors._form.join(', ')}</p>
               )}
               <div className="space-y-2">
-                <Label htmlFor="edit-label">Label</Label>
+                <Label htmlFor="edit-label">{t('label')}</Label>
                 <Input
                   id="edit-label"
                   name="label"
@@ -202,7 +204,7 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-order">Order</Label>
+                <Label htmlFor="edit-order">{t('order')}</Label>
                 <Input
                   id="edit-order"
                   name="order"
@@ -212,7 +214,7 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label htmlFor="edit-active">Active</Label>
+                <Label htmlFor="edit-active">{t('active')}</Label>
                 <input
                   type="hidden"
                   name="isActive"
@@ -230,7 +232,7 @@ export function GradeOptionsTable({ options }: { options: GradeOption[] }) {
                 />
               </div>
               <Button type="submit" disabled={editPending}>
-                {editPending ? 'Saving...' : 'Save'}
+                {editPending ? t('saving') : t('save')}
               </Button>
             </form>
           )}

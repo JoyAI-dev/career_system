@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { updateSystemSetting } from '@/server/actions/admin';
@@ -8,6 +9,7 @@ import { updateSystemSetting } from '@/server/actions/admin';
 export function StudentIdToggle({ initialValue }: { initialValue: boolean }) {
   const [enabled, setEnabled] = useState(initialValue);
   const [saving, setSaving] = useState(false);
+  const t = useTranslations('admin.settings');
 
   async function handleToggle(checked: boolean) {
     setEnabled(checked);
@@ -25,10 +27,10 @@ export function StudentIdToggle({ initialValue }: { initialValue: boolean }) {
     <div className="flex items-center justify-between rounded-lg border p-4">
       <div className="space-y-1">
         <Label htmlFor="student-id-toggle" className="text-base font-medium">
-          Require Student ID Upload
+          {t('requireStudentId')}
         </Label>
         <p className="text-sm text-muted-foreground">
-          When enabled, students must upload a student ID photo on their profile.
+          {t('requireStudentIdDesc')}
         </p>
       </div>
       <Switch
