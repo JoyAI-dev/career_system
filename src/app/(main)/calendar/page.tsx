@@ -1,9 +1,14 @@
+import dynamic from 'next/dynamic';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getUserCalendarEvents } from '@/server/queries/calendar';
 import { getRecruitmentEvents } from '@/server/queries/recruitment';
 import { getActivityTypes } from '@/server/queries/activityType';
-import { CalendarView } from '@/components/Calendar';
+
+const CalendarView = dynamic(
+  () => import('@/components/Calendar').then((mod) => mod.CalendarView),
+  { ssr: false, loading: () => <div className="flex h-96 items-center justify-center text-muted-foreground">Loading calendar...</div> },
+);
 
 export default async function CalendarPage() {
   const session = await auth();

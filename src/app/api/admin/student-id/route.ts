@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { getStudentIdSignedUrl } from '@/server/services/studentId';
 import { mapErrorToResponse } from '@/lib/errors';
+import { prisma } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     const userId = request.nextUrl.searchParams.get('userId');
     if (!userId) {
@@ -23,6 +24,16 @@ export async function GET(request: NextRequest) {
         { status: result.status },
       );
     }
+
+    // Audit log: record student ID access
+    await (prisma as any).auditLog.create({
+      data: {
+        adminId: session.user.id,
+        action: 'VIEW_STUDENT_ID',
+        targetId: userId,
+        details: JSON.stringify({ timestamp: new Date().toISOString() }),
+      },
+    });
 
     return NextResponse.json({ url: result.url });
   } catch (error) {

@@ -1,9 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { CognitiveRadarChart } from '@/components/CognitiveRadarChart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+
+const CognitiveRadarChart = dynamic(
+  () => import('@/components/CognitiveRadarChart').then((mod) => mod.CognitiveRadarChart),
+  { ssr: false, loading: () => <div className="flex h-64 items-center justify-center text-muted-foreground">Loading chart...</div> },
+);
 import type { ScoringResult } from '@/server/scoring';
 
 type SnapshotEntry = {

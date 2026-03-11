@@ -63,7 +63,7 @@ export function mapErrorToResponse(error: unknown): {
     };
   }
 
-  console.error('Unhandled error:', error);
+  console.error('Unhandled error:', error instanceof Error ? error.message : 'Unknown error');
   return {
     status: 500,
     body: { error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } },

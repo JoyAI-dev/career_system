@@ -44,7 +44,7 @@ export async function uploadStudentId(
     });
   } catch (dbError) {
     // Rollback: delete the newly uploaded file
-    console.error('DB update failed, rolling back upload:', dbError);
+    console.error('DB update failed, rolling back upload:', dbError instanceof Error ? dbError.message : 'Unknown error');
     await supabaseAdmin()
       .storage.from(STUDENT_ID_BUCKET)
       .remove([newFilePath]);
