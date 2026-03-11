@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin, requireAuth, auth } from '@/lib/auth';
 import { getUnlockedTypeIds } from '@/server/queries/activity';
+import { validateTransition, type TransitionAction } from '@/server/stateMachine';
 import { revalidatePath } from 'next/cache';
+import type { ActivityStatus, MemberRole } from '@prisma/client';
 
 const ADMIN_PATH = '/admin/activities';
 
@@ -299,6 +301,150 @@ export async function leaveActivity(activityId: string): Promise<ActionState> {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to leave activity.';
+    return { errors: { _form: [message] } };
+  }
+
+  revalidatePath(ACTIVITIES_PATH);
+  return { success: true };
+}
+
+const scheduleSchema = z.object({
+  activityId: z.string().min(1),
+  scheduledAt: z.coerce.date({ error: 'Meeting date/time is required' }),
+  location: z.string().optional(),
+  isOnline: z.preprocess((v) => v === 'true' || v === true, z.boolean()).optional(),
+});
+
+/**
+ * Schedule a meeting (FULL → SCHEDULED).
+ * Leader sets date/time, location, and online/offline.
+ */
+export async function scheduleMeeting(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  const parsed = scheduleSchema.safeParse({
+    activityId: formData.get('activityId'),
+    scheduledAt: formData.get('scheduledAt'),
+    location: formData.get('location') || undefined,
+    isOnline: formData.get('isOnline'),
+  });
+  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const activities = await tx.$queryRawUnsafe<
+        { id: string; status: ActivityStatus }[]
+      >(
+        'SELECT id, status FROM activities WHERE id = $1 FOR UPDATE',
+        parsed.data.activityId,
+      );
+      if (activities.length === 0) throw new Error('Activity not found.');
+      const activity = activities[0];
+
+      const membership = await tx.membership.findUnique({
+        where: { activityId_userId: { activityId: parsed.data.activityId, userId } },
+      });
+      const userRole: MemberRole | null = membership?.role ?? null;
+
+      const result = validateTransition(activity.status, 'SCHEDULE', userRole);
+      if (!result.valid) throw new Error(result.error);
+
+      await tx.activity.update({
+        where: { id: parsed.data.activityId },
+        data: {
+          status: result.to,
+          scheduledAt: parsed.data.scheduledAt,
+          location: parsed.data.location || null,
+          isOnline: parsed.data.isOnline ?? false,
+        },
+      });
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to schedule meeting.';
+    return { errors: { _form: [message] } };
+  }
+
+  revalidatePath(ACTIVITIES_PATH);
+  return { success: true };
+}
+
+/**
+ * Start a meeting (SCHEDULED → IN_PROGRESS).
+ */
+export async function startMeeting(activityId: string): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const activities = await tx.$queryRawUnsafe<
+        { id: string; status: ActivityStatus }[]
+      >(
+        'SELECT id, status FROM activities WHERE id = $1 FOR UPDATE',
+        activityId,
+      );
+      if (activities.length === 0) throw new Error('Activity not found.');
+      const activity = activities[0];
+
+      const membership = await tx.membership.findUnique({
+        where: { activityId_userId: { activityId, userId } },
+      });
+      const userRole: MemberRole | null = membership?.role ?? null;
+
+      const result = validateTransition(activity.status, 'START', userRole);
+      if (!result.valid) throw new Error(result.error);
+
+      await tx.activity.update({
+        where: { id: activityId },
+        data: { status: result.to },
+      });
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to start meeting.';
+    return { errors: { _form: [message] } };
+  }
+
+  revalidatePath(ACTIVITIES_PATH);
+  return { success: true };
+}
+
+/**
+ * Complete a meeting (IN_PROGRESS → COMPLETED).
+ */
+export async function completeMeeting(activityId: string): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const activities = await tx.$queryRawUnsafe<
+        { id: string; status: ActivityStatus }[]
+      >(
+        'SELECT id, status FROM activities WHERE id = $1 FOR UPDATE',
+        activityId,
+      );
+      if (activities.length === 0) throw new Error('Activity not found.');
+      const activity = activities[0];
+
+      const membership = await tx.membership.findUnique({
+        where: { activityId_userId: { activityId, userId } },
+      });
+      const userRole: MemberRole | null = membership?.role ?? null;
+
+      const result = validateTransition(activity.status, 'COMPLETE', userRole);
+      if (!result.valid) throw new Error(result.error);
+
+      await tx.activity.update({
+        where: { id: activityId },
+        data: { status: result.to },
+      });
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to complete meeting.';
     return { errors: { _form: [message] } };
   }
 

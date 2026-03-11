@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useActionState, useTransition } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   Dialog,
@@ -10,8 +10,18 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { joinActivity, leaveActivity } from '@/server/actions/activity';
-import type { ActivityStatus } from '@prisma/client';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  joinActivity,
+  leaveActivity,
+  scheduleMeeting,
+  startMeeting,
+  completeMeeting,
+  type ActionState,
+} from '@/server/actions/activity';
+import { getAvailableActions, getActionLabel, type TransitionAction } from '@/server/stateMachine';
+import type { ActivityStatus, MemberRole } from '@prisma/client';
 
 type Tag = { id: string; name: string };
 
@@ -42,18 +52,23 @@ const STATUS_COLORS: Record<string, string> = {
   FULL: 'bg-yellow-100 text-yellow-800',
   SCHEDULED: 'bg-blue-100 text-blue-800',
   IN_PROGRESS: 'bg-purple-100 text-purple-800',
+  COMPLETED: 'bg-gray-100 text-gray-800',
 };
 
 export function ActivityDetailDialog({ activity, onClose }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
 
   if (!activity) return null;
 
   const isLocked = !activity.isEligible;
   const isFull = activity._count.memberships >= activity.capacity;
   const canJoin = activity.isEligible && activity.status === 'OPEN' && !isFull && !activity.isMember;
-  const canLeave = activity.isMember;
+  const canLeave = activity.isMember && activity.status === 'OPEN';
+
+  const userRole = activity.memberRole as MemberRole | undefined;
+  const availableActions = getAvailableActions(activity.status, userRole ?? null);
 
   function handleJoin() {
     setError(null);
@@ -72,6 +87,28 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
     setError(null);
     startTransition(async () => {
       const result = await leaveActivity(activity!.id);
+      if (result.errors?._form) {
+        setError(result.errors._form[0]);
+      } else {
+        onClose();
+      }
+    });
+  }
+
+  function handleAction(action: TransitionAction) {
+    if (action === 'SCHEDULE') {
+      setShowScheduleForm(true);
+      return;
+    }
+    const confirmMsg = action === 'START'
+      ? 'Start this meeting now?'
+      : 'Mark this meeting as completed?';
+    if (!confirm(confirmMsg)) return;
+
+    setError(null);
+    startTransition(async () => {
+      const fn = action === 'START' ? startMeeting : completeMeeting;
+      const result = await fn(activity!.id);
       if (result.errors?._form) {
         setError(result.errors._form[0]);
       } else {
@@ -145,6 +182,16 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
             </div>
           )}
 
+          {/* Schedule Form (shown when leader clicks Schedule) */}
+          {showScheduleForm && (
+            <ScheduleForm
+              activityId={activity.id}
+              onSuccess={onClose}
+              onError={(msg) => setError(msg)}
+              onCancel={() => setShowScheduleForm(false)}
+            />
+          )}
+
           {/* Markdown guide */}
           {activity.guideMarkdown && (
             <div className="border-t pt-4">
@@ -157,7 +204,23 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
         </div>
 
         <DialogFooter>
-          {canLeave ? (
+          {/* Leader actions */}
+          {availableActions.length > 0 && !showScheduleForm && (
+            <div className="flex gap-2">
+              {availableActions.map((action) => (
+                <Button
+                  key={action}
+                  onClick={() => handleAction(action)}
+                  disabled={isPending}
+                >
+                  {isPending ? '...' : getActionLabel(action)}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {/* Join/Leave */}
+          {canLeave && availableActions.length === 0 ? (
             <Button
               variant="outline"
               onClick={handleLeave}
@@ -165,35 +228,107 @@ export function ActivityDetailDialog({ activity, onClose }: Props) {
             >
               {isPending ? 'Leaving...' : 'Leave'}
             </Button>
-          ) : (
+          ) : !activity.isMember && !isLocked ? (
             <Button
               onClick={handleJoin}
               disabled={!canJoin || isPending}
               title={
-                isLocked
-                  ? 'Complete prerequisite to unlock'
-                  : activity.isMember
-                    ? 'Already joined'
-                    : isFull
-                      ? 'Activity is full'
-                      : activity.status !== 'OPEN'
-                        ? 'Activity is not open for joining'
-                        : 'Join this activity'
+                isFull
+                  ? 'Activity is full'
+                  : activity.status !== 'OPEN'
+                    ? 'Activity is not open for joining'
+                    : 'Join this activity'
               }
             >
               {isPending
                 ? 'Joining...'
-                : isLocked
-                  ? 'Locked'
-                  : activity.isMember
-                    ? 'Joined'
-                    : isFull
-                      ? 'Full'
-                      : 'Join'}
+                : isFull
+                  ? 'Full'
+                  : activity.status !== 'OPEN'
+                    ? activity.status
+                    : 'Join'}
             </Button>
-          )}
+          ) : isLocked ? (
+            <Button disabled>Locked</Button>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ScheduleForm({
+  activityId,
+  onSuccess,
+  onError,
+  onCancel,
+}: {
+  activityId: string;
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+  onCancel: () => void;
+}) {
+  const [state, formAction] = useActionState<ActionState, FormData>(scheduleMeeting, {});
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    formData.set('activityId', activityId);
+
+    startTransition(async () => {
+      const result = await scheduleMeeting({}, formData);
+      if (result.errors?._form) {
+        onError(result.errors._form[0]);
+      } else if (result.errors) {
+        const firstError = Object.values(result.errors)[0]?.[0];
+        if (firstError) onError(firstError);
+      } else {
+        onSuccess();
+      }
+    });
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-4">
+      <h3 className="mb-3 text-sm font-medium">Schedule Meeting</h3>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div>
+          <Label htmlFor="scheduledAt">Date & Time</Label>
+          <Input
+            id="scheduledAt"
+            name="scheduledAt"
+            type="datetime-local"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="schedule-location">Location</Label>
+          <Input
+            id="schedule-location"
+            name="location"
+            placeholder="Meeting room, address, etc."
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="schedule-isOnline"
+            name="isOnline"
+            value="true"
+            className="size-4 rounded border-border"
+          />
+          <Label htmlFor="schedule-isOnline">Online meeting</Label>
+        </div>
+        <div className="flex gap-2">
+          <Button type="submit" size="sm" disabled={isPending}>
+            {isPending ? 'Scheduling...' : 'Confirm Schedule'}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }
