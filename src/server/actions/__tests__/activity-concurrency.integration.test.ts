@@ -190,7 +190,7 @@ describe('Concurrent Join Tests', () => {
     const join1 = await simulateJoin(activity.id, user1.id);
     expect(join1.success).toBe(true);
 
-    let act = await prisma.activity.findUnique({ where: { id: activity.id } });
+    const act = await prisma.activity.findUnique({ where: { id: activity.id } });
     expect(act?.status).toBe('FULL');
 
     // User2 cannot join (FULL)

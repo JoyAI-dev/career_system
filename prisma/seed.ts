@@ -309,10 +309,10 @@ async function main() {
     if (existingTopics.length > 0) {
       topicId = existingTopics[0].id;
     } else {
-      const created = await (prisma as any).topic.create({
-        data: { name: topic.name, order: topic.order, versionId },
-      });
-      topicId = created.id;
+      const inserted = await prisma.$queryRaw<{ id: string }[]>(
+        Prisma.sql`INSERT INTO topics (id, name, "order", "versionId") VALUES (gen_random_uuid(), ${topic.name}, ${topic.order}, ${versionId}) RETURNING id`,
+      );
+      topicId = inserted[0].id;
     }
 
     for (const dim of topic.dimensions) {
@@ -324,10 +324,10 @@ async function main() {
       if (existingDims.length > 0) {
         dimId = existingDims[0].id;
       } else {
-        const created = await (prisma as any).dimension.create({
-          data: { name: dim.name, order: dim.order, topicId },
-        });
-        dimId = created.id;
+        const inserted = await prisma.$queryRaw<{ id: string }[]>(
+          Prisma.sql`INSERT INTO dimensions (id, name, "order", "topicId") VALUES (gen_random_uuid(), ${dim.name}, ${dim.order}, ${topicId}) RETURNING id`,
+        );
+        dimId = inserted[0].id;
       }
 
       for (const q of dim.questions) {
@@ -339,10 +339,10 @@ async function main() {
         if (existingQs.length > 0) {
           questionId = existingQs[0].id;
         } else {
-          const created = await (prisma as any).question.create({
-            data: { title: q.title, order: q.order, dimensionId: dimId },
-          });
-          questionId = created.id;
+          const inserted = await prisma.$queryRaw<{ id: string }[]>(
+            Prisma.sql`INSERT INTO questions (id, title, "order", "dimensionId") VALUES (gen_random_uuid(), ${q.title}, ${q.order}, ${dimId}) RETURNING id`,
+          );
+          questionId = inserted[0].id;
         }
 
         for (const opt of q.options) {
@@ -351,14 +351,9 @@ async function main() {
           );
 
           if (existingOpts.length === 0) {
-            await (prisma as any).answerOption.create({
-              data: {
-                label: opt.label,
-                score: opt.score,
-                order: opt.order,
-                questionId,
-              },
-            });
+            await prisma.$queryRaw(
+              Prisma.sql`INSERT INTO answer_options (id, label, score, "order", "questionId") VALUES (gen_random_uuid(), ${opt.label}, ${opt.score}, ${opt.order}, ${questionId})`,
+            );
           }
         }
       }
