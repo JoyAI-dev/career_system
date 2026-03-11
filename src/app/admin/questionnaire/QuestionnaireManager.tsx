@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -109,39 +109,36 @@ export function QuestionnaireManager({
   const [isPending, startTransition] = useTransition();
   const [selectedVersionId, setSelectedVersionId] = useState(initialVersionId);
   const t = useTranslations('admin.questionnaire');
+  const locale = useLocale();
 
   const selectedVersion = versions.find((v) => v.id === selectedVersionId);
   const isDraft = selectedVersion && !selectedVersion.isActive;
   const structure = initialStructure;
 
+  function formatDate(date: Date) {
+    return new Date(date).toLocaleDateString(locale, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  function getStatus(v: VersionSummary): 'active' | 'draft' | 'archived' {
+    if (v.isActive) return 'active';
+    // A non-active version with no active version after it is archived
+    // For simplicity: if not active and there's an active version with higher version number, it's archived
+    const activeVersion = versions.find((ver) => ver.isActive);
+    if (activeVersion && v.version < activeVersion.version) return 'archived';
+    return 'draft';
+  }
+
   return (
     <div className="space-y-6">
-      {/* Version Bar */}
+      {/* Version Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{t('versionManagement')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Version Selector */}
-            <select
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={selectedVersionId ?? ''}
-              onChange={(e) => {
-                setSelectedVersionId(e.target.value || null);
-                // Trigger page reload to fetch new structure
-                window.location.href = `/admin/questionnaire?v=${e.target.value}`;
-              }}
-            >
-              {versions.length === 0 && <option value="">{t('noVersions')}</option>}
-              {versions.map((v) => (
-                <option key={v.id} value={v.id}>
-                  v{v.version} ({v.isActive ? t('active') : t('draft')})
-                </option>
-              ))}
-            </select>
-
-            {/* Create Draft */}
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">{t('versionManagement')}</CardTitle>
             {!versions.some((v) => !v.isActive) && (
               <Button
                 variant="outline"
@@ -156,63 +153,131 @@ export function QuestionnaireManager({
                 {isPending ? t('creating') : t('createNewDraft')}
               </Button>
             )}
-
-            {/* Publish Draft */}
-            {isDraft && selectedVersionId && (
-              <>
-                <Button
-                  size="sm"
-                  disabled={isPending}
-                  onClick={() =>
-                    startTransition(async () => {
-                      if (confirm(t('confirmPublish'))) {
-                        await publishVersion(selectedVersionId);
-                      }
-                    })
-                  }
-                >
-                  {isPending ? t('publishing') : t('publishVersion')}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={isPending}
-                  onClick={() =>
-                    startTransition(async () => {
-                      if (confirm(t('confirmDeleteDraft'))) {
-                        await deleteDraftVersion(selectedVersionId);
-                      }
-                    })
-                  }
-                >
-                  {t('deleteDraft')}
-                </Button>
-              </>
-            )}
-
-            {/* Set Active (for published versions) */}
-            {selectedVersion && !selectedVersion.isActive && selectedVersionId && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isPending}
-                onClick={() =>
-                  startTransition(async () => {
-                    if (confirm(t('confirmSetActive'))) {
-                      await setActiveVersion(selectedVersionId);
-                    }
-                  })
-                }
-              >
-                {t('setAsActive')}
-              </Button>
-            )}
           </div>
-
-          {versions.length === 0 && (
-            <p className="mt-3 text-sm text-muted-foreground">
+        </CardHeader>
+        <CardContent className="p-0">
+          {versions.length === 0 ? (
+            <p className="px-6 py-8 text-center text-sm text-muted-foreground">
               {t('noVersionsHint')}
             </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="px-4 py-3 font-medium text-muted-foreground">{t('versionColumn')}</th>
+                    <th className="px-4 py-3 font-medium text-muted-foreground">{t('statusColumn')}</th>
+                    <th className="px-4 py-3 font-medium text-muted-foreground">{t('createdColumn')}</th>
+                    <th className="px-4 py-3 font-medium text-muted-foreground">{t('actionsColumn')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {versions.map((v) => {
+                    const status = getStatus(v);
+                    const isSelected = v.id === selectedVersionId;
+                    return (
+                      <tr
+                        key={v.id}
+                        className={`border-b last:border-0 ${
+                          status === 'active'
+                            ? 'bg-green-50 dark:bg-green-950/20'
+                            : isSelected
+                              ? 'bg-muted/50'
+                              : 'hover:bg-muted/30'
+                        }`}
+                      >
+                        <td className="px-4 py-3 font-medium">
+                          v{v.version}
+                          {status === 'active' && (
+                            <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              {t('active')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            status === 'active'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : status === 'draft'
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                          }`}>
+                            {status === 'active' ? t('active') : status === 'draft' ? t('draft') : t('archived')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatDate(v.createdAt)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            {/* View/Edit structure */}
+                            <Button
+                              variant={isSelected ? 'secondary' : 'ghost'}
+                              size="sm"
+                              onClick={() => {
+                                setSelectedVersionId(v.id);
+                                window.location.href = `/admin/questionnaire?v=${v.id}`;
+                              }}
+                            >
+                              {status === 'draft' ? t('edit') : t('viewVersion')}
+                            </Button>
+
+                            {/* Draft actions: Publish, Delete */}
+                            {status === 'draft' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  disabled={isPending}
+                                  onClick={() =>
+                                    startTransition(async () => {
+                                      if (confirm(t('confirmPublish'))) {
+                                        await publishVersion(v.id);
+                                      }
+                                    })
+                                  }
+                                >
+                                  {t('publishVersion')}
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  disabled={isPending}
+                                  onClick={() =>
+                                    startTransition(async () => {
+                                      if (confirm(t('confirmDeleteDraft'))) {
+                                        await deleteDraftVersion(v.id);
+                                      }
+                                    })
+                                  }
+                                >
+                                  {t('delete')}
+                                </Button>
+                              </>
+                            )}
+
+                            {/* Archived actions: Delete */}
+                            {status === 'archived' && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                disabled={isPending}
+                                onClick={() =>
+                                  startTransition(async () => {
+                                    if (confirm(t('confirmDeleteDraft'))) {
+                                      await deleteDraftVersion(v.id);
+                                    }
+                                  })
+                                }
+                              >
+                                {t('delete')}
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
