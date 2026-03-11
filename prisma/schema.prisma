@@ -29,6 +29,7 @@ model User {
   memberships        Membership[]
   createdActivities  Activity[]
   recruitmentInfos   RecruitmentInfo[]
+  responseComments   ResponseComment[]
 
   @@map("users")
 }
@@ -162,8 +163,24 @@ model ResponseAnswer {
   snapshot       ResponseSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
   question       Question         @relation(fields: [questionId], references: [id])
   selectedOption AnswerOption     @relation(fields: [selectedOptionId], references: [id])
+  comments       ResponseComment[]
 
   @@map("response_answers")
+}
+
+model ResponseComment {
+  id               String   @id @default(cuid())
+  responseAnswerId String
+  userId           String
+  content          String
+  activityTag      String?
+  createdAt        DateTime @default(now())
+
+  responseAnswer ResponseAnswer @relation(fields: [responseAnswerId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([responseAnswerId])
+  @@map("response_comments")
 }
 
 // ─── Activity System ─────────────────────────────────────────────────

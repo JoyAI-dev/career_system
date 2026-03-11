@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { CognitiveRadarChart } from '@/components/CognitiveRadarChart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { ScoringResult } from '@/server/scoring';
@@ -241,6 +242,7 @@ export function CognitiveReportClient({ snapshots }: Props) {
                   <th className="pb-2 pr-4 font-medium text-muted-foreground">Context</th>
                   <th className="pb-2 pr-4 text-right font-medium text-muted-foreground">Score</th>
                   <th className="pb-2 text-right font-medium text-muted-foreground">Change</th>
+                  <th className="pb-2 text-right font-medium text-muted-foreground"></th>
                 </tr>
               </thead>
               <tbody>
@@ -278,6 +280,14 @@ export function CognitiveReportClient({ snapshots }: Props) {
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
+                      </td>
+                      <td className="py-3 text-right">
+                        <Link
+                          href={`/cognitive-report/${s.id}`}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Details
+                        </Link>
                       </td>
                     </tr>
                   );
