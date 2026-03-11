@@ -27,7 +27,7 @@ export async function getVersionStructure(versionId: string) {
                 include: {
                   notes: true,
                   answerOptions: {
-                    orderBy: { score: 'asc' },
+                    orderBy: { order: 'asc' },
                   },
                 },
               },
@@ -51,7 +51,7 @@ export async function getQuestionWithOptions(questionId: string) {
     where: { id: questionId },
     include: {
       answerOptions: {
-        orderBy: { score: 'asc' },
+        orderBy: { order: 'asc' },
       },
       dimension: {
         include: {

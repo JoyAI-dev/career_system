@@ -191,6 +191,7 @@ export async function createDraftVersion(): Promise<ActionState> {
                   questionId: newQ.id,
                   label: opt.label,
                   score: opt.score,
+                  order: opt.order,
                 },
               });
             }
@@ -680,11 +681,17 @@ export async function createAnswerOption(
   const versionId = await getVersionIdFromQuestion(parsed.data.questionId);
   await requireDraftVersion(versionId);
 
+  const maxOrder = await prisma.answerOption.aggregate({
+    where: { questionId: parsed.data.questionId },
+    _max: { order: true },
+  });
+
   await prisma.answerOption.create({
     data: {
       questionId: parsed.data.questionId,
       label: parsed.data.label,
       score: parsed.data.score,
+      order: (maxOrder._max.order ?? -1) + 1,
     },
   });
 
@@ -753,20 +760,19 @@ export async function reorderAnswerOption(
   const versionId = await getVersionIdFromQuestion(option.questionId);
   await requireDraftVersion(versionId);
 
-  const allOptions = await prisma.answerOption.findMany({
-    where: { questionId: option.questionId },
-    orderBy: { score: 'asc' },
+  const sibling = await prisma.answerOption.findFirst({
+    where: {
+      questionId: option.questionId,
+      order: direction === 'up' ? { lt: option.order } : { gt: option.order },
+    },
+    orderBy: { order: direction === 'up' ? 'desc' : 'asc' },
   });
 
-  const currentIndex = allOptions.findIndex((o) => o.id === optionId);
-  const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-  if (swapIndex < 0 || swapIndex >= allOptions.length) return { success: true };
+  if (!sibling) return { success: true };
 
-  const sibling = allOptions[swapIndex];
-  // Swap scores to swap order
   await prisma.$transaction([
-    prisma.answerOption.update({ where: { id: option.id }, data: { score: sibling.score } }),
-    prisma.answerOption.update({ where: { id: sibling.id }, data: { score: option.score } }),
+    prisma.answerOption.update({ where: { id: option.id }, data: { order: sibling.order } }),
+    prisma.answerOption.update({ where: { id: sibling.id }, data: { order: option.order } }),
   ]);
 
   revalidatePath(ADMIN_PATH);

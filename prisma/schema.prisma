@@ -124,6 +124,7 @@ model AnswerOption {
   questionId String
   label      String
   score      Int
+  order      Int
 
   question        Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
   responseAnswers ResponseAnswer[]
