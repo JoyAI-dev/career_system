@@ -21,7 +21,7 @@ export default async function CalendarPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Calendar</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Calendar</h1>
       <CalendarView
         events={JSON.parse(JSON.stringify(events))}
         recruitmentEvents={JSON.parse(JSON.stringify(recruitmentEvents))}

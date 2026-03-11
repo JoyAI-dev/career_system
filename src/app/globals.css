@@ -126,4 +126,10 @@
   html {
     @apply font-sans;
   }
+  select:focus-visible {
+    @apply ring-2 ring-ring outline-none;
+  }
+  a:focus-visible {
+    @apply ring-2 ring-ring outline-none rounded-sm;
+  }
 }

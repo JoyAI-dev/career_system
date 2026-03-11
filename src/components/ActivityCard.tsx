@@ -24,10 +24,10 @@ type Props = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  OPEN: 'bg-green-100 text-green-800',
-  FULL: 'bg-yellow-100 text-yellow-800',
-  SCHEDULED: 'bg-blue-100 text-blue-800',
-  IN_PROGRESS: 'bg-purple-100 text-purple-800',
+  OPEN: 'bg-primary/10 text-primary',
+  FULL: 'bg-muted text-muted-foreground',
+  SCHEDULED: 'bg-accent text-accent-foreground',
+  IN_PROGRESS: 'bg-secondary text-secondary-foreground',
 };
 
 export function ActivityCard({ activity, onClick }: Props) {
@@ -35,8 +35,11 @@ export function ActivityCard({ activity, onClick }: Props) {
 
   return (
     <Card
-      className={`cursor-pointer transition-shadow hover:shadow-md ${isLocked ? 'opacity-50' : ''}`}
+      className={`cursor-pointer transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring outline-none ${isLocked ? 'opacity-50' : ''}`}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+      tabIndex={0}
+      role="button"
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">

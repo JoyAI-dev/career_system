@@ -9,7 +9,7 @@ export default async function ActivityTypesPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Activity Types</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Activity Types</h1>
       <ActivityTypeManager types={types} />
     </div>
   );

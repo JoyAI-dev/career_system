@@ -15,7 +15,7 @@ export default async function ActivitiesPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Activities</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Activities</h1>
       <ActivityList
         activities={activities}
         types={types}

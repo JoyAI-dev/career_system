@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
+import { buttonVariants } from '@/components/ui/button';
 import { getUserProfile, getActiveGradeOptions } from '@/server/queries/user';
 import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 import { ProfileForm } from './ProfileForm';
@@ -25,7 +26,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold">Profile</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Profile</h1>
 
       <div className="space-y-6">
         <Card>
@@ -66,7 +67,7 @@ export default async function ProfilePage() {
             {hasCompleted ? (
               <Link
                 href="/cognitive-report"
-                className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/80"
+                className={buttonVariants({ variant: 'default' })}
               >
                 View Report
               </Link>

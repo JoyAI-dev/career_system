@@ -9,7 +9,7 @@ export default async function TagsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Tags</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Tags</h1>
       <TagManager tags={tags} />
     </div>
   );

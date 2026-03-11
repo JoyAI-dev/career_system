@@ -52,7 +52,8 @@ export function ActivityBrowser({ activities, types, tags }: Props) {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          aria-label="Filter by activity type"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="ALL">All Types</option>
           {types.map((t) => (
@@ -64,7 +65,8 @@ export function ActivityBrowser({ activities, types, tags }: Props) {
         <select
           value={tagFilter}
           onChange={(e) => setTagFilter(e.target.value)}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          aria-label="Filter by tag"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="ALL">All Tags</option>
           {tags.map((t) => (

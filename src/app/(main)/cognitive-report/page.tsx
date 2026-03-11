@@ -17,7 +17,7 @@ export default async function CognitiveReportPage() {
   if (snapshotMeta.length === 0) {
     return (
       <div className="container mx-auto max-w-3xl px-4 py-8">
-        <h1 className="mb-4 text-2xl font-bold">Cognitive Boundary Report</h1>
+        <h1 className="mb-4 text-3xl font-bold tracking-tight">Cognitive Boundary Report</h1>
         <Card>
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground">
@@ -42,7 +42,7 @@ export default async function CognitiveReportPage() {
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Cognitive Boundary Report</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Cognitive Boundary Report</h1>
         <Link
           href="/profile"
           className="text-sm text-muted-foreground hover:text-foreground"

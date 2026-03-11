@@ -9,7 +9,7 @@ export default async function RecruitmentPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Recruitment Info</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Recruitment Info</h1>
       <RecruitmentManager items={JSON.parse(JSON.stringify(items))} />
     </div>
   );

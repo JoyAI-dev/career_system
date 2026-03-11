@@ -20,7 +20,7 @@ export default async function NotificationsPage() {
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Notifications</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Notifications</h1>
       <NotificationList notifications={serialized} />
     </div>
   );

@@ -19,7 +19,7 @@ export default async function ActivitiesPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Activities</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Activities</h1>
       <ActivityBrowser
         activities={JSON.parse(JSON.stringify(activities))}
         types={enabledTypes.map((t) => ({ id: t.id, name: t.name }))}
