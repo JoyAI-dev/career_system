@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
-import { createNotification } from '@/server/notifications';
 
 export type ActionState = {
   errors?: { [key: string]: string[] };
@@ -17,6 +16,12 @@ const addCommentSchema = z.object({
   activityTag: z.string().max(100).optional(),
 });
 
+// Actor model: Self-reflection only. Users can only comment on their own
+// questionnaire answers as part of their cognitive growth journaling.
+// The ownership guard (line 38) enforces this invariant, so cross-user
+// NEW_COMMENT notifications are not applicable in this model.
+// If cross-user comments are needed in the future, remove the ownership
+// guard and add scoped authorization (e.g., same-activity membership).
 export async function addComment(
   _prevState: ActionState,
   formData: FormData,
@@ -30,7 +35,7 @@ export async function addComment(
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  // Verify the response answer belongs to the current user
+  // Verify the response answer belongs to the current user (self-reflection model)
   const answer = await prisma.responseAnswer.findUnique({
     where: { id: parsed.data.responseAnswerId },
     select: { snapshot: { select: { userId: true } } },
@@ -47,17 +52,6 @@ export async function addComment(
       activityTag: parsed.data.activityTag ?? null,
     },
   });
-
-  // Notify answer owner if commenter is different (future-proofing for shared comments)
-  const ownerId = answer.snapshot.userId;
-  if (ownerId !== session.user.id) {
-    await createNotification({
-      userId: ownerId,
-      type: 'NEW_COMMENT',
-      title: 'New Comment',
-      message: `Someone commented on your questionnaire answer.`,
-    });
-  }
 
   revalidatePath('/cognitive-report');
   return { success: true };
