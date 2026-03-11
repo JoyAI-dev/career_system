@@ -97,7 +97,7 @@ export async function register(
     redirect('/login');
   }
 
-  redirect('/');
+  redirect('/dashboard');
 }
 
 const loginSchema = z.object({
@@ -137,5 +137,5 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
     };
   }
 
-  redirect('/');
+  redirect('/dashboard');
 }
