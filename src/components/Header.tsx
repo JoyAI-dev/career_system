@@ -10,6 +10,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -56,14 +57,16 @@ export function Header({ initialUnreadCount = 0 }: { initialUnreadCount?: number
           </Avatar>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">{username}</p>
-              <p className="text-xs text-muted-foreground">
-                {session?.user?.role === 'ADMIN' ? t('administrator') : t('student')}
-              </p>
-            </div>
-          </DropdownMenuLabel>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{username}</p>
+                <p className="text-xs text-muted-foreground">
+                  {session?.user?.role === 'ADMIN' ? t('administrator') : t('student')}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
             <LogOut className="h-4 w-4" />

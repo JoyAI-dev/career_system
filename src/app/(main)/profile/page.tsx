@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
-import { buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { getUserProfile, getActiveGradeOptions } from '@/server/queries/user';
 import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 import { ProfileForm } from './ProfileForm';
@@ -67,12 +67,9 @@ export default async function ProfilePage() {
           </CardHeader>
           <CardContent>
             {hasCompleted ? (
-              <Link
-                href="/cognitive-report"
-                className={buttonVariants({ variant: 'default' })}
-              >
+              <Button render={<Link href="/cognitive-report" />}>
                 {t('viewReport')}
-              </Link>
+              </Button>
             ) : (
               <p className="text-sm text-muted-foreground">
                 {t('completeQuestionnaire')}

@@ -2,6 +2,8 @@ import { auth } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 import { locales, defaultLocale, type Locale } from '@/i18n/config';
 
+export const runtime = 'nodejs';
+
 const COOKIE_NAME = 'NEXT_LOCALE';
 
 function detectLocale(acceptLanguage: string | null): Locale {

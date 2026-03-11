@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -126,7 +127,9 @@ export function NotificationBell({ initialCount = 0 }: { initialCount?: number }
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between px-2">
-          <DropdownMenuLabel>{t('title')}</DropdownMenuLabel>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{t('title')}</DropdownMenuLabel>
+          </DropdownMenuGroup>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
