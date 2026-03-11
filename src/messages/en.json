@@ -3,6 +3,16 @@
     "title": "Career Exploration Platform",
     "description": "Student career exploration and activity management platform"
   },
+  "stepper": {
+    "roundtable": "Roundtable",
+    "studyBuddy": "Study Buddy",
+    "deepExplore": "Deep Explore",
+    "competition": "Competition",
+    "trialCase": "Trial Case",
+    "focusDiscussion": "Focus Group",
+    "mentorAuction": "Mentor Auction",
+    "internAuction": "Intern Auction"
+  },
   "landing": {
     "title": "Career Exploration Platform",
     "description": "Student career exploration and activity management"

@@ -99,6 +99,52 @@ export async function getUserActivities(userId: string) {
   });
 }
 
+export type StepState = 'completed' | 'current' | 'locked';
+
+export interface ActivityProgressStep {
+  typeId: string;
+  typeName: string;
+  order: number;
+  state: StepState;
+}
+
+/**
+ * Get activity progress for the stepper component.
+ * Returns ordered activity types with computed state (completed/current/locked).
+ */
+export async function getActivityProgress(userId: string): Promise<ActivityProgressStep[]> {
+  const types = await prisma.activityType.findMany({
+    where: { isEnabled: true },
+    orderBy: { order: 'asc' },
+    select: { id: true, name: true, order: true, prerequisiteTypeId: true },
+  });
+
+  const completedMemberships = await prisma.membership.findMany({
+    where: {
+      userId,
+      activity: { status: 'COMPLETED' },
+    },
+    select: { activity: { select: { typeId: true } } },
+  });
+  const completedTypeIds = new Set(completedMemberships.map((m) => m.activity.typeId));
+
+  let foundCurrent = false;
+  return types.map((type) => {
+    const isCompleted = completedTypeIds.has(type.id);
+    if (isCompleted) {
+      return { typeId: type.id, typeName: type.name, order: type.order, state: 'completed' as const };
+    }
+
+    const prereqMet = !type.prerequisiteTypeId || completedTypeIds.has(type.prerequisiteTypeId);
+    if (prereqMet && !foundCurrent) {
+      foundCurrent = true;
+      return { typeId: type.id, typeName: type.name, order: type.order, state: 'current' as const };
+    }
+
+    return { typeId: type.id, typeName: type.name, order: type.order, state: 'locked' as const };
+  });
+}
+
 /** Get activity detail with full info for the detail popup */
 export async function getActivityDetail(id: string) {
   return prisma.activity.findUnique({

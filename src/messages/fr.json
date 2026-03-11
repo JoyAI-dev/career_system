@@ -3,6 +3,16 @@
     "title": "Plateforme d'Exploration de Carrière",
     "description": "Plateforme d'exploration de carrière et de gestion des activités étudiantes"
   },
+  "stepper": {
+    "roundtable": "Table ronde",
+    "studyBuddy": "Partenaire d'étude",
+    "deepExplore": "Exploration approfondie",
+    "competition": "Compétition",
+    "trialCase": "Cas pratique",
+    "focusDiscussion": "Groupe de discussion",
+    "mentorAuction": "Enchère mentor",
+    "internAuction": "Enchère stage"
+  },
   "landing": {
     "title": "Plateforme d'Exploration de Carrière",
     "description": "Exploration de carrière et gestion des activités étudiantes"

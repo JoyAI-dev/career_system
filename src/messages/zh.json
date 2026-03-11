@@ -3,6 +3,16 @@
     "title": "职业探索平台",
     "description": "大学生职业探索与活动管理平台"
   },
+  "stepper": {
+    "roundtable": "圆桌会议",
+    "studyBuddy": "探索搭子",
+    "deepExplore": "深度探索",
+    "competition": "竞赛",
+    "trialCase": "试水案例",
+    "focusDiscussion": "聚焦讨论",
+    "mentorAuction": "导师拍卖",
+    "internAuction": "实习拍卖"
+  },
   "landing": {
     "title": "职业探索平台",
     "description": "大学生职业探索与活动管理"
