@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { auth } from '@/lib/auth';
 import { getUserProfile, getActiveGradeOptions } from '@/server/queries/user';
+import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 import { ProfileForm } from './ProfileForm';
 import { StudentIdUpload } from './StudentIdUpload';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,9 +13,10 @@ export default async function ProfilePage() {
     redirect('/login');
   }
 
-  const [user, gradeOptions] = await Promise.all([
+  const [user, gradeOptions, hasCompleted] = await Promise.all([
     getUserProfile(session.user.id),
     getActiveGradeOptions(),
+    hasCompletedQuestionnaire(session.user.id),
   ]);
 
   if (!user) {
@@ -60,9 +63,18 @@ export default async function ProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Complete the cognitive boundary questionnaire to unlock your report.
-            </p>
+            {hasCompleted ? (
+              <Link
+                href="/cognitive-report"
+                className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/80"
+              >
+                View Report
+              </Link>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Complete the cognitive boundary questionnaire to unlock your report.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

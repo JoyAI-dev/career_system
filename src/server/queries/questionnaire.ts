@@ -81,6 +81,15 @@ export async function getActiveVersion() {
   });
 }
 
+export async function getUserSnapshotIds(userId: string) {
+  const snapshots = await prisma.responseSnapshot.findMany({
+    where: { userId },
+    orderBy: { completedAt: 'asc' },
+    select: { id: true, completedAt: true, context: true },
+  });
+  return snapshots;
+}
+
 export async function getQuestionWithOptions(questionId: string) {
   return prisma.question.findUnique({
     where: { id: questionId },
