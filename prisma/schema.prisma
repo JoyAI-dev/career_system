@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  name         String?
+  school       String?
+  major        String?
+  grade        String?
+  studentIdUrl String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+model GradeOption {
+  id       String  @id @default(cuid())
+  label    String  @unique
+  order    Int
+  isActive Boolean @default(true)
+
+  @@map("grade_options")
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model LoginAttempt {
+  username     String   @id
+  count        Int      @default(0)
+  firstAttempt DateTime @default(now())
+
+  @@map("login_attempts")
+}
