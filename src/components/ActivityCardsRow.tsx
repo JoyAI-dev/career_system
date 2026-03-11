@@ -16,7 +16,7 @@ type JoinedActivity = {
   guideMarkdown: string | null;
   isOnline: boolean;
   location: string | null;
-  scheduledAt: Date | null;
+  scheduledAt: string | null;
   type: { id: string; name: string };
   activityTags: { tag: Tag }[];
   _count: { memberships: number };
@@ -57,10 +57,7 @@ export function ActivityCardsRow({ activities }: ActivityCardsRowProps) {
       )}
 
       <ActivityDetailDialog
-        activity={selectedActivity ? {
-          ...selectedActivity,
-          scheduledAt: selectedActivity.scheduledAt?.toISOString() ?? null,
-        } : null}
+        activity={selectedActivity}
         onClose={() => setSelectedActivity(null)}
       />
     </section>

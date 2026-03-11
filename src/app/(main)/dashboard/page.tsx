@@ -45,7 +45,10 @@ export default async function DashboardPage() {
       {/* Section: Joined Activity Cards */}
       <section>
         <h2 className="mb-4 text-lg font-semibold">{t('myActivities')}</h2>
-        <ActivityCardsRow activities={JSON.parse(JSON.stringify(joinedActivities))} />
+        <ActivityCardsRow activities={joinedActivities.map(a => ({
+          ...a,
+          scheduledAt: a.scheduledAt?.toISOString() ?? null,
+        }))} />
       </section>
 
       {/* Section: Calendar */}
