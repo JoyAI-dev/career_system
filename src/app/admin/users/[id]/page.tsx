@@ -4,6 +4,7 @@ import { getUserDetail } from '@/server/queries/admin';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RoleToggle } from './RoleToggle';
+import { StudentIdButton } from './StudentIdButton';
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -77,20 +78,13 @@ export default async function UserDetailPage({ params }: Props) {
       </Card>
 
       {/* Student ID */}
-      {user.studentIdUrl && (
+      {user.hasStudentId && (
         <Card>
           <CardHeader>
             <CardTitle>Student ID</CardTitle>
           </CardHeader>
           <CardContent>
-            <a
-              href={user.studentIdUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline"
-            >
-              View Student ID Document
-            </a>
+            <StudentIdButton userId={user.id} />
           </CardContent>
         </Card>
       )}

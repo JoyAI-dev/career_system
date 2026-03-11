@@ -170,7 +170,7 @@ export async function searchUsers({
 }
 
 export async function getUserDetail(userId: string) {
-  const [user, snapshotCount, activityCount] = await Promise.all([
+  const [user, snapshotCount, activityCount, studentIdCheck] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -181,15 +181,17 @@ export async function getUserDetail(userId: string) {
         major: true,
         grade: true,
         role: true,
-        studentIdUrl: true,
         createdAt: true,
       },
     }),
     prisma.responseSnapshot.count({ where: { userId } }),
     (prisma as any).membership.count({ where: { userId } }) as Promise<number>,
+    prisma.user.findUnique({ where: { id: userId }, select: { studentIdUrl: true } }),
   ]);
 
   if (!user) return null;
+
+  type StudentIdRow = { studentIdUrl: string | null } | null;
 
   return {
     id: user.id,
@@ -199,7 +201,7 @@ export async function getUserDetail(userId: string) {
     major: user.major,
     grade: user.grade,
     role: String(user.role),
-    studentIdUrl: user.studentIdUrl,
+    hasStudentId: !!(studentIdCheck as StudentIdRow)?.studentIdUrl,
     createdAt: user.createdAt.toISOString(),
     snapshotCount,
     activityCount,
