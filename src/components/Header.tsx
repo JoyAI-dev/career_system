@@ -84,7 +84,8 @@ export function Header({ initialUnreadCount = 0, variant = 'admin' }: HeaderProp
                 )}
               >
                 <item.icon className="h-4 w-4" />
-                {tn(item.labelKey)}
+                <span className="hidden md:inline">{tn(item.labelKey)}</span>
+                <span className="sr-only md:hidden">{tn(item.labelKey)}</span>
               </Link>
             );
           })}
