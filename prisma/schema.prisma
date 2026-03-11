@@ -25,9 +25,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  responseSnapshots ResponseSnapshot[]
-  memberships       Membership[]
-  createdActivities Activity[]
+  responseSnapshots  ResponseSnapshot[]
+  memberships        Membership[]
+  createdActivities  Activity[]
+  recruitmentInfos   RecruitmentInfo[]
 
   @@map("users")
 }
@@ -252,4 +253,21 @@ model Membership {
   @@unique([activityId, userId])
   @@index([userId])
   @@map("memberships")
+}
+
+// ─── Recruitment Info ───────────────────────────────────────────────
+
+model RecruitmentInfo {
+  id          String   @id @default(cuid())
+  title       String
+  company     String
+  description String?
+  eventDate   DateTime
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  creator User @relation(fields: [createdBy], references: [id])
+
+  @@index([eventDate])
+  @@map("recruitment_info")
 }

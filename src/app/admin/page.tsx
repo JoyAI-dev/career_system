@@ -96,6 +96,21 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </Link>
+        <Link href="/admin/recruitment">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardHeader>
+              <CardTitle>Recruitment</CardTitle>
+              <CardDescription>
+                Publish recruitment info
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create and manage recruitment events visible on user calendars.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );
