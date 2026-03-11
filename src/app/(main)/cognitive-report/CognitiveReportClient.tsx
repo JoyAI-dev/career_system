@@ -29,7 +29,25 @@ function formatDate(dateStr: string) {
 
 function contextLabel(context: string | null, index: number) {
   if (context === 'initial' || index === 0) return 'Initial';
-  return context || 'Assessment';
+  if (!context) return 'Assessment';
+  try {
+    const ctx = JSON.parse(context);
+    if (ctx.type === 'activity' && ctx.tags?.length) {
+      return `After ${ctx.tags[0]}`;
+    }
+  } catch {
+    // not JSON, use raw
+  }
+  return context;
+}
+
+function snapshotLabel(snapshot: SnapshotEntry, index: number) {
+  const label = contextLabel(snapshot.context, index);
+  const date = new Date(snapshot.completedAt).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+  });
+  return `${label} — ${date}`;
 }
 
 export function CognitiveReportClient({ snapshots }: Props) {
@@ -112,7 +130,7 @@ export function CognitiveReportClient({ snapshots }: Props) {
           <CardTitle>Cognitive State Overview</CardTitle>
           <CardDescription>
             {hasComparison
-              ? `Comparing "${contextLabel(snapshotA.context, snapshotAIndex)}" with "${contextLabel(snapshotB.context, snapshotBIndex)}".`
+              ? `Comparing "${snapshotLabel(snapshotA, snapshotAIndex)}" with "${snapshotLabel(snapshotB, snapshotBIndex)}".`
               : 'Your cognitive boundary assessment.'}
           </CardDescription>
         </CardHeader>
@@ -120,6 +138,8 @@ export function CognitiveReportClient({ snapshots }: Props) {
           <CognitiveRadarChart
             initialScores={snapshotA.scores}
             currentScores={hasComparison ? snapshotB.scores : null}
+            labelA={snapshotLabel(snapshotA, snapshotAIndex)}
+            labelB={hasComparison ? snapshotLabel(snapshotB, snapshotBIndex) : undefined}
           />
         </CardContent>
       </Card>
@@ -174,30 +194,42 @@ export function CognitiveReportClient({ snapshots }: Props) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {sortedByGrowth.map((item) => (
-                <div
-                  key={item.topicName}
-                  className="flex items-center justify-between rounded-lg border px-4 py-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{item.topicName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.scoreA} → {item.scoreB}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-sm font-semibold ${
-                      item.change > 0
-                        ? 'text-green-600'
-                        : item.change < 0
-                          ? 'text-red-600'
-                          : 'text-muted-foreground'
+              {sortedByGrowth.map((item, idx) => {
+                const isTopGrowth = idx === 0 && item.change > 0;
+                return (
+                  <div
+                    key={item.topicName}
+                    className={`flex items-center justify-between rounded-lg border px-4 py-3 ${
+                      isTopGrowth ? 'border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950' : ''
                     }`}
                   >
-                    {item.change > 0 ? '+' : ''}{item.change}
-                  </span>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="text-sm font-medium">{item.topicName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.scoreA} → {item.scoreB}
+                        </p>
+                      </div>
+                      {isTopGrowth && (
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
+                          Most improved
+                        </span>
+                      )}
+                    </div>
+                    <span
+                      className={`text-sm font-semibold ${
+                        item.change > 0
+                          ? 'text-green-600'
+                          : item.change < 0
+                            ? 'text-red-600'
+                            : 'text-muted-foreground'
+                      }`}
+                    >
+                      {item.change > 0 ? '+' : ''}{item.change} {item.change !== 0 ? 'points' : ''}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

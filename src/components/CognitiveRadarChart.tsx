@@ -15,9 +15,11 @@ import type { ScoringResult } from '@/server/scoring';
 type Props = {
   initialScores: ScoringResult;
   currentScores: ScoringResult | null;
+  labelA?: string;
+  labelB?: string;
 };
 
-export function CognitiveRadarChart({ initialScores, currentScores }: Props) {
+export function CognitiveRadarChart({ initialScores, currentScores, labelA, labelB }: Props) {
   // Build data array with topic names as axes
   const data = initialScores.topicScores.map((topic) => {
     const currentTopic = currentScores?.topicScores.find(
@@ -47,7 +49,7 @@ export function CognitiveRadarChart({ initialScores, currentScores }: Props) {
           tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
         />
         <Radar
-          name="Initial"
+          name={labelA || 'Initial'}
           dataKey="initial"
           stroke="hsl(210, 70%, 55%)"
           fill="hsl(210, 70%, 55%)"
@@ -56,7 +58,7 @@ export function CognitiveRadarChart({ initialScores, currentScores }: Props) {
         />
         {hasComparison && (
           <Radar
-            name="Current"
+            name={labelB || 'Current'}
             dataKey="current"
             stroke="hsl(150, 60%, 45%)"
             fill="hsl(150, 60%, 45%)"
