@@ -30,14 +30,16 @@ export function ActivityStepper({ steps }: ActivityStepperProps) {
   const t = useTranslations('stepper');
 
   return (
-    <div className="flex items-start gap-0 overflow-x-auto pb-2 scrollbar-none" role="list">
+    <div className="flex w-full items-start pb-2" role="list">
       {steps.map((step, index) => {
         const i18nKey = stepKeyMap[step.typeName];
         const label = i18nKey ? t(i18nKey) : step.typeName;
         const isLast = index === steps.length - 1;
+        const connectorColor = step.state === 'completed' ? 'border-green-500' : 'border-gray-300';
+        const arrowColor = step.state === 'completed' ? 'border-l-green-500' : 'border-l-gray-300';
 
         return (
-          <div key={step.typeId} className="flex items-start" role="listitem">
+          <div key={step.typeId} className={cn('flex items-start', !isLast && 'flex-1')} role="listitem">
             <div className="flex flex-col items-center">
               {/* Circle */}
               <div
@@ -67,14 +69,17 @@ export function ActivityStepper({ steps }: ActivityStepperProps) {
               </span>
             </div>
 
-            {/* Connector line */}
+            {/* Arrow connector */}
             {!isLast && (
-              <div
-                className={cn(
-                  'mt-5 h-0.5 w-8 shrink-0 md:w-12',
-                  step.state === 'completed' ? 'bg-green-500' : 'bg-gray-300',
-                )}
-              />
+              <div className="mt-5 flex flex-1 items-center">
+                <div className={cn('h-0 flex-1 border-t-2', connectorColor)} />
+                <div
+                  className={cn(
+                    'h-0 w-0 border-b-[5px] border-l-[7px] border-t-[5px] border-b-transparent border-t-transparent',
+                    arrowColor,
+                  )}
+                />
+              </div>
             )}
           </div>
         );
