@@ -16,11 +16,11 @@ interface SeedTopic { name: string; order: number; dimensions: SeedDimension[] }
 // ─── Shared slider answer options (same for every question) ───────────────────
 
 const SLIDER_OPTIONS: SeedAnswerOption[] = [
-  { label: '完全不知道/没听过', score: 0, order: 1 },
-  { label: '是的，我听说过并不确定', score: 25, order: 2 },
-  { label: '是的，我做过一点基于客观事实的信息搜索', score: 50, order: 3 },
-  { label: '是的，我很确定我知道基本的客观事实但并不深入', score: 75, order: 4 },
-  { label: '我很熟悉/深入了解过/身边有切实的信息渠道', score: 100, order: 5 },
+  { label: '完全不知道', score: 0, order: 1 },
+  { label: '听说过不确定', score: 25, order: 2 },
+  { label: '做过信息搜索', score: 50, order: 3 },
+  { label: '知道基本事实', score: 75, order: 4 },
+  { label: '深入了解', score: 100, order: 5 },
 ];
 
 function q(title: string, order: number): SeedQuestion {
