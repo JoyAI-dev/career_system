@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { getSnapshotAnswersWithComments } from '@/server/queries/comment';
 import { SnapshotDetailClient } from './SnapshotDetailClient';
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, getFormatter } from 'next-intl/server';
 
 type Props = {
   params: Promise<{ snapshotId: string }>;
@@ -31,9 +31,10 @@ export default async function SnapshotDetailPage({ params }: Props) {
     notFound();
   }
 
-  const [answersWithComments, t] = await Promise.all([
+  const [answersWithComments, t, format] = await Promise.all([
     getSnapshotAnswersWithComments(snapshotId),
     getTranslations('cognitiveReport'),
+    getFormatter(),
   ]);
 
   // Group by topic > dimension
@@ -91,11 +92,7 @@ export default async function SnapshotDetailPage({ params }: Props) {
         <div>
           <h1 className="text-2xl font-bold">{t('snapshotDetails')}</h1>
           <p className="text-sm text-muted-foreground">
-            {new Date(snapshot.completedAt).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
+            {format.dateTime(new Date(snapshot.completedAt), { dateStyle: 'long' })}
             {snapshot.context && snapshot.context !== 'initial' && (
               <> &middot; {activityTag || t('postActivityUpdate')}</>
             )}

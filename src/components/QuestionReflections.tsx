@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useFormatter } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { addReflection } from '@/server/actions/reflection';
 
@@ -26,6 +26,7 @@ export function QuestionReflections({
   defaultExpanded = true,
 }: Props) {
   const t = useTranslations('reflections');
+  const format = useFormatter();
   const [reflections, setReflections] = useState<Reflection[]>(initialReflections);
   const [content, setContent] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -74,7 +75,7 @@ export function QuestionReflections({
             <div key={r.id} className="rounded-md bg-muted/50 px-3 py-2 text-xs">
               <p className="text-foreground">{r.content}</p>
               <p className="mt-1 text-[10px] text-muted-foreground">
-                {new Date(r.createdAt).toLocaleDateString()}
+                {format.dateTime(new Date(r.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}
                 {r.activityTag && (
                   <span className="ml-2 rounded-full bg-primary/10 px-1.5 py-0.5 text-primary">
                     {r.activityTag}

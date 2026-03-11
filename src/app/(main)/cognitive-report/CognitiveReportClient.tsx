@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useFormatter } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,20 +68,12 @@ function computeScores(
   return { topicScores, overallScore: Math.round(overall * 100) / 100 };
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 // ─── Component ─────────────────────────────────────────────────────────
 
 export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswers, versionStructure }: Props) {
   const t = useTranslations('cognitiveReport');
+  const format = useFormatter();
   const [answers, setAnswers] = useState<Record<string, CurrentAnswer>>(initialAnswers);
   const [selectedSnapshotIdx, setSelectedSnapshotIdx] = useState(0);
   const [isPending, startTransition] = useTransition();
@@ -188,7 +180,7 @@ export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswer
               >
                 {snapshots.map((s, idx) => (
                   <option key={s.id} value={idx}>
-                    {contextLabel(s.context, s.snapshotLabel, idx)} — {formatDate(s.completedAt)} ({t('scoreLabel', { score: s.scores.overallScore })})
+                    {contextLabel(s.context, s.snapshotLabel, idx)} — {format.dateTime(new Date(s.completedAt), { dateStyle: 'medium', timeStyle: 'short' })} ({t('scoreLabel', { score: s.scores.overallScore })})
                   </option>
                 ))}
               </select>
@@ -367,7 +359,7 @@ export function CognitiveReportClient({ snapshots, currentAnswers: initialAnswer
                     return (
                       <tr key={s.id} className="border-b last:border-0">
                         <td className="py-3 pr-4 text-muted-foreground">{idx + 1}</td>
-                        <td className="py-3 pr-4">{formatDate(s.completedAt)}</td>
+                        <td className="py-3 pr-4">{format.dateTime(new Date(s.completedAt), { dateStyle: 'medium', timeStyle: 'short' })}</td>
                         <td className="py-3 pr-4">
                           <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
                             {contextLabel(s.context, s.snapshotLabel, idx)}

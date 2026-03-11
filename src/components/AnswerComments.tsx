@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useTransition, useRef, useEffect } from 'react';
+import { useTranslations, useFormatter } from 'next-intl';
 import { addComment, type ActionState } from '@/server/actions/comment';
 import { Button } from '@/components/ui/button';
 
@@ -17,16 +18,9 @@ type Props = {
   activityTag?: string;
 };
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 export function AnswerComments({ responseAnswerId, comments, activityTag }: Props) {
+  const t = useTranslations('reflections');
+  const format = useFormatter();
   const [state, formAction] = useActionState<ActionState, FormData>(addComment, {});
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -49,7 +43,7 @@ export function AnswerComments({ responseAnswerId, comments, activityTag }: Prop
             >
               <p className="text-sm">{comment.content}</p>
               <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{formatDate(comment.createdAt)}</span>
+                <span>{format.dateTime(new Date(comment.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}</span>
                 {comment.activityTag && (
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                     {comment.activityTag}
@@ -71,12 +65,12 @@ export function AnswerComments({ responseAnswerId, comments, activityTag }: Prop
         {activityTag && <input type="hidden" name="activityTag" value={activityTag} />}
         <input
           name="content"
-          placeholder="Add a reflection..."
+          placeholder={t('placeholder')}
           className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           maxLength={1000}
         />
         <Button type="submit" size="sm" variant="outline" disabled={isPending}>
-          {isPending ? '...' : 'Add'}
+          {isPending ? t('adding') : t('add')}
         </Button>
       </form>
 
