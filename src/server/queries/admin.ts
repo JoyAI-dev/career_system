@@ -222,7 +222,7 @@ export async function searchUsers({
 }
 
 export async function getUserDetail(userId: string) {
-  const [user, snapshotCount, activityCount, studentIdCheck] = await Promise.all([
+  const [user, snapshotCount, activityCount, studentIdCheck, latestSnapshot] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -239,6 +239,11 @@ export async function getUserDetail(userId: string) {
     prisma.responseSnapshot.count({ where: { userId } }),
     (prisma as any).membership.count({ where: { userId } }) as Promise<number>,
     prisma.user.findUnique({ where: { id: userId }, select: { studentIdUrl: true } }),
+    prisma.responseSnapshot.findFirst({
+      where: { userId },
+      orderBy: { completedAt: 'desc' },
+      select: { id: true, completedAt: true },
+    }),
   ]);
 
   if (!user) return null;
@@ -257,5 +262,7 @@ export async function getUserDetail(userId: string) {
     createdAt: user.createdAt.toISOString(),
     snapshotCount,
     activityCount,
+    latestSnapshotId: latestSnapshot?.id ?? null,
+    latestSnapshotDate: latestSnapshot?.completedAt.toISOString() ?? null,
   };
 }

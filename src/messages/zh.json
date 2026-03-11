@@ -323,7 +323,12 @@
       "failedLoadStudentId": "加载学生证失败",
       "studentTab": "学生",
       "adminTab": "管理员",
-      "score": "评分"
+      "score": "评分",
+      "cognitiveProfile": "认知画像",
+      "lastCompleted": "最近完成: {date}",
+      "overallScore": "综合评分",
+      "cognitiveScores": "评分",
+      "noQuestionnaireData": "暂无问卷数据"
     },
     "questionnaire": {
       "title": "问卷管理",

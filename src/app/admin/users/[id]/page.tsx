@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
 import { getUserDetail } from '@/server/queries/admin';
+import { getSnapshotScores } from '@/server/scoring';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RoleToggle } from './RoleToggle';
 import { StudentIdButton } from './StudentIdButton';
+import { CognitiveRadarChart } from '@/components/CognitiveRadarChart';
 import { getTranslations, getLocale } from 'next-intl/server';
 
 type Props = {
@@ -21,6 +23,11 @@ export default async function UserDetailPage({ params }: Props) {
 
   const user = await getUserDetail(id);
   if (!user) notFound();
+
+  // Fetch scores if user has completed questionnaire
+  const scores = user.latestSnapshotId
+    ? await getSnapshotScores(user.latestSnapshotId)
+    : null;
 
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString(locale, {
@@ -39,7 +46,9 @@ export default async function UserDetailPage({ params }: Props) {
     { label: t('fieldMajor'), value: user.major || '—' },
     { label: t('fieldGrade'), value: user.grade || '—' },
     { label: t('fieldRegistered'), value: formatDate(user.createdAt) },
-    { label: t('fieldQuestionnaire'), value: user.snapshotCount > 0 ? t('completedCount', { count: user.snapshotCount }) : t('notCompleted') },
+    { label: t('fieldQuestionnaire'), value: user.snapshotCount > 0
+      ? t('completedCount', { count: user.snapshotCount })
+      : t('notCompleted') },
     { label: t('activitiesJoined'), value: String(user.activityCount) },
   ];
 
@@ -69,6 +78,36 @@ export default async function UserDetailPage({ params }: Props) {
               </div>
             ))}
           </dl>
+        </CardContent>
+      </Card>
+
+      {/* Cognitive Profile Radar Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('cognitiveProfile')}</CardTitle>
+          {user.latestSnapshotDate && (
+            <p className="text-sm text-muted-foreground">
+              {t('lastCompleted', { date: formatDate(user.latestSnapshotDate) })}
+            </p>
+          )}
+        </CardHeader>
+        <CardContent>
+          {scores ? (
+            <div>
+              <p className="mb-2 text-sm text-muted-foreground">
+                {t('overallScore')}: <span className="font-medium text-foreground">{scores.overallScore}</span>
+              </p>
+              <CognitiveRadarChart
+                initialScores={scores}
+                currentScores={null}
+                labelA={t('cognitiveScores')}
+              />
+            </div>
+          ) : (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {t('noQuestionnaireData')}
+            </p>
+          )}
         </CardContent>
       </Card>
 

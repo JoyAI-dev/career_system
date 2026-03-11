@@ -323,7 +323,12 @@
       "failedLoadStudentId": "Impossible de charger la carte étudiante",
       "studentTab": "Étudiants",
       "adminTab": "Administrateurs",
-      "score": "Score"
+      "score": "Score",
+      "cognitiveProfile": "Profil cognitif",
+      "lastCompleted": "Dernière complétion : {date}",
+      "overallScore": "Score global",
+      "cognitiveScores": "Scores",
+      "noQuestionnaireData": "Aucune donnée de questionnaire disponible"
     },
     "questionnaire": {
       "title": "Gestion du questionnaire",
