@@ -1,10 +1,10 @@
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { getActivityTypes } from '@/server/queries/activityType';
 import { ActivityTypeManager } from './ActivityTypeManager';
 import { getTranslations } from 'next-intl/server';
 
 export default async function ActivityTypesPage() {
-  await requireAdmin();
+  await requireAdminPage();
 
   const [types, t] = await Promise.all([getActivityTypes(), getTranslations('admin.activityTypes')]);
 

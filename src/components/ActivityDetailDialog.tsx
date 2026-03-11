@@ -180,7 +180,7 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
 
   return (
     <Dialog open={!!activity} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{activity.title}</DialogTitle>
         </DialogHeader>
@@ -257,7 +257,7 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
           {activity.guideMarkdown && (
             <div className="border-t pt-4">
               <h3 className="mb-2 text-sm font-medium">{t('guide')}</h3>
-              <div className="prose prose-sm max-w-none">
+              <div className="prose prose-sm max-w-none overflow-hidden break-words [&_pre]:overflow-x-auto [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_li]:my-0">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{activity.guideMarkdown}</ReactMarkdown>
               </div>
             </div>

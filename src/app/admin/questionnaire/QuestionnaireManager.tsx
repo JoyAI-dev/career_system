@@ -751,7 +751,13 @@ function QuestionItem({
   const [notesExpanded, setNotesExpanded] = useState(false);
   const t = useTranslations('admin.questionnaire');
 
-  const optionsSum = question.answerOptions.reduce((sum, o) => sum + o.score, 0);
+  const optionsAscending = (() => {
+    const sorted = [...question.answerOptions].sort((a, b) => a.score - b.score);
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i].score <= sorted[i - 1].score) return false;
+    }
+    return question.answerOptions.length > 0;
+  })();
 
   const [editState, editAction, editPending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
@@ -780,14 +786,14 @@ function QuestionItem({
             <Link
               href={`/admin/questionnaire/${question.id}/options`}
               className={`text-xs hover:text-foreground ${
-                optionsSum === 100
+                optionsAscending
                   ? 'text-green-600 dark:text-green-400'
-                  : optionsSum > 0
+                  : question.answerOptions.length > 0
                     ? 'text-amber-600 dark:text-amber-400'
                     : 'text-muted-foreground'
               }`}
             >
-              {t('optionCount', { count: question.answerOptions.length })} ({t('optionSum', { sum: optionsSum })})
+              {t('optionCount', { count: question.answerOptions.length })}
             </Link>
           </div>
         </div>

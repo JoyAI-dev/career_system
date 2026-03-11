@@ -1,10 +1,10 @@
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { getRecruitmentInfos } from '@/server/queries/recruitment';
 import { RecruitmentManager } from './RecruitmentManager';
 import { getTranslations } from 'next-intl/server';
 
 export default async function RecruitmentPage() {
-  await requireAdmin();
+  await requireAdminPage();
 
   const [items, t] = await Promise.all([getRecruitmentInfos(), getTranslations('admin.recruitment')]);
 

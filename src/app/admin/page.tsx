@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDashboardStats } from '@/server/queries/admin';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { getTranslations, getLocale } from 'next-intl/server';
 
 type RecentUser = { id: string; username: string; name: string | null; school: string | null; createdAt: string };
@@ -27,7 +27,7 @@ const ADMIN_LINKS = [
 ];
 
 export default async function AdminPage() {
-  await requireAdmin();
+  await requireAdminPage();
   const [stats, t, locale] = await Promise.all([
     getDashboardStats(),
     getTranslations('admin.dashboard'),

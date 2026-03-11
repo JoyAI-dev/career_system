@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { getTranslations } from 'next-intl/server';
 import { getActivityById } from '@/server/queries/activity';
 import { getActivityTypes } from '@/server/queries/activityType';
@@ -11,7 +11,7 @@ export default async function EditActivityPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  await requireAdminPage();
 
   const { id } = await params;
 

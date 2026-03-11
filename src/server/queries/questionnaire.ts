@@ -2,10 +2,32 @@ import { prisma } from '@/lib/db';
 
 export async function hasCompletedQuestionnaire(userId: string) {
   const snapshot = await prisma.responseSnapshot.findFirst({
-    where: { userId },
+    where: { userId, isSnapshot: true },
     select: { id: true },
   });
   return !!snapshot;
+}
+
+/**
+ * Get saved draft answers (from the current non-snapshot record).
+ * Returns a map of questionId → optionId, or empty if no draft exists.
+ */
+export async function getSavedDraftAnswers(userId: string): Promise<Record<string, string>> {
+  const draft = await prisma.responseSnapshot.findFirst({
+    where: { userId, isSnapshot: false },
+    orderBy: { completedAt: 'desc' },
+    select: {
+      answers: {
+        select: { questionId: true, selectedOptionId: true },
+      },
+    },
+  });
+  if (!draft) return {};
+  const map: Record<string, string> = {};
+  for (const answer of draft.answers) {
+    map[answer.questionId] = answer.selectedOptionId;
+  }
+  return map;
 }
 
 export async function getActiveVersionWithStructure() {

@@ -54,17 +54,17 @@ export function AnswerOptionsEditor({
   const t = useTranslations('admin.questionnaire.options');
   const tc = useTranslations('common');
 
-  const scoreSum = useMemo(
-    () => options.reduce((sum, opt) => sum + opt.score, 0),
-    [options],
-  );
+  const isAscending = useMemo(() => {
+    const sorted = [...options].sort((a, b) => (a.score ?? 0) - (b.score ?? 0));
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i].score <= sorted[i - 1].score) return false;
+    }
+    return options.length > 0;
+  }, [options]);
 
-  const sumColor =
-    scoreSum === 100
-      ? 'text-green-600 dark:text-green-400'
-      : scoreSum > 100
-        ? 'text-destructive'
-        : 'text-amber-600 dark:text-amber-400';
+  const validColor = isAscending
+    ? 'text-green-600 dark:text-green-400'
+    : 'text-amber-600 dark:text-amber-400';
 
   const [addState, addAction, addPending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
@@ -95,18 +95,10 @@ export function AnswerOptionsEditor({
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">{t('scoreTotal')}</p>
-            <p className={`text-2xl font-bold ${sumColor}`}>
-              {scoreSum} / 100
+            <p className="text-sm text-muted-foreground">{t('scoreOrder')}</p>
+            <p className={`text-lg font-bold ${validColor}`}>
+              {isAscending ? t('valid') : t('scoresNotAscending')}
             </p>
-            {scoreSum === 100 && (
-              <p className="text-xs text-green-600 dark:text-green-400">{t('valid')}</p>
-            )}
-            {scoreSum !== 100 && (
-              <p className="text-xs text-destructive">
-                {scoreSum < 100 ? t('needMore', { count: 100 - scoreSum }) : t('over', { count: scoreSum - 100 })}
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>

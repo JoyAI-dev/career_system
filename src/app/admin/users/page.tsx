@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { searchUsers } from '@/server/queries/admin';
 import { UserTabs } from './UserTabs';
 import { getTranslations } from 'next-intl/server';
@@ -16,7 +16,7 @@ export default async function AdminUsersPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requireAdmin();
+  await requireAdminPage();
   const [params, t] = await Promise.all([searchParams, getTranslations('admin.users')]);
 
   const query = params.q || undefined;

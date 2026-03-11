@@ -1,11 +1,11 @@
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { getActivityTypes } from '@/server/queries/activityType';
 import { getTags } from '@/server/queries/tag';
 import { ActivityForm } from '../ActivityForm';
 import { getTranslations } from 'next-intl/server';
 
 export default async function NewActivityPage() {
-  await requireAdmin();
+  await requireAdminPage();
 
   const [types, tags, t] = await Promise.all([getActivityTypes(), getTags(), getTranslations('admin.activities')]);
 

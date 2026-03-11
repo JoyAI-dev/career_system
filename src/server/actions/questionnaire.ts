@@ -856,6 +856,97 @@ export async function reorderAnswerOption(
   return { success: true };
 }
 
+// ─── User Questionnaire Draft Save ──────────────────────────────────
+
+export async function saveQuestionnaireDraft(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const te = await getTranslations('serverErrors');
+
+  const versionId = formData.get('versionId') as string;
+  if (!versionId) {
+    return { errors: { _form: [te('versionRequired')] } };
+  }
+
+  // Verify the version is active
+  const version = await prisma.questionnaireVersion.findUnique({
+    where: { id: versionId },
+    select: { isActive: true },
+  });
+  if (!version?.isActive) {
+    return { errors: { _form: [te('questionnaireInactive')] } };
+  }
+
+  const rawAnswers: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith('answer_') && typeof value === 'string') {
+      const questionId = key.replace('answer_', '');
+      rawAnswers[questionId] = value;
+    }
+  }
+
+  if (Object.keys(rawAnswers).length === 0) {
+    return { errors: { _form: [te('atLeastOneAnswer')] } };
+  }
+
+  // Validate all selected options belong to the right questions
+  const selectedOptionIds = Object.values(rawAnswers);
+  const validOptions = await prisma.answerOption.findMany({
+    where: { id: { in: selectedOptionIds } },
+    select: { id: true, questionId: true },
+  });
+  const optionMap = new Map(validOptions.map((o) => [o.id, o.questionId]));
+  for (const [questionId, optionId] of Object.entries(rawAnswers)) {
+    const ownerQuestion = optionMap.get(optionId);
+    if (!ownerQuestion || ownerQuestion !== questionId) {
+      return { errors: { _form: [te('invalidAnswerOption')] } };
+    }
+  }
+
+  // Save to the current (non-snapshot) record
+  await prisma.$transaction(async (tx) => {
+    const answerData = Object.entries(rawAnswers).map(([questionId, selectedOptionId]) => ({
+      questionId,
+      selectedOptionId,
+    }));
+
+    const existingCurrent = await tx.responseSnapshot.findFirst({
+      where: { userId, isSnapshot: false },
+      orderBy: { completedAt: 'desc' },
+      select: { id: true },
+    });
+
+    if (existingCurrent) {
+      // Delete old answers and insert new ones
+      await tx.responseAnswer.deleteMany({ where: { snapshotId: existingCurrent.id } });
+      await tx.responseAnswer.createMany({
+        data: answerData.map((a) => ({ ...a, snapshotId: existingCurrent.id })),
+      });
+      await tx.responseSnapshot.update({
+        where: { id: existingCurrent.id },
+        data: { versionId, completedAt: new Date() },
+      });
+    } else {
+      const current = await tx.responseSnapshot.create({
+        data: {
+          userId,
+          versionId,
+          context: 'draft',
+          isSnapshot: false,
+        },
+      });
+      await tx.responseAnswer.createMany({
+        data: answerData.map((a) => ({ ...a, snapshotId: current.id })),
+      });
+    }
+  });
+
+  return { success: true };
+}
+
 // ─── User Questionnaire Submission ───────────────────────────────────
 
 export async function submitQuestionnaire(
@@ -891,25 +982,6 @@ export async function submitQuestionnaire(
   });
   if (!version?.isActive) {
     return { errors: { _form: [te('questionnaireInactive')] } };
-  }
-
-  // Get all questions for this version to validate completeness
-  const allQuestions = await prisma.question.findMany({
-    where: {
-      dimension: {
-        topic: { versionId },
-      },
-    },
-    select: { id: true },
-  });
-
-  const questionIds = allQuestions.map((q) => q.id);
-  const answeredIds = Object.keys(answers);
-
-  // Check all questions are answered
-  const missing = questionIds.filter((id) => !answeredIds.includes(id));
-  if (missing.length > 0) {
-    return { errors: { _form: [te('answerAllQuestions', { count: missing.length.toString() })] } };
   }
 
   // Validate all selected options exist and belong to the right questions
@@ -1027,19 +1099,6 @@ export async function submitQuestionnaireUpdate(
   });
   if (!version?.isActive) {
     return { errors: { _form: [te('questionnaireInactive')] } };
-  }
-
-  // Get all questions for this version to validate completeness
-  const allQuestions = await prisma.question.findMany({
-    where: { dimension: { topic: { versionId } } },
-    select: { id: true },
-  });
-
-  const questionIds = allQuestions.map((q) => q.id);
-  const answeredIds = Object.keys(answers);
-  const missing = questionIds.filter((id) => !answeredIds.includes(id));
-  if (missing.length > 0) {
-    return { errors: { _form: [te('answerAllQuestions', { count: missing.length.toString() })] } };
   }
 
   // Validate all selected options belong to the right questions
@@ -1268,16 +1327,19 @@ export async function validateAnswerOptionsSum(questionId: string): Promise<Acti
 
   const options = await prisma.answerOption.findMany({
     where: { questionId },
-    select: { score: true },
+    select: { score: true, order: true },
+    orderBy: { order: 'asc' },
   });
 
-  const sum = options.reduce((acc, o) => acc + o.score, 0);
-  if (sum !== 100) {
-    return {
-      errors: {
-        _form: [te('scoreSumInvalid', { sum: sum.toString() })],
-      },
-    };
+  // Validate that scores are strictly ascending
+  for (let i = 1; i < options.length; i++) {
+    if (options[i].score <= options[i - 1].score) {
+      return {
+        errors: {
+          _form: [te('scoresNotAscending')],
+        },
+      };
+    }
   }
 
   return { success: true };

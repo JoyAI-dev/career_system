@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { getUserDetail } from '@/server/queries/admin';
 import { getSnapshotScores } from '@/server/scoring';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export default async function UserDetailPage({ params }: Props) {
-  await requireAdmin();
+  await requireAdminPage();
   const [{ id }, t, locale] = await Promise.all([
     params,
     getTranslations('admin.users'),

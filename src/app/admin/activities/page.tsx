@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { getActivities } from '@/server/queries/activity';
 import { getActivityTypes } from '@/server/queries/activityType';
 import { getTags } from '@/server/queries/tag';
@@ -10,7 +10,7 @@ export default async function ActivitiesPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  await requireAdmin();
+  await requireAdminPage();
 
   const { tab } = await searchParams;
   const activeTab = tab === 'tags' ? 'tags' : 'activities';

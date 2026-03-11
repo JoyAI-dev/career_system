@@ -12,7 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { submitQuestionnaire, type ActionState } from '@/server/actions/questionnaire';
+import { submitQuestionnaire, saveQuestionnaireDraft, type ActionState } from '@/server/actions/questionnaire';
 import { DimensionNav } from '@/components/DimensionNav';
 import { SectionProgress } from '@/components/SectionProgress';
 import { QuestionReflections } from '@/components/QuestionReflections';
@@ -63,15 +63,20 @@ type ReflectionItem = { id: string; content: string; activityTag: string | null;
 export function QuestionnaireFlow({
   version,
   reflectionsByQuestion = {},
+  savedAnswers = {},
 }: {
   version: Version;
   reflectionsByQuestion?: Record<string, ReflectionItem[]>;
+  savedAnswers?: Record<string, string>;
 }) {
   const t = useTranslations('questionnaire');
   const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(savedAnswers);
   const [state, formAction] = useActionState<ActionState, FormData>(submitQuestionnaire, {});
+  const [, saveDraftAction] = useActionState<ActionState, FormData>(saveQuestionnaireDraft, {});
   const [isPending, startTransition] = useTransition();
+  const [isSaving, startSavingTransition] = useTransition();
+  const [showSaved, setShowSaved] = useState(false);
   const [unansweredDialogOpen, setUnansweredDialogOpen] = useState(false);
   const [unansweredQuestions, setUnansweredQuestions] = useState<Question[]>([]);
   const [isSubmitAttempt, setIsSubmitAttempt] = useState(false);
@@ -132,6 +137,31 @@ export function QuestionnaireFlow({
     }
   }
 
+  function handleSave() {
+    if (Object.keys(answers).length === 0) return;
+    const formData = new FormData();
+    formData.set('versionId', version.id);
+    for (const [questionId, optionId] of Object.entries(answers)) {
+      formData.set(`answer_${questionId}`, optionId);
+    }
+    startSavingTransition(() => {
+      saveDraftAction(formData);
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 2000);
+    });
+  }
+
+  function doSubmit() {
+    const formData = new FormData();
+    formData.set('versionId', version.id);
+    for (const [questionId, optionId] of Object.entries(answers)) {
+      formData.set(`answer_${questionId}`, optionId);
+    }
+    startTransition(() => {
+      formAction(formData);
+    });
+  }
+
   function handleSubmit() {
     const allUnanswered = allQuestions.filter((q) => !answers[q.id]);
     if (allUnanswered.length > 0) {
@@ -141,14 +171,7 @@ export function QuestionnaireFlow({
       return;
     }
 
-    const formData = new FormData();
-    formData.set('versionId', version.id);
-    for (const [questionId, optionId] of Object.entries(answers)) {
-      formData.set(`answer_${questionId}`, optionId);
-    }
-    startTransition(() => {
-      formAction(formData);
-    });
+    doSubmit();
   }
 
   return (
@@ -282,18 +305,31 @@ export function QuestionnaireFlow({
           {t('previous')}
         </Button>
 
-        {isLastTopic ? (
+        <div className="flex items-center gap-2">
+          {showSaved && (
+            <span className="text-sm text-green-600">{t('saved')}</span>
+          )}
           <Button
-            onClick={handleSubmit}
-            disabled={isPending}
+            variant="outline"
+            onClick={handleSave}
+            disabled={isSaving || Object.keys(answers).length === 0}
           >
-            {isPending ? t('submitting') : t('submit')}
+            {isSaving ? t('saving') : t('save')}
           </Button>
-        ) : (
-          <Button onClick={handleNext}>
-            {t('nextTopic')}
-          </Button>
-        )}
+
+          {isLastTopic ? (
+            <Button
+              onClick={handleSubmit}
+              disabled={isPending || Object.keys(answers).length === 0}
+            >
+              {isPending ? t('submitting') : t('submit')}
+            </Button>
+          ) : (
+            <Button onClick={handleNext}>
+              {t('nextTopic')}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Unanswered Questions Dialog */}
@@ -320,7 +356,11 @@ export function QuestionnaireFlow({
             <Button variant="outline" onClick={() => setUnansweredDialogOpen(false)}>
               {t('goBack')}
             </Button>
-            {!isSubmitAttempt && (
+            {isSubmitAttempt ? (
+              <Button onClick={() => { setUnansweredDialogOpen(false); doSubmit(); }}>
+                {t('submitAnyway')}
+              </Button>
+            ) : (
               <Button onClick={handleContinueAnyway}>
                 {t('continueAnyway')}
               </Button>

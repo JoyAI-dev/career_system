@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { checkRateLimit, recordFailedAttempt, resetAttempts } from '@/lib/rate-limit';
 import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -131,6 +132,30 @@ export async function requireAdmin() {
   const session = await requireAuth();
   if (session.user.role !== 'ADMIN') {
     throw new ForbiddenError();
+  }
+  return session;
+}
+
+/**
+ * Require authentication in Server Components (pages/layouts).
+ * Redirects to /login instead of throwing, which avoids 500 errors.
+ */
+export async function requireAuthPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect('/login');
+  }
+  return session;
+}
+
+/**
+ * Require ADMIN role in Server Components (pages/layouts).
+ * Redirects instead of throwing.
+ */
+export async function requireAdminPage() {
+  const session = await requireAuthPage();
+  if (session.user.role !== 'ADMIN') {
+    redirect('/');
   }
   return session;
 }

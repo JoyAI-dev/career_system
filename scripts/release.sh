@@ -51,14 +51,18 @@ run_migrations() {
 run_seeds() {
   local label="$1"
   info "Running seeds ($label)..."
-  local db_url
-  db_url=$(resolve_db_url)
+  local tmpenv db_url admin_pw
+  tmpenv=$(mktemp)
+  vercel env pull "$tmpenv" --yes >/dev/null 2>&1
+  db_url=$(grep '^DATABASE_URL=' "$tmpenv" | cut -d'"' -f2)
+  admin_pw=$(grep '^ADMIN_SEED_PASSWORD=' "$tmpenv" | cut -d'"' -f2)
+  rm -f "$tmpenv"
 
   if [ -z "$db_url" ]; then
     fail "Could not resolve DATABASE_URL from Vercel env"
   fi
 
-  DATABASE_URL="$db_url" npx tsx prisma/seed-questionnaire-v2.ts 2>&1
+  DATABASE_URL="$db_url" ADMIN_SEED_PASSWORD="$admin_pw" npx tsx prisma/seed.ts 2>&1
   ok "Seeds complete ($label)"
 }
 
