@@ -313,6 +313,7 @@ export function QuestionnaireManager({
             <TopicSection
               key={topic.id}
               topic={topic}
+              index={topicIdx + 1}
               isDraft={!!isDraft}
               isFirst={topicIdx === 0}
               isLast={topicIdx === structure.topics.length - 1}
@@ -369,11 +370,13 @@ function AddTopicButton({ versionId }: { versionId: string }) {
 
 function TopicSection({
   topic,
+  index,
   isDraft,
   isFirst,
   isLast,
 }: {
   topic: Topic;
+  index: number;
   isDraft: boolean;
   isFirst: boolean;
   isLast: boolean;
@@ -402,7 +405,7 @@ function TopicSection({
             onClick={() => setExpanded(!expanded)}
           >
             <span className="text-lg">{expanded ? '▼' : '▶'}</span>
-            <CardTitle className="text-lg">{topic.name}</CardTitle>
+            <CardTitle className="text-lg">{index}. {topic.name}</CardTitle>
             <span className="text-sm text-muted-foreground">
               ({t('dimensionCount', { count: topic.dimensions.length })})
             </span>
@@ -494,6 +497,7 @@ function TopicSection({
             <DimensionSection
               key={dim.id}
               dimension={dim}
+              index={dimIdx + 1}
               isDraft={isDraft}
               isFirst={dimIdx === 0}
               isLast={dimIdx === topic.dimensions.length - 1}
@@ -550,11 +554,13 @@ function AddDimensionButton({ topicId }: { topicId: string }) {
 
 function DimensionSection({
   dimension,
+  index,
   isDraft,
   isFirst,
   isLast,
 }: {
   dimension: Dimension;
+  index: number;
   isDraft: boolean;
   isFirst: boolean;
   isLast: boolean;
@@ -582,7 +588,7 @@ function DimensionSection({
           onClick={() => setExpanded(!expanded)}
         >
           <span className="text-sm">{expanded ? '▼' : '▶'}</span>
-          <span className="font-medium">{dimension.name}</span>
+          <span className="font-medium">{index}. {dimension.name}</span>
           <span className="text-sm text-muted-foreground">
             ({t('questionCount', { count: dimension.questions.length })})
           </span>
@@ -671,6 +677,7 @@ function DimensionSection({
             <QuestionItem
               key={q.id}
               question={q}
+              index={qIdx + 1}
               isDraft={isDraft}
               isFirst={qIdx === 0}
               isLast={qIdx === dimension.questions.length - 1}
@@ -727,11 +734,13 @@ function AddQuestionButton({ dimensionId }: { dimensionId: string }) {
 
 function QuestionItem({
   question,
+  index,
   isDraft,
   isFirst,
   isLast,
 }: {
   question: Question;
+  index: number;
   isDraft: boolean;
   isFirst: boolean;
   isLast: boolean;
@@ -756,7 +765,7 @@ function QuestionItem({
     <div className="rounded border bg-background p-2">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-sm">{question.title}</p>
+          <p className="text-sm">{index}. {question.title}</p>
           <div className="mt-1 flex items-center gap-3">
             {question.notes.length > 0 && (
               <button
