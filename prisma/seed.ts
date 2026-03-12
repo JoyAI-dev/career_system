@@ -401,6 +401,27 @@ async function main() {
 
   console.log('Seeded 14 preference categories with options and sliders');
 
+  // ── Announcement Seed ──────────────────────────────────────────────────
+  const announcementContent = `| 我 既<b style="color:red">不能</b> 也<b style="color:red">不会</b> | 我 <b style="color:green">只能</b> <b style="color:green">只会</b> |
+|:---|:---|
+| 替你学习、思考、判断 | 帮助你<br>- 学习如何正确使用AI工具<br>- 思考如何让AI帮你更高效<br>- 判断AI的输出是否合理 |
+| 帮你做出人生选择 | 提供你需要的信息和分析框架 |
+| 保证任何结果或承诺 | 陪伴你探索、试错、反思的全过程 |
+| 替代真实的人际关系和经验 | 作为你探索路上的辅助工具和资源 |`;
+
+  const existingAnnouncement = await prisma.$queryRaw<{ id: string }[]>(
+    Prisma.sql`SELECT id FROM announcements WHERE title = '公告' LIMIT 1`,
+  );
+  if (existingAnnouncement.length === 0) {
+    await prisma.$queryRaw(
+      Prisma.sql`INSERT INTO announcements (id, title, content, "isActive", "countdownSeconds", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid(), '公告', ${announcementContent}, true, 20, NOW(), NOW())`,
+    );
+    console.log('Seeded announcement: 公告');
+  } else {
+    console.log('Announcement already exists, skipping');
+  }
+
   // ── Questionnaire V2 (4-tier: Topic → SubTopic → Dimension → Question) ──
 
   // Create or get version 2
