@@ -100,7 +100,8 @@ function AnnouncementRow({ item }: { item: AnnouncementItem }) {
     });
   }
 
-  const formattedDate = new Date(item.createdAt).toLocaleDateString();
+  const d = new Date(item.createdAt);
+  const formattedDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
   return (
     <tr className="border-b last:border-0">
@@ -169,7 +170,7 @@ function AddAnnouncementButton() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button />}>{t('create')}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('createAnnouncement')}</DialogTitle>
         </DialogHeader>
@@ -186,8 +187,8 @@ function AddAnnouncementButton() {
             <MarkdownEditor
               id="content"
               name="content"
-              minHeight={200}
-              preview="edit"
+              minHeight={400}
+              preview="live"
             />
           </div>
           <div>
@@ -235,7 +236,7 @@ function EditAnnouncementButton({ item }: { item: AnnouncementItem }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="ghost" size="xs" />}>{t('edit')}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('editAnnouncement')}</DialogTitle>
         </DialogHeader>
@@ -253,8 +254,8 @@ function EditAnnouncementButton({ item }: { item: AnnouncementItem }) {
               id="edit-content"
               name="content"
               defaultValue={item.content}
-              minHeight={200}
-              preview="edit"
+              minHeight={400}
+              preview="live"
             />
           </div>
           <div>

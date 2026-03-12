@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { useTranslations } from 'next-intl';
 import {
   Dialog,
@@ -20,27 +21,29 @@ type Props = {
     content: string;
     countdownSeconds: number;
   } | null;
-  forceCountdown: boolean;
+  /** Whether this user has already completed a full countdown viewing */
+  hasViewed: boolean;
 };
 
-export function AnnouncementPopup({ announcement, forceCountdown }: Props) {
+const SESSION_KEY = 'announcement_dismissed';
+
+export function AnnouncementPopup({ announcement, hasViewed }: Props) {
   const t = useTranslations('announcement');
   const [open, setOpen] = useState(!!announcement);
+  const needsCountdown = !hasViewed;
   const [countdown, setCountdown] = useState(
-    forceCountdown ? (announcement?.countdownSeconds ?? 20) : 0,
+    needsCountdown ? (announcement?.countdownSeconds ?? 20) : 0,
   );
+  const markedRef = useRef(false);
 
+  // If already dismissed in this browser session, close immediately on mount
   useEffect(() => {
-    // Clean up ?registered=true from URL
-    if (forceCountdown && typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has('registered')) {
-        url.searchParams.delete('registered');
-        window.history.replaceState({}, '', url.pathname + url.search);
-      }
+    if (announcement && sessionStorage.getItem(`${SESSION_KEY}_${announcement.id}`)) {
+      setOpen(false);
     }
-  }, [forceCountdown]);
+  }, [announcement]);
 
+  // Countdown timer
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setInterval(() => {
@@ -49,22 +52,23 @@ export function AnnouncementPopup({ announcement, forceCountdown }: Props) {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // When countdown reaches 0, notify server so forced mode won't repeat
+  // When countdown reaches 0 for a first-time viewer, notify server
+  // This is the ONLY way the "hasViewed" flag gets set in the database
   useEffect(() => {
-    if (forceCountdown && countdown === 0 && announcement) {
+    if (needsCountdown && countdown === 0 && announcement && !markedRef.current) {
+      markedRef.current = true;
       markAnnouncementViewed(announcement.id);
     }
-  }, [forceCountdown, countdown, announcement]);
+  }, [needsCountdown, countdown, announcement]);
 
   if (!announcement) return null;
 
-  const canClose = !forceCountdown || countdown <= 0;
+  const canClose = hasViewed || countdown <= 0;
 
   function handleDismiss() {
     if (!canClose) return;
-    if (!forceCountdown && announcement) {
-      markAnnouncementViewed(announcement.id);
-    }
+    // Mark dismissed for this browser session so it won't re-appear on page navigation
+    sessionStorage.setItem(`${SESSION_KEY}_${announcement.id}`, '1');
     setOpen(false);
   }
 
@@ -82,7 +86,7 @@ export function AnnouncementPopup({ announcement, forceCountdown }: Props) {
           <DialogTitle>{announcement.title}</DialogTitle>
         </DialogHeader>
         <div className="prose prose-sm max-w-none dark:prose-invert">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
             {announcement.content}
           </ReactMarkdown>
         </div>
