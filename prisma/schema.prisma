@@ -35,6 +35,7 @@ model User {
   notifications      Notification[]
   auditLogs          AuditLog[]     @relation("auditLogs")
   announcementViews  AnnouncementView[]
+  preference         UserPreference?
 
   @@map("users")
 }
@@ -66,6 +67,12 @@ model LoginAttempt {
 
 // ─── Versioned Questionnaire System ─────────────────────────────────
 
+enum TopicPreferenceMode {
+  REPEAT    // Same questions repeated for each preference selection (e.g., cities)
+  FILTER    // Unique SubTopics filtered by user's preference selections
+  CONTEXT   // Single SubTopic, preference shown as contextual label
+}
+
 model QuestionnaireVersion {
   id        String   @id @default(cuid())
   version   Int      @unique
@@ -79,27 +86,48 @@ model QuestionnaireVersion {
 }
 
 model Topic {
-  id        String @id @default(cuid())
-  versionId String
-  name      String
-  order     Int
+  id                   String              @id @default(cuid())
+  versionId            String
+  name                 String
+  order                Int
+  preferenceMode       TopicPreferenceMode @default(CONTEXT)
+  showInReport         Boolean             @default(true)
+  preferenceCategoryId String?
 
-  version    QuestionnaireVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  dimensions Dimension[]
+  version            QuestionnaireVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  preferenceCategory PreferenceCategory?  @relation("TopicPreference", fields: [preferenceCategoryId], references: [id], onDelete: SetNull)
+  subTopics          SubTopic[]
 
   @@index([versionId])
   @@map("topics")
 }
 
-model Dimension {
-  id      String @id @default(cuid())
-  topicId String
-  name    String
-  order   Int
+model SubTopic {
+  id                 String  @id @default(cuid())
+  topicId            String
+  name               String
+  order              Int
+  preferenceOptionId String?
 
-  topic     Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topic            Topic             @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  preferenceOption PreferenceOption? @relation(fields: [preferenceOptionId], references: [id], onDelete: SetNull)
+  dimensions       Dimension[]
+
+  @@index([topicId])
+  @@index([preferenceOptionId])
+  @@map("sub_topics")
+}
+
+model Dimension {
+  id         String @id @default(cuid())
+  subTopicId String
+  name       String
+  order      Int
+
+  subTopic  SubTopic   @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
   questions Question[]
 
+  @@index([subTopicId])
   @@map("dimensions")
 }
 
@@ -163,16 +191,20 @@ model ResponseSnapshot {
 }
 
 model ResponseAnswer {
-  id               String @id @default(cuid())
-  snapshotId       String
-  questionId       String
-  selectedOptionId String
+  id                 String  @id @default(cuid())
+  snapshotId         String
+  questionId         String
+  selectedOptionId   String
+  preferenceOptionId String?
 
-  snapshot       ResponseSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
-  question       Question         @relation(fields: [questionId], references: [id])
-  selectedOption AnswerOption     @relation(fields: [selectedOptionId], references: [id])
-  comments       ResponseComment[]
+  snapshot         ResponseSnapshot  @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  question         Question          @relation(fields: [questionId], references: [id])
+  selectedOption   AnswerOption      @relation(fields: [selectedOptionId], references: [id])
+  preferenceOption PreferenceOption? @relation("RepeatAnswers", fields: [preferenceOptionId], references: [id], onDelete: SetNull)
+  comments         ResponseComment[]
 
+  @@unique([snapshotId, questionId, preferenceOptionId])
+  @@index([preferenceOptionId])
   @@map("response_answers")
 }
 
@@ -380,6 +412,113 @@ model AnnouncementView {
   @@unique([userId, announcementId])
   @@index([userId])
   @@map("announcement_views")
+}
+
+// ─── Career Preference System ────────────────────────────────────────
+
+enum PreferenceInputType {
+  SINGLE_SELECT
+  MULTI_SELECT
+  HIERARCHICAL_MULTI
+  SLIDER
+}
+
+model PreferenceCategory {
+  id          String              @id @default(cuid())
+  name        String
+  slug        String              @unique
+  icon        String?
+  description String?
+  order       Int
+  inputType   PreferenceInputType
+  isActive    Boolean             @default(true)
+
+  topics  Topic[]            @relation("TopicPreference")
+  options PreferenceOption[]
+  sliders PreferenceSlider[]
+
+  @@index([order])
+  @@map("preference_categories")
+}
+
+model PreferenceOption {
+  id             String  @id @default(cuid())
+  categoryId     String
+  label          String
+  value          String
+  order          Int
+  isActive       Boolean @default(true)
+  parentId       String?
+  isAutoSelected Boolean @default(false)
+  requiresChild  Boolean @default(false)
+
+  category      PreferenceCategory        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  parent        PreferenceOption?          @relation("OptionHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children      PreferenceOption[]         @relation("OptionHierarchy")
+  selections    UserPreferenceSelection[]
+  subTopics     SubTopic[]
+  repeatAnswers ResponseAnswer[]           @relation("RepeatAnswers")
+
+  @@index([categoryId])
+  @@index([parentId])
+  @@map("preference_options")
+}
+
+model PreferenceSlider {
+  id           String @id @default(cuid())
+  categoryId   String
+  label        String
+  minValue     Int    @default(0)
+  maxValue     Int    @default(10)
+  defaultValue Int    @default(5)
+  step         Int    @default(1)
+  order        Int
+
+  category PreferenceCategory          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  values   UserPreferenceSliderValue[]
+
+  @@index([categoryId])
+  @@map("preference_sliders")
+}
+
+model UserPreference {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  completedAt DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  selections   UserPreferenceSelection[]
+  sliderValues UserPreferenceSliderValue[]
+
+  @@map("user_preferences")
+}
+
+model UserPreferenceSelection {
+  id               String @id @default(cuid())
+  userPreferenceId String
+  optionId         String
+
+  userPreference UserPreference @relation(fields: [userPreferenceId], references: [id], onDelete: Cascade)
+  option         PreferenceOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([userPreferenceId, optionId])
+  @@index([optionId])
+  @@map("user_preference_selections")
+}
+
+model UserPreferenceSliderValue {
+  id               String @id @default(cuid())
+  userPreferenceId String
+  sliderId         String
+  value            Int
+
+  userPreference UserPreference @relation(fields: [userPreferenceId], references: [id], onDelete: Cascade)
+  slider         PreferenceSlider @relation(fields: [sliderId], references: [id], onDelete: Cascade)
+
+  @@unique([userPreferenceId, sliderId])
+  @@map("user_preference_slider_values")
 }
 
 // ─── Audit Log ──────────────────────────────────────────────────────

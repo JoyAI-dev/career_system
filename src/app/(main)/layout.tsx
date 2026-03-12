@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { SessionProvider } from '@/components/SessionProvider';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
 import { AnnouncementPopup } from '@/components/AnnouncementPopup';
 import { auth } from '@/lib/auth';
+import { hasCompletedPreference } from '@/server/queries/preference';
 import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 import { getUnreadCount } from '@/server/queries/notification';
 import { getActiveAnnouncement, hasUserViewedAnnouncement } from '@/server/queries/announcement';
@@ -14,8 +14,12 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   const session = await auth();
   const isAdmin = session?.user?.role === 'ADMIN';
 
-  // Redirect non-admin users who haven't completed the questionnaire
+  // Redirect non-admin users who haven't completed preferences or questionnaire
   if (session?.user && !isAdmin) {
+    const hasPref = await hasCompletedPreference(session.user.id);
+    if (!hasPref) {
+      redirect('/preferences');
+    }
     const completed = await hasCompletedQuestionnaire(session.user.id);
     if (!completed) {
       redirect('/questionnaire');
@@ -24,19 +28,15 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   const unreadCount = session?.user ? await getUnreadCount(session.user.id) : 0;
 
-  // Announcement popup for non-admin users
+  // Announcement popup for non-admin users (always show, countdown only for first-time viewers)
   let announcementData: { id: string; title: string; content: string; countdownSeconds: number } | null = null;
-  let forceCountdown = false;
+  let hasViewed = false;
 
   if (!isAdmin && session?.user) {
     const announcement = await getActiveAnnouncement();
     if (announcement) {
-      const viewed = await hasUserViewedAnnouncement(session.user.id, announcement.id);
-      if (!viewed) {
-        announcementData = announcement;
-        const cookieStore = await cookies();
-        forceCountdown = cookieStore.get('just_registered')?.value === '1';
-      }
+      announcementData = announcement;
+      hasViewed = await hasUserViewedAnnouncement(session.user.id, announcement.id);
     }
   }
 
@@ -68,7 +68,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       </div>
       <AnnouncementPopup
         announcement={announcementData}
-        forceCountdown={forceCountdown}
+        hasViewed={hasViewed}
       />
     </SessionProvider>
   );

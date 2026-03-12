@@ -13,12 +13,14 @@ import {
   Briefcase,
   GraduationCap,
   Megaphone,
+  Heart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const adminNavItems = [
   { href: '/admin', labelKey: 'adminDashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/users', labelKey: 'users', icon: Users },
+  { href: '/admin/preferences', labelKey: 'preferences', icon: Heart },
   { href: '/admin/questionnaire', labelKey: 'questionnaire', icon: ClipboardList },
   { href: '/admin/activities', labelKey: 'adminActivities', icon: Activity },
   { href: '/admin/activity-types', labelKey: 'activityTypes', icon: Briefcase },
