@@ -34,6 +34,7 @@ model User {
   reflections        Reflection[]
   notifications      Notification[]
   auditLogs          AuditLog[]     @relation("auditLogs")
+  announcementViews  AnnouncementView[]
 
   @@map("users")
 }
@@ -349,6 +350,36 @@ model Notification {
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+// ─── Announcements ─────────────────────────────────────────────────
+
+model Announcement {
+  id               String   @id @default(cuid())
+  title            String
+  content          String
+  isActive         Boolean  @default(false)
+  countdownSeconds Int      @default(20)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  views AnnouncementView[]
+
+  @@map("announcements")
+}
+
+model AnnouncementView {
+  id             String   @id @default(cuid())
+  userId         String
+  announcementId String
+  viewedAt       DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, announcementId])
+  @@index([userId])
+  @@map("announcement_views")
 }
 
 // ─── Audit Log ──────────────────────────────────────────────────────

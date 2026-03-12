@@ -272,6 +272,7 @@
     "tags": "标签管理",
     "grades": "年级管理",
     "recruitment": "招聘管理",
+    "announcements": "公告管理",
     "settings": "系统设置"
   },
   "admin": {
@@ -411,6 +412,21 @@
       "confirmDeleteNote": "删除此注释？",
       "edit": "编辑",
       "delete": "删除",
+      "import": "导入",
+      "importTitle": "从文本导入题目",
+      "importHint": "粘贴使用 Markdown 标题格式的结构化文本：# 代表主题，## 代表维度，### 代表题目。也可使用缩进（无缩进、4空格、8空格）。",
+      "importValidate": "验证",
+      "importValid": "有效：{topics} 个主题，{dimensions} 个维度，{questions} 个题目",
+      "importPreview": "预览",
+      "importConfirm": "导入",
+      "importing": "导入中...",
+      "export": "导出",
+      "exportTitle": "导出题目",
+      "exportSummary": "{topics} 个主题，{dimensions} 个维度，{questions} 个题目",
+      "exportCopy": "复制到剪贴板",
+      "exportCopied": "已复制！",
+      "exportDownload": "下载 .md",
+      "cancel": "取消",
       "optionCount": "{count, plural, =1 {1 个选项} other {# 个选项}}",
       "optionSum": "合计：{sum}",
       "options": {
@@ -563,6 +579,32 @@
       "saving": "保存中...",
       "save": "保存"
     },
+    "announcements": {
+      "title": "公告管理",
+      "create": "创建",
+      "createAnnouncement": "创建公告",
+      "editAnnouncement": "编辑公告",
+      "titleField": "标题",
+      "content": "内容",
+      "status": "状态",
+      "created": "创建时间",
+      "active": "已激活",
+      "inactive": "未激活",
+      "toggleActive": "切换激活",
+      "countdown": "倒计时",
+      "countdownField": "倒计时（秒）",
+      "countdownHint": "新注册用户必须查看公告的时长，超过后才能关闭（0 = 无强制等待）。",
+      "noAnnouncements": "暂无公告。点击创建开始使用。",
+      "actions": "操作",
+      "edit": "编辑",
+      "delete": "删除",
+      "confirmDelete": "删除「{title}」？",
+      "cancel": "取消",
+      "createBtn": "创建",
+      "creating": "创建中...",
+      "save": "保存",
+      "saving": "保存中..."
+    },
     "settings": {
       "title": "系统设置",
       "requireStudentId": "要求上传学生证",
@@ -690,6 +732,10 @@
     "placeholder": "写下你对这道题的思考...",
     "add": "添加",
     "adding": "添加中..."
+  },
+  "announcement": {
+    "closeIn": "关闭 ({seconds}秒)",
+    "close": "关闭"
   },
   "languageSwitcher": {
     "label": "切换语言"

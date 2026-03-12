@@ -268,6 +268,7 @@
     "tags": "Étiquettes",
     "grades": "Niveaux",
     "recruitment": "Recrutement",
+    "announcements": "Annonces",
     "settings": "Paramètres"
   },
   "admin": {
@@ -407,6 +408,21 @@
       "confirmDeleteNote": "Supprimer cette note ?",
       "edit": "Modifier",
       "delete": "Supprimer",
+      "import": "Importer",
+      "importTitle": "Importer des questions depuis du texte",
+      "importHint": "Collez du texte structuré avec des titres Markdown : # pour les sujets, ## pour les dimensions, ### pour les questions. Vous pouvez aussi utiliser l'indentation (sans, 4 espaces, 8 espaces).",
+      "importValidate": "Valider",
+      "importValid": "Valide : {topics} sujets, {dimensions} dimensions, {questions} questions",
+      "importPreview": "Aperçu",
+      "importConfirm": "Importer",
+      "importing": "Importation...",
+      "export": "Exporter",
+      "exportTitle": "Exporter les questions",
+      "exportSummary": "{topics} sujets, {dimensions} dimensions, {questions} questions",
+      "exportCopy": "Copier",
+      "exportCopied": "Copié !",
+      "exportDownload": "Télécharger .md",
+      "cancel": "Annuler",
       "optionCount": "{count, plural, =1 {1 option} other {# options}}",
       "optionSum": "total : {sum}",
       "options": {
@@ -559,6 +575,32 @@
       "saving": "Enregistrement...",
       "save": "Enregistrer"
     },
+    "announcements": {
+      "title": "Annonces",
+      "create": "Créer",
+      "createAnnouncement": "Créer une annonce",
+      "editAnnouncement": "Modifier l'annonce",
+      "titleField": "Titre",
+      "content": "Contenu",
+      "status": "Statut",
+      "created": "Créé",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "toggleActive": "Activer/Désactiver",
+      "countdown": "Compte à rebours",
+      "countdownField": "Compte à rebours (secondes)",
+      "countdownHint": "Durée pendant laquelle les nouveaux inscrits doivent consulter cette annonce avant de pouvoir la fermer (0 = pas d'attente forcée).",
+      "noAnnouncements": "Aucune annonce. Créez-en une pour commencer.",
+      "actions": "Actions",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "confirmDelete": "Supprimer « {title} » ?",
+      "cancel": "Annuler",
+      "createBtn": "Créer",
+      "creating": "Création...",
+      "save": "Enregistrer",
+      "saving": "Enregistrement..."
+    },
     "settings": {
       "title": "Paramètres système",
       "requireStudentId": "Exiger le téléchargement de la carte étudiante",
@@ -686,6 +728,10 @@
     "placeholder": "Écrivez vos réflexions sur cette question...",
     "add": "Ajouter",
     "adding": "Ajout..."
+  },
+  "announcement": {
+    "closeIn": "Fermer ({seconds}s)",
+    "close": "Fermer"
   },
   "languageSwitcher": {
     "label": "Changer de langue"

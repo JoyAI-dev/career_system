@@ -12,6 +12,7 @@ import {
   Settings,
   Briefcase,
   GraduationCap,
+  Megaphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,7 @@ const adminNavItems = [
   { href: '/admin/activity-types', labelKey: 'activityTypes', icon: Briefcase },
   { href: '/admin/grades', labelKey: 'grades', icon: GraduationCap },
   { href: '/admin/recruitment', labelKey: 'recruitment', icon: Briefcase },
+  { href: '/admin/announcements', labelKey: 'announcements', icon: Megaphone },
   { href: '/admin/settings', labelKey: 'settings', icon: Settings },
 ];
 

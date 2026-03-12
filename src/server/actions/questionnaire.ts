@@ -321,6 +321,71 @@ export async function deleteDraftVersion(versionId: string): Promise<ActionState
   return { success: true };
 }
 
+// ─── Bulk Import ───────────────────────────────────────────────────
+
+export type ImportTopic = {
+  name: string;
+  dimensions: {
+    name: string;
+    questions: string[];
+  }[];
+};
+
+export async function importQuestionnaireStructure(
+  versionId: string,
+  topics: ImportTopic[],
+): Promise<ActionState> {
+  await requireAdmin();
+  const te = await getTranslations('serverErrors');
+
+  await requireDraftVersion(versionId, te);
+
+  // Get current max order for topics in this version
+  const maxTopic = await prisma.topic.findFirst({
+    where: { versionId },
+    orderBy: { order: 'desc' },
+    select: { order: true },
+  });
+  let topicOrder = (maxTopic?.order ?? 0) + 1;
+
+  await prisma.$transaction(async (tx) => {
+    for (const topic of topics) {
+      const newTopic = await tx.topic.create({
+        data: {
+          versionId,
+          name: topic.name,
+          order: topicOrder++,
+        },
+      });
+
+      let dimOrder = 1;
+      for (const dim of topic.dimensions) {
+        const newDim = await tx.dimension.create({
+          data: {
+            topicId: newTopic.id,
+            name: dim.name,
+            order: dimOrder++,
+          },
+        });
+
+        let qOrder = 1;
+        for (const questionTitle of dim.questions) {
+          await tx.question.create({
+            data: {
+              dimensionId: newDim.id,
+              title: questionTitle,
+              order: qOrder++,
+            },
+          });
+        }
+      }
+    }
+  });
+
+  revalidatePath(ADMIN_PATH);
+  return { success: true };
+}
+
 // ─── Topic CRUD ─────────────────────────────────────────────────────
 
 export async function createTopic(

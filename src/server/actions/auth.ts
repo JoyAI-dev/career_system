@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { signIn } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 
 function getRegisterSchema(t: (key: string) => string) {
@@ -104,7 +105,8 @@ export async function register(
     redirect('/login');
   }
 
-  redirect('/dashboard');
+  (await cookies()).set('just_registered', '1', { maxAge: 120, path: '/' });
+  redirect('/dashboard?registered=true');
 }
 
 function getLoginSchema(t: (key: string) => string) {

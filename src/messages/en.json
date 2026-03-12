@@ -268,6 +268,7 @@
     "tags": "Tags",
     "grades": "Grades",
     "recruitment": "Recruitment",
+    "announcements": "Announcements",
     "settings": "Settings"
   },
   "admin": {
@@ -407,6 +408,21 @@
       "confirmDeleteNote": "Delete this note?",
       "edit": "Edit",
       "delete": "Delete",
+      "import": "Import",
+      "importTitle": "Import Questions from Text",
+      "importHint": "Paste structured text using markdown headings: # for Topics, ## for Dimensions, ### for Questions. You can also use indentation (no indent, 4 spaces, 8 spaces).",
+      "importValidate": "Validate",
+      "importValid": "Valid: {topics} topics, {dimensions} dimensions, {questions} questions",
+      "importPreview": "Preview",
+      "importConfirm": "Import",
+      "importing": "Importing...",
+      "export": "Export",
+      "exportTitle": "Export Questions",
+      "exportSummary": "{topics} topics, {dimensions} dimensions, {questions} questions",
+      "exportCopy": "Copy to Clipboard",
+      "exportCopied": "Copied!",
+      "exportDownload": "Download .md",
+      "cancel": "Cancel",
       "optionCount": "{count, plural, =1 {1 option} other {# options}}",
       "optionSum": "sum: {sum}",
       "options": {
@@ -559,6 +575,32 @@
       "saving": "Saving...",
       "save": "Save"
     },
+    "announcements": {
+      "title": "Announcements",
+      "create": "Create",
+      "createAnnouncement": "Create Announcement",
+      "editAnnouncement": "Edit Announcement",
+      "titleField": "Title",
+      "content": "Content",
+      "status": "Status",
+      "created": "Created",
+      "active": "Active",
+      "inactive": "Inactive",
+      "toggleActive": "Toggle Active",
+      "countdown": "Countdown",
+      "countdownField": "Countdown (seconds)",
+      "countdownHint": "How long new registrants must view this announcement before dismissing (0 = no forced wait).",
+      "noAnnouncements": "No announcements yet. Create one to get started.",
+      "actions": "Actions",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Delete \"{title}\"?",
+      "cancel": "Cancel",
+      "createBtn": "Create",
+      "creating": "Creating...",
+      "save": "Save",
+      "saving": "Saving..."
+    },
     "settings": {
       "title": "System Settings",
       "requireStudentId": "Require Student ID Upload",
@@ -686,6 +728,10 @@
     "placeholder": "Write your thoughts on this question...",
     "add": "Add",
     "adding": "Adding..."
+  },
+  "announcement": {
+    "closeIn": "Close ({seconds}s)",
+    "close": "Close"
   },
   "languageSwitcher": {
     "label": "Switch language"

@@ -35,7 +35,9 @@ import {
   createQuestionNote,
   updateQuestionNote,
   deleteQuestionNote,
+  importQuestionnaireStructure,
   type ActionState,
+  type ImportTopic,
 } from '@/server/actions/questionnaire';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -299,7 +301,11 @@ export function QuestionnaireManager({
                 </span>
               )}
             </h2>
-            {isDraft && <AddTopicButton versionId={structure.id} />}
+            <div className="flex items-center gap-2">
+              {isDraft && <AddTopicButton versionId={structure.id} />}
+              {isDraft && <ImportButton versionId={structure.id} />}
+              {structure.topics.length > 0 && <ExportButton structure={structure} />}
+            </div>
           </div>
 
           {structure.topics.length === 0 && (
@@ -1028,5 +1034,298 @@ function NoteItem({ note, isDraft }: { note: QuestionNote; isDraft: boolean }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Import Button + Dialog ────────────────────────────────────────
+
+function parseImportText(text: string): { topics: ImportTopic[]; errors: string[] } {
+  const errors: string[] = [];
+  const topics: ImportTopic[] = [];
+  const lines = text.split('\n');
+
+  let currentTopic: ImportTopic | null = null;
+  let currentDimension: { name: string; questions: string[] } | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+
+    // Detect heading level by # prefix or indentation
+    // Support: # H1, ## H2, ### H3 (markdown headings)
+    // Or: no indent = L1, 4-space/tab indent = L2, 8-space/2-tab indent = L3
+    let level = 0;
+
+    if (trimmed.startsWith('### ')) {
+      level = 3;
+    } else if (trimmed.startsWith('## ')) {
+      level = 2;
+    } else if (trimmed.startsWith('# ')) {
+      level = 1;
+    } else {
+      // Indentation-based detection
+      const leadingSpaces = raw.length - raw.replace(/^[\t ]+/, '').length;
+      const tabCount = (raw.match(/^\t*/)?.[0] ?? '').length;
+      const effectiveIndent = tabCount * 4 + (leadingSpaces - tabCount);
+
+      if (effectiveIndent >= 8) {
+        level = 3;
+      } else if (effectiveIndent >= 4) {
+        level = 2;
+      } else {
+        level = 1;
+      }
+    }
+
+    const content = trimmed.replace(/^#{1,3}\s+/, '').trim();
+    if (!content) continue;
+
+    if (level === 1) {
+      currentTopic = { name: content, dimensions: [] };
+      topics.push(currentTopic);
+      currentDimension = null;
+    } else if (level === 2) {
+      if (!currentTopic) {
+        errors.push(`Line ${i + 1}: Dimension "${content}" has no parent topic (Level 1).`);
+        continue;
+      }
+      currentDimension = { name: content, questions: [] };
+      currentTopic.dimensions.push(currentDimension);
+    } else if (level === 3) {
+      if (!currentDimension) {
+        errors.push(`Line ${i + 1}: Question "${content}" has no parent dimension (Level 2).`);
+        continue;
+      }
+      currentDimension.questions.push(content);
+    }
+  }
+
+  // Validation
+  if (topics.length === 0) {
+    errors.push('No topics found. Use # for topics, ## for dimensions, ### for questions.');
+  }
+  for (const topic of topics) {
+    if (topic.dimensions.length === 0) {
+      errors.push(`Topic "${topic.name}" has no dimensions.`);
+    }
+    for (const dim of topic.dimensions) {
+      if (dim.questions.length === 0) {
+        errors.push(`Dimension "${dim.name}" in topic "${topic.name}" has no questions.`);
+      }
+    }
+  }
+
+  return { topics, errors };
+}
+
+function ImportButton({ versionId }: { versionId: string }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [parsed, setParsed] = useState<{ topics: ImportTopic[]; errors: string[] } | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
+  const t = useTranslations('admin.questionnaire');
+
+  function handleParse() {
+    const result = parseImportText(text);
+    setParsed(result);
+  }
+
+  function handleImport() {
+    if (!parsed || parsed.errors.length > 0 || parsed.topics.length === 0) return;
+    setServerError(null);
+    startTransition(async () => {
+      const result = await importQuestionnaireStructure(versionId, parsed.topics);
+      if (result.success) {
+        setOpen(false);
+        setText('');
+        setParsed(null);
+      } else if (result.errors?._form) {
+        setServerError(result.errors._form[0]);
+      }
+    });
+  }
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) {
+      setText('');
+      setParsed(null);
+      setServerError(null);
+    }
+  }
+
+  const totalQuestions = parsed?.topics.reduce(
+    (sum, t) => sum + t.dimensions.reduce((s, d) => s + d.questions.length, 0),
+    0,
+  ) ?? 0;
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent">
+        {t('import')}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{t('importTitle')}</DialogTitle>
+        </DialogHeader>
+
+        <p className="text-sm text-muted-foreground">{t('importHint')}</p>
+
+        <textarea
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono min-h-[200px] focus:outline-none focus:ring-2 focus:ring-ring"
+          placeholder={`# Topic Name\n## Dimension Name\n### Question text here\n### Another question\n## Another Dimension\n### Question text`}
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setParsed(null);
+          }}
+        />
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleParse} disabled={!text.trim()}>
+            {t('importValidate')}
+          </Button>
+          {parsed && parsed.errors.length === 0 && (
+            <span className="text-sm text-green-600">
+              {t('importValid', {
+                topics: parsed.topics.length,
+                dimensions: parsed.topics.reduce((s, t) => s + t.dimensions.length, 0),
+                questions: totalQuestions,
+              })}
+            </span>
+          )}
+        </div>
+
+        {parsed && parsed.errors.length > 0 && (
+          <div className="rounded-md border border-destructive/50 bg-destructive/5 p-3 space-y-1">
+            {parsed.errors.map((err, i) => (
+              <p key={i} className="text-sm text-destructive">{err}</p>
+            ))}
+          </div>
+        )}
+
+        {parsed && parsed.errors.length === 0 && parsed.topics.length > 0 && (
+          <div className="rounded-md border p-3 space-y-3 max-h-[300px] overflow-y-auto">
+            <p className="text-sm font-medium">{t('importPreview')}</p>
+            {parsed.topics.map((topic, ti) => (
+              <div key={ti} className="space-y-1">
+                <p className="font-medium text-sm">{ti + 1}. {topic.name}</p>
+                {topic.dimensions.map((dim, di) => (
+                  <div key={di} className="ml-4 space-y-0.5">
+                    <p className="text-sm text-muted-foreground">{di + 1}. {dim.name}</p>
+                    {dim.questions.map((q, qi) => (
+                      <p key={qi} className="ml-4 text-xs text-muted-foreground">
+                        {qi + 1}. {q}
+                      </p>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {serverError && (
+          <p className="text-sm text-destructive">{serverError}</p>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+            {t('cancel')}
+          </Button>
+          <Button
+            onClick={handleImport}
+            disabled={isPending || !parsed || parsed.errors.length > 0 || parsed.topics.length === 0}
+          >
+            {isPending ? t('importing') : t('importConfirm')}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Export Button + Dialog ─────────────────────────────────────────
+
+function structureToMarkdown(structure: NonNullable<VersionStructure>): string {
+  const lines: string[] = [];
+  for (const topic of structure.topics) {
+    lines.push(`# ${topic.name}`);
+    for (const dim of topic.dimensions) {
+      lines.push(`## ${dim.name}`);
+      for (const q of dim.questions) {
+        lines.push(`### ${q.title}`);
+      }
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+function ExportButton({ structure }: { structure: NonNullable<VersionStructure> }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const t = useTranslations('admin.questionnaire');
+
+  const markdown = structureToMarkdown(structure);
+
+  const totalTopics = structure.topics.length;
+  const totalDimensions = structure.topics.reduce((s, t) => s + t.dimensions.length, 0);
+  const totalQuestions = structure.topics.reduce(
+    (s, t) => s + t.dimensions.reduce((ds, d) => ds + d.questions.length, 0),
+    0,
+  );
+
+  function handleCopy() {
+    navigator.clipboard.writeText(markdown);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleDownload() {
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `questionnaire-v${structure.version}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent">
+        {t('export')}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{t('exportTitle')} — v{structure.version}</DialogTitle>
+        </DialogHeader>
+
+        <p className="text-sm text-muted-foreground">
+          {t('exportSummary', { topics: totalTopics, dimensions: totalDimensions, questions: totalQuestions })}
+        </p>
+
+        <textarea
+          className="w-full rounded-md border bg-muted/30 px-3 py-2 text-sm font-mono min-h-[300px] focus:outline-none"
+          value={markdown}
+          readOnly
+        />
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={handleCopy}>
+            {copied ? t('exportCopied') : t('exportCopy')}
+          </Button>
+          <Button variant="outline" onClick={handleDownload}>
+            {t('exportDownload')}
+          </Button>
+          <Button onClick={() => setOpen(false)}>
+            {t('cancel')}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
