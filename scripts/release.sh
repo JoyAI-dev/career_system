@@ -1,26 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Release script: tag → push → Vercel auto-deploys → migrate/seed
+# Release script: bump version → commit → push → deploy via SSH to production
 #
-# With Git connected to Vercel:
-#   - Pushing to main triggers a Production deployment automatically
-#   - Pushing to other branches triggers Preview deployments
+# Production: 8.131.74.70 (pm2: career-system, port 3000)
+# Reverse proxy: career.joysort.cn via Caddy on admin.joysort.cn
 #
 # Usage:
-#   ./scripts/release.sh                        Tag + push + migrate/seed production
-#   ./scripts/release.sh --no-db                Tag + push without DB updates
+#   ./scripts/release.sh                        Bump patch + deploy
 #   ./scripts/release.sh --patch                Bump patch version (default)
 #   ./scripts/release.sh --minor                Bump minor version
 #   ./scripts/release.sh --major                Bump major version
-#   ./scripts/release.sh --db-only              Skip deploy, only run migrations/seeds
+#   ./scripts/release.sh --no-deploy            Tag + push only, no deploy
+#   ./scripts/release.sh --deploy-only          Deploy without version bump
 
-SCOPE="n0rthwoods-projects"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-VERCEL_ENV_FILE="$PROJECT_DIR/.env.vercel"
-RUN_DB=true
-DB_ONLY=false
+PROD_HOST="root@8.131.74.70"
+PROD_DIR="/opt/career_system"
 BUMP="patch"
+DO_DEPLOY=true
+DEPLOY_ONLY=false
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
@@ -37,8 +36,8 @@ Options:
   --patch                 Bump patch version (default): 0.1.0 → 0.1.1
   --minor                 Bump minor version: 0.1.0 → 0.2.0
   --major                 Bump major version: 0.1.0 → 1.0.0
-  --no-db                 Skip migrations and seeds
-  --db-only               Only run migrations/seeds (no tag/push)
+  --no-deploy             Tag and push only (no SSH deploy)
+  --deploy-only           Deploy current code without version bump
   -h, --help              Show help
 EOF
 }
@@ -58,116 +57,53 @@ bump_version() {
   esac
 }
 
-resolve_db_url() {
-  local vercel_env="$1"
-  vercel env pull "$VERCEL_ENV_FILE" --yes --environment="$vercel_env" --scope "$SCOPE" >/dev/null 2>&1
-  local db_url=""
-  db_url=$(grep '^POSTGRES_PRISMA_URL=' "$VERCEL_ENV_FILE" | cut -d'"' -f2 || true)
-  if [ -z "$db_url" ]; then
-    db_url=$(grep '^POSTGRES_URL=' "$VERCEL_ENV_FILE" | cut -d'"' -f2 || true)
-  fi
-  if [ -z "$db_url" ]; then
-    db_url=$(grep '^DATABASE_URL=' "$VERCEL_ENV_FILE" | cut -d'"' -f2 || true)
-  fi
-  echo "$db_url"
+ssh_cmd() {
+  ssh "$PROD_HOST" "source /root/.nvm/nvm.sh && $1"
 }
 
-run_migrations() {
-  local label="$1"
-  local vercel_env="$2"
-  info "Running database migrations ($label)..."
-  local db_url
-  db_url=$(resolve_db_url "$vercel_env")
-
-  if [ -z "$db_url" ]; then
-    fail "Could not resolve DATABASE_URL from Vercel $vercel_env env"
-  fi
-
-  PRISMA_ENV_FILE="$VERCEL_ENV_FILE" DATABASE_URL="$db_url" npx prisma migrate deploy 2>&1
-  ok "Migrations complete ($label)"
-}
-
-run_seeds() {
-  local label="$1"
-  local vercel_env="$2"
-  info "Running seeds ($label)..."
-  local db_url admin_pw
-  db_url=$(resolve_db_url "$vercel_env")
-  admin_pw=$(grep '^ADMIN_SEED_PASSWORD=' "$VERCEL_ENV_FILE" | cut -d'"' -f2 || true)
-
-  if [ -z "$db_url" ]; then
-    fail "Could not resolve DATABASE_URL from Vercel $vercel_env env"
-  fi
-
-  PRISMA_ENV_FILE="$VERCEL_ENV_FILE" DATABASE_URL="$db_url" ADMIN_SEED_PASSWORD="$admin_pw" npx tsx prisma/seed.ts 2>&1
-  ok "Seeds complete ($label)"
-}
-
-wait_for_deployment() {
-  local tag="$1"
-  local max_wait=300  # 5 minutes
-  local elapsed=0
-
-  info "Waiting for Vercel to deploy $tag..."
-  while [ $elapsed -lt $max_wait ]; do
-    local status
-    status=$(vercel ls --scope "$SCOPE" 2>&1 | grep "● Ready" | grep "Production" | head -1 || true)
-    if [ -n "$status" ]; then
-      local deploy_url
-      deploy_url=$(echo "$status" | awk '{print $3}')
-      # Check if the deployment is recent (within last 5 minutes)
-      ok "Production deployment ready: $deploy_url"
-      return 0
-    fi
-    sleep 10
-    elapsed=$((elapsed + 10))
-    echo "    ... waiting ($elapsed/${max_wait}s)"
-  done
-  fail "Timed out waiting for Vercel deployment"
-}
-
-# ── Main ─────────────────────────────────────────────────────────────
+# ── Parse args ───────────────────────────────────────────────────────
 
 for arg in "$@"; do
   case "$arg" in
-    --patch)   BUMP="patch" ;;
-    --minor)   BUMP="minor" ;;
-    --major)   BUMP="major" ;;
-    --no-db)   RUN_DB=false ;;
-    --db-only) DB_ONLY=true ;;
-    -h|--help) usage; exit 0 ;;
-    *)         fail "Unknown option: $arg (use --help)" ;;
+    --patch)       BUMP="patch" ;;
+    --minor)       BUMP="minor" ;;
+    --major)       BUMP="major" ;;
+    --no-deploy)   DO_DEPLOY=false ;;
+    --deploy-only) DEPLOY_ONLY=true ;;
+    -h|--help)     usage; exit 0 ;;
+    *)             fail "Unknown option: $arg (use --help)" ;;
   esac
 done
 
 cd "$PROJECT_DIR"
 
-# ── DB-only mode ─────────────────────────────────────────────────────
+# ── Deploy-only mode ────────────────────────────────────────────────
 
-if [ "$DB_ONLY" = true ]; then
-  run_migrations "production" "production"
-  run_seeds "production" "production"
+if [ "$DEPLOY_ONLY" = true ]; then
+  info "Deploying current code to production..."
+  ssh_cmd "cd $PROD_DIR && git pull origin main && npm install --registry=https://registry.npmmirror.com && npx prisma migrate deploy && npm run build && pm2 restart career-system"
+  ok "Deployed"
+
+  info "Verifying..."
+  ssh "$PROD_HOST" "curl -sf http://127.0.0.1:3000/api/health" && ok "Health check passed" || fail "Health check failed"
   echo ""
   echo "========================================"
-  echo "  DB updates complete!"
+  echo "  Deployed to career.joysort.cn"
   echo "========================================"
   exit 0
 fi
 
 # ── Pre-flight checks ───────────────────────────────────────────────
 
-# Ensure working tree is clean
 if [ -n "$(git status --porcelain)" ]; then
   fail "Working tree is not clean. Commit or stash changes first."
 fi
 
-# Ensure we're on main
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 if [ "$BRANCH" != "main" ]; then
   fail "Must be on 'main' branch to release (currently on '$BRANCH')"
 fi
 
-# Ensure main is up to date with remote
 git fetch origin main
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
@@ -175,7 +111,7 @@ if [ "$LOCAL" != "$REMOTE" ]; then
   fail "Local main is not in sync with origin/main. Pull or push first."
 fi
 
-# ── Version bump + tag ───────────────────────────────────────────────
+# ── Version bump + tag ──────────────────────────────────────────────
 
 CURRENT_VERSION=$(get_current_version)
 NEW_VERSION=$(bump_version "$CURRENT_VERSION" "$BUMP")
@@ -183,7 +119,6 @@ TAG="v$NEW_VERSION"
 
 info "Bumping version: $CURRENT_VERSION → $NEW_VERSION"
 
-# Update package.json version
 node -e "
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -196,35 +131,28 @@ git commit -m "release: $TAG"
 git tag -a "$TAG" -m "Release $TAG"
 
 ok "Created tag $TAG"
-echo ""
 
-# ── Push to trigger Vercel deploy ────────────────────────────────────
-
-info "Pushing to origin (triggers Vercel production deploy)..."
+info "Pushing to origin..."
 git push origin main --tags
 ok "Pushed main + $TAG"
 echo ""
 
-# ── Wait for Vercel to finish deploying ──────────────────────────────
+# ── Deploy to production via SSH ────────────────────────────────────
 
-wait_for_deployment "$TAG"
-echo ""
+if [ "$DO_DEPLOY" = true ]; then
+  info "Deploying $TAG to production..."
+  ssh_cmd "cd $PROD_DIR && git pull origin main && npm install --registry=https://registry.npmmirror.com && npx prisma migrate deploy && npm run build && pm2 restart career-system"
+  ok "Deployed $TAG"
 
-# ── Run DB migrations/seeds ──────────────────────────────────────────
-
-if [ "$RUN_DB" = true ]; then
-  run_migrations "production" "production"
-  run_seeds "production" "production"
-  echo ""
+  info "Verifying..."
+  ssh "$PROD_HOST" "curl -sf http://127.0.0.1:3000/api/health" && ok "Health check passed" || fail "Health check failed"
 else
-  info "Skipping DB updates (--no-db)"
-  echo ""
+  info "Skipping deploy (--no-deploy)"
 fi
 
-# ── Done ─────────────────────────────────────────────────────────────
-
+echo ""
 echo "========================================"
 echo "  $TAG released!"
-echo "  https://careerjoy.vercel.app"
+echo "  https://career.joysort.cn"
 echo "========================================"
 echo ""

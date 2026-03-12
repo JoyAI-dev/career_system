@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '@/lib/supabase';
+import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '@/lib/storage';
 import { uploadStudentId } from '@/server/services/upload';
 import { mapErrorToResponse } from '@/lib/errors';
 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, ocrApplied: result.ocrApplied });
   } catch (error) {
     const { status, body } = mapErrorToResponse(error);
     return NextResponse.json(body, { status });

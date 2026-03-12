@@ -23,7 +23,7 @@ Career Exploration Platform for university students facing fragmented career inf
 
 ## Project Shape
 
-Full-stack monolith using Next.js App Router. Single deployable unit on Vercel. Database hosted on Supabase (PostgreSQL).
+Full-stack monolith using Next.js App Router. Deployed on self-hosted server (8.131.74.70) via pm2. PostgreSQL 16 database in Docker.
 
 ## Key Directories (Planned)
 

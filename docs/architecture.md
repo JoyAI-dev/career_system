@@ -2,7 +2,7 @@
 
 ## System Shape
 
-Full-stack monolith. Single Next.js application serving both frontend (SSR + client) and backend (Route Handlers + Server Actions). Deployed as serverless functions on Vercel.
+Full-stack monolith. Single Next.js application serving both frontend (SSR + client) and backend (Route Handlers + Server Actions). Deployed on self-hosted server via pm2.
 
 ## Core Modules
 
@@ -62,13 +62,13 @@ Radar Chart: Compare Snapshots → Cognitive Growth Visible
 | Validation | Zod schemas at API boundary; Prisma constraints at DB |
 | Error Handling | Standardized error envelope; user-facing vs technical separation |
 | State Management | Server Components + Server Actions; minimal client state |
-| File Storage | Supabase private bucket with signed URLs |
+| File Storage | Local filesystem (/var/lib/career_system) with auth-gated API routes |
 
 ## Deployment Topology
 
 ```
-[Browser] → [Vercel CDN] → [Next.js Serverless Functions]
-                                    ↓
-                           [Supabase PostgreSQL]
-                           [Supabase Storage]
+[Browser] → [career.joysort.cn (Caddy)] → [Next.js on 8.131.74.70:3000 (pm2)]
+                                                      ↓
+                                             [PostgreSQL 16 (Docker)]
+                                             [Local filesystem (/var/lib/career_system)]
 ```

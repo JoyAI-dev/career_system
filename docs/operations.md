@@ -8,8 +8,8 @@
 | Production build | `npm run build` |
 | Start production | `npm start` |
 | Lint | `npm run lint` |
-| Lint fix | `npm run lint -- --fix` |
-| Type check | `npx tsc --noEmit` |
+| Type check | `npm run typecheck` |
+| Tests | `npm test` |
 
 ## Database Tasks
 
@@ -36,49 +36,47 @@
 | Prisma client out of date | `npx prisma generate` |
 | Migration drift | `npx prisma migrate dev` |
 | Port 3000 in use | `lsof -i :3000` and kill process, or use `PORT=3001 npm run dev` |
-| Supabase connection refused | Check `DATABASE_URL` and Supabase project status |
+| DB connection refused | Check `DATABASE_URL` in `.env.local` and PostgreSQL container status |
 
-## Deployment (Vercel)
+## Deployment
 
-### Build & Deploy
+### Architecture
 
-- Push to `main` triggers auto-deploy via Vercel Git integration
-- Build command (configured in `vercel.json`): `prisma migrate deploy && prisma generate && next build`
-- `postinstall` script also runs `prisma generate` during `npm install`
-- Migrations run automatically during the Vercel build via `prisma migrate deploy` (idempotent — skips already-applied migrations)
+```
+User → career.joysort.cn (HTTPS)
+     → Caddy reverse proxy on admin.joysort.cn (10.0.1.198)
+     → Next.js app on 8.131.74.70 (10.0.1.201:3000, pm2: career-system)
+     → PostgreSQL 16 on 8.131.74.70 (Docker: postgres16, 127.0.0.1:5432)
+```
+
+### Deploy via Claude Code
+
+Use the `/deploy` skill with arguments: `full`, `code-only`, `db-migrate`, `restart`.
+
+### Manual Deploy
+
+```bash
+# Full deploy
+ssh root@8.131.74.70 "cd /opt/career_system && git pull origin main && source /root/.nvm/nvm.sh && npm install && npx prisma migrate deploy && npm run build && pm2 restart career-system"
+```
 
 ### Environment Variables
 
-Configure these in the Vercel dashboard (Settings → Environment Variables):
+Configured in `/opt/career_system/.env.local` on the production server (not overwritten by git pull):
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string (Supabase pooler recommended) |
-| `AUTH_SECRET` | Random secret for Auth.js v5 session encryption (`openssl rand -base64 32`) |
-| `AUTH_URL` | Production URL (e.g., `https://your-app.vercel.app`) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only) |
-| `NEXT_PUBLIC_APP_URL` | Public-facing app URL |
-| `APP_VERSION` | App version string (optional, defaults to `0.1.0`) |
-
-### Migration Workflow
-
-1. Create migration locally: `npx prisma migrate dev --name <name>`
-2. Commit the generated SQL file in `prisma/migrations/`
-3. Push to `main` — Vercel build runs `prisma migrate deploy` automatically
-4. Verify via health check: `GET /api/health` → `{ status: "ok", db: "connected" }`
+| `DATABASE_URL` | PostgreSQL connection string |
+| `AUTH_SECRET` | Auth.js session secret |
+| `AUTH_URL` | `https://career.joysort.cn` |
+| `ZHIPU_API_KEY` | ZhiPu OCR API key (student ID recognition) |
+| `ADMIN_SEED_PASSWORD` | Initial admin password |
 
 ### Health Check
 
 - **Endpoint:** `GET /api/health`
 - **Response:** `{ status: "ok", version: "x.y.z", db: "connected", timestamp: "..." }`
-- Returns HTTP 503 with `status: "degraded"` if database is unreachable
 
 ### Security Headers
 
-Configured in `vercel.json`:
-- `X-Content-Type-Options: nosniff`
-- `X-Frame-Options: DENY`
-- `X-XSS-Protection: 1; mode=block`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+Configured in `next.config.ts`: X-Content-Type-Options, X-Frame-Options, Referrer-Policy, CSP.

@@ -21,9 +21,9 @@
 
 - **Pattern:** Layered monolith (Presentation → Server Actions/API → Business Logic → Data Access)
 - **Stack:** Next.js 14+ (App Router), React 18, TypeScript, TailwindCSS, Shadcn UI
-- **Database:** PostgreSQL (Supabase) via Prisma ORM
+- **Database:** PostgreSQL 16 via Prisma ORM (pg driver adapter)
 - **Auth:** Auth.js (NextAuth) with JWT sessions
-- **Deploy:** Vercel (serverless)
+- **Deploy:** Self-hosted (pm2 + Caddy)
 
 ```
 ┌─────────────────────────────────┐
@@ -36,7 +36,7 @@
 ├─────────────────────────────────┤
 │  Data Access (Prisma)           │
 ├─────────────────────────────────┤
-│  PostgreSQL (Supabase)          │
+│  PostgreSQL 16 (Docker)         │
 └─────────────────────────────────┘
 ```
 
@@ -128,7 +128,7 @@ Error:   { error: { code: string, message: string, details?: unknown } }
 ## 7. Configuration Management
 
 ### Hierarchy (highest priority first)
-1. Environment variables (`.env.local`, Vercel env vars)
+1. Environment variables (`.env.local`)
 2. `next.config.js` for build-time config
 3. Default values in code
 
@@ -188,7 +188,7 @@ Error:   { error: { code: string, message: string, details?: unknown } }
 - Never trust client-provided role/userId
 
 ### Data Protection
-- Student ID files: private Supabase bucket, signed URLs (short expiry)
+- Student ID files: local filesystem, auth-gated API routes
 - MIME type and file size validation on upload
 - File retention policy: define and enforce deletion schedule
 - No PII in logs
@@ -292,19 +292,15 @@ npm run build            # Verify build succeeds
 
 ### Retry Policies
 - Database connection: 3 retries with exponential backoff (Prisma built-in)
-- Supabase Storage uploads: 2 retries with 1s delay
 - No retries on validation or auth failures
 
 ### Timeouts
-- API route timeout: 10s (Vercel serverless default)
 - Database query timeout: 5s (Prisma `connection_limit` and `pool_timeout`)
 - File upload: 30s max
 
 ### Graceful Degradation
-- If Supabase Storage unavailable: disable student ID upload; allow registration without it
 - If radar chart data incomplete: show available data with "incomplete" indicator
 - If FullCalendar fails to load: show activity list fallback
 
 ### Health Checks
 - `/api/health` endpoint: checks DB connection, returns app version
-- Vercel monitoring for deployment health

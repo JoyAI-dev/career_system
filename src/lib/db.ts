@@ -39,7 +39,6 @@ function createPrismaClient() {
     : (process.env.NODE_ENV === 'production' ? 1 : 10);
   let { connectionString, source } = resolveConnection();
 
-  let ssl: { rejectUnauthorized: boolean } | undefined;
   let dbHost = 'unknown';
   let dbPort = 'unknown';
   let dbName = 'unknown';
@@ -49,27 +48,18 @@ function createPrismaClient() {
       dbHost = u.hostname || dbHost;
       dbPort = u.port || '5432';
       dbName = u.pathname.replace(/^\//, '') || dbName;
-      if (u.hostname.includes('.supabase.com')) {
-        ssl = { rejectUnauthorized: false };
-        // Ensure sslmode is in the URL so Prisma's Rust engine also skips cert verification
-        if (!u.searchParams.has('sslmode')) {
-          u.searchParams.set('sslmode', 'no-verify');
-          connectionString = u.toString();
-        }
-      }
     } catch {
-      // ignore parse failures and use default pg SSL behavior
+      // ignore parse failures
     }
   }
 
   console.info(
-    `[db:init] source=${source} host=${dbHost} port=${dbPort} db=${dbName} poolMax=${max} sslOverride=${ssl ? 'on' : 'off'}`,
+    `[db:init] source=${source} host=${dbHost} port=${dbPort} db=${dbName} poolMax=${max}`,
   );
 
   const pool = new Pool({
     connectionString,
     max,
-    ssl,
   });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });

@@ -1,13 +1,17 @@
+import path from 'node:path';
 import { prisma } from '@/lib/db';
-import { createSignedUrl } from '@/lib/supabase';
 
-export type SignedUrlResult =
+export type StudentIdUrlResult =
   | { success: true; url: string }
   | { success: false; error: string; status: 404 | 500 };
 
-export async function getStudentIdSignedUrl(
+/**
+ * Get the API URL for viewing a user's student ID image.
+ * The file is served via /api/files/student-ids/[userId]/[filename].
+ */
+export async function getStudentIdUrl(
   userId: string,
-): Promise<SignedUrlResult> {
+): Promise<StudentIdUrlResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { studentIdUrl: true },
@@ -17,11 +21,9 @@ export async function getStudentIdSignedUrl(
     return { success: false, error: 'No student ID uploaded', status: 404 };
   }
 
-  const signedUrl = await createSignedUrl(user.studentIdUrl, 3600);
+  // studentIdUrl is stored as relative path: "uploads/student-ids/{userId}/{filename}"
+  const filename = path.basename(user.studentIdUrl);
+  const url = `/api/files/student-ids/${userId}/${filename}`;
 
-  if (!signedUrl) {
-    return { success: false, error: 'Failed to generate viewing URL', status: 500 };
-  }
-
-  return { success: true, url: signedUrl };
+  return { success: true, url };
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import { getStudentIdSignedUrl } from '@/server/services/studentId';
+import { getStudentIdUrl } from '@/server/services/studentId';
 import { mapErrorToResponse } from '@/lib/errors';
 import { prisma } from '@/lib/db';
 
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const result = await getStudentIdSignedUrl(userId);
+    const result = await getStudentIdUrl(userId);
 
     if (!result.success) {
       return NextResponse.json(

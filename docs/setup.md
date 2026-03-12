@@ -2,9 +2,9 @@
 
 ## Prerequisites
 
-- Node.js 20 LTS
-- npm or pnpm
-- PostgreSQL (or Supabase account)
+- Node.js 22 LTS
+- npm
+- PostgreSQL 16
 - Git
 
 ## Install Steps
@@ -23,22 +23,21 @@ npx prisma generate
 
 ## Environment Variables
 
-Create `.env.local` at project root:
+Create `.env.local` at project root (see `.env.example`):
 
 ```env
 # Database
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
 
-# Supabase (Storage)
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
 # Auth.js (v5)
 AUTH_URL=http://localhost:3000
 AUTH_SECRET=your-random-secret
 
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+# ZhiPu OCR (student ID recognition)
+ZHIPU_API_KEY=your-zhipu-api-key
+
+# Admin Seed
+ADMIN_SEED_PASSWORD=change-me-to-a-strong-password
 ```
 
 ## Database Setup
@@ -64,9 +63,7 @@ npm run build && npm start
 ## How to Test and Lint
 
 ```bash
-# Lint
 npm run lint
-
-# Tests (once configured)
+npm run typecheck
 npm test
 ```

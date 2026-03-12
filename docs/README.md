@@ -21,10 +21,10 @@ A structured career cognition growth platform for university students. The syste
 | Attribute | Value |
 |-----------|-------|
 | Language | TypeScript |
-| Framework | Next.js 14+ (App Router) |
-| UI | React 18, TailwindCSS, Shadcn UI |
-| Database | PostgreSQL (Supabase-hosted) |
-| ORM | Prisma |
-| Auth | Auth.js (NextAuth) |
-| Deploy | Vercel (Serverless) |
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, TailwindCSS 4, Shadcn UI |
+| Database | PostgreSQL 16 (Docker) |
+| ORM | Prisma 7 (pg driver adapter) |
+| Auth | Auth.js (NextAuth v5) |
+| Deploy | Self-hosted (pm2 + Caddy) |
 | Project Shape | Monolith (full-stack Next.js) |

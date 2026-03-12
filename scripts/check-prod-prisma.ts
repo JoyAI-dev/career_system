@@ -8,19 +8,7 @@ const raw =
   process.env.DATABASE_URL ||
   process.env.POSTGRES_URL_NON_POOLING;
 
-let ssl: { rejectUnauthorized: boolean } | undefined;
-if (raw) {
-  try {
-    const u = new URL(raw);
-    if (u.hostname.includes('.supabase.com')) {
-      ssl = { rejectUnauthorized: false };
-    }
-  } catch {
-    // ignore
-  }
-}
-
-const pool = new Pool({ connectionString: raw, max: 1, ssl });
+const pool = new Pool({ connectionString: raw, max: 1 });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 async function run() {

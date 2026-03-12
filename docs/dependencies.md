@@ -17,7 +17,6 @@
 | react-markdown | Markdown rendering | MIT |
 | zod | Schema validation | MIT |
 | bcryptjs | Password hashing | MIT |
-| @supabase/supabase-js | Supabase client (storage) | MIT |
 
 ## Dev Dependencies
 
@@ -27,13 +26,11 @@
 | eslint | Linting |
 | prettier | Formatting |
 | vitest | Unit/integration testing |
-| @testing-library/react | Component testing |
-| playwright | E2E testing |
 
 ## Critical Runtime Services
 
 | Service | Purpose | Required |
 |---------|---------|----------|
-| PostgreSQL (Supabase) | Primary datastore | Yes |
-| Supabase Storage | File uploads (student ID) | Optional (only if student ID feature enabled) |
-| Vercel | Hosting/deployment | Yes (production) |
+| PostgreSQL 16 (Docker) | Primary datastore | Yes |
+| Local filesystem | File uploads (student ID) | Yes |
+| ZhiPu GLM-OCR API | Student ID OCR recognition | Optional |
