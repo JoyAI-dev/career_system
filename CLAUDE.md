@@ -9,7 +9,7 @@ Student career exploration platform (学生职业探索平台) built with Next.j
 ## Commands
 
 ```bash
-npm run dev              # Dev server (localhost:3000)
+./dev.sh                 # Local dev server (port 3450, public: career-staging.joysort.cn)
 npm run build            # Production build (runs prisma generate + next build)
 npm run lint             # ESLint (flat config, next/core-web-vitals + prettier)
 npm run typecheck        # TypeScript type checking
@@ -27,6 +27,38 @@ npm run db:studio        # Prisma Studio GUI
 npx vitest run src/server/scoring.test.ts              # Single unit test file
 npx vitest run --testNamePattern "pattern"              # By test name
 ```
+
+### Local Development (Staging)
+
+Run `./dev.sh` to start the dev server. It uses `.env.dev` (not `.env.local`) and listens on port 3450.
+
+```
+Local:  http://localhost:3450
+Public: https://career-staging.joysort.cn  (Caddy on admin.joysort.cn → 172.30.3.123:3450)
+```
+
+**Database**: Local PostgreSQL in Docker container `aas-postgres` (port 5432), database `career_staging`, user `career_staging`.
+
+**First-time setup**:
+```bash
+# Create database (if not already done)
+docker exec aas-postgres psql -U aas -d postgres \
+  -c "CREATE USER career_staging WITH PASSWORD 'career_staging_2026';" \
+  -c "CREATE DATABASE career_staging OWNER career_staging;"
+
+# Run migrations
+DATABASE_URL="postgresql://career_staging:career_staging_2026@127.0.0.1:5432/career_staging" npx prisma migrate deploy
+
+# Seed data (temporarily swap env, then restore)
+cp .env.dev .env.local && npx prisma db seed && rm .env.local
+```
+
+**ai_helper on staging**: `https://career-staging.joysort.cn/ai_helper/` is protected by HTTP basic auth (admin / L0ndon2016!).
+
+**Env files**:
+- `.env.dev` — local dev/staging config (committed to .gitignore, not in git)
+- `.env.local` — production config (only exists on prod server `8.131.74.70:/opt/career_system/.env.local`)
+- Never use `.env.local` locally; use `.env.dev` via `./dev.sh`
 
 ### Deployment
 Use the `/deploy` skill with arguments: `full`, `code-only`, `db-migrate`, `restart`. Production is at `8.131.74.70` (pm2: career-system, port 3000), proxied through `career.joysort.cn`.
