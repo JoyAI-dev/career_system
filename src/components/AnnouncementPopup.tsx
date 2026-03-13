@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -36,6 +36,8 @@ export function AnnouncementPopup({ announcement, hasViewed }: Props) {
   );
   const markedRef = useRef(false);
 
+  const canClose = hasViewed || countdown <= 0;
+
   // If already dismissed in this browser session, close immediately on mount
   useEffect(() => {
     if (announcement && sessionStorage.getItem(`${SESSION_KEY}_${announcement.id}`)) {
@@ -61,24 +63,33 @@ export function AnnouncementPopup({ announcement, hasViewed }: Props) {
     }
   }, [needsCountdown, countdown, announcement]);
 
-  if (!announcement) return null;
-
-  const canClose = hasViewed || countdown <= 0;
-
-  function handleDismiss() {
+  const handleDismiss = useCallback(() => {
     if (!canClose) return;
     // Mark dismissed for this browser session so it won't re-appear on page navigation
-    sessionStorage.setItem(`${SESSION_KEY}_${announcement.id}`, '1');
+    if (announcement) {
+      sessionStorage.setItem(`${SESSION_KEY}_${announcement.id}`, '1');
+    }
     setOpen(false);
-  }
+  }, [canClose, announcement]);
+
+  // Don't render the Dialog at all when closed or no announcement.
+  // This avoids Base UI Dialog controlled mode state desync issues:
+  // Base UI's store uses `openProp ?? open` selector and syncs via
+  // useLayoutEffect, which can desynchronize internal vs controlled state.
+  if (!announcement || !open) return null;
 
   return (
     <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen && canClose) {
-          handleDismiss();
+      defaultOpen
+      modal
+      onOpenChange={(_nextOpen, eventDetails) => {
+        // During countdown, cancel the close event so Base UI doesn't
+        // update internal state while we keep the dialog mounted
+        if (!canClose) {
+          eventDetails.cancel();
+          return;
         }
+        handleDismiss();
       }}
     >
       <DialogContent showCloseButton={canClose} className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
