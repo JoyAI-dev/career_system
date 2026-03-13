@@ -279,6 +279,7 @@
     "preferences": "Préférences",
     "communities": "Communautés",
     "announcements": "Annonces",
+    "chatStats": "Stats de chat",
     "settings": "Paramètres"
   },
   "admin": {
@@ -833,5 +834,50 @@
   },
   "languageSwitcher": {
     "label": "Changer de langue"
+  },
+  "secondaryNav": {
+    "studentNetwork": "Réseau étudiant",
+    "shareCalendar": "Partager le calendrier",
+    "crossCalendar": "Calendrier croisé",
+    "shareActivities": "Partager les activités",
+    "friendChat": "Discussion",
+    "comingSoon": "Bientôt disponible"
+  },
+  "chat": {
+    "title": "Discussion",
+    "groups": "Groupes",
+    "friends": "Amis",
+    "typeMessage": "Tapez un message...",
+    "send": "Envoyer",
+    "noMessages": "Aucun message",
+    "noGroups": "Aucun groupe rejoint",
+    "noFriends": "Aucun ami",
+    "noMembersFound": "Aucun membre trouvé",
+    "selectChat": "Sélectionnez une conversation",
+    "memoryWarning": "Ce service de messagerie est uniquement pour la coordination des activités. Les messages ne sont pas sauvegardés. Veuillez échanger vos coordonnées en privé si vous souhaitez rester en contact.",
+    "externalLinkWarning": "Vous allez quitter ce site",
+    "externalLinkDisclaimer": "Toute action au-delà de ce point n'est pas associée à ce site. Veuillez exercer votre propre jugement.",
+    "continue": "Continuer",
+    "goBack": "Retour",
+    "addFriend": "Ajouter",
+    "friendRequestSent": "Envoyé",
+    "requestSent": "Demande envoyée",
+    "friendRequestReceived": "{name} veut être votre ami",
+    "accept": "Accepter",
+    "reject": "Refuser",
+    "blocked": "Bloqué",
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "members": "Membres",
+    "mention": "Mentionner",
+    "you": "Moi",
+    "friendLabel": "Ami",
+    "communityLabel": "Communauté",
+    "groupLabel": "Groupe",
+    "openChat": "Ouvrir la discussion",
+    "studentNetwork": "Réseau étudiant",
+    "privateChat": "Discussion privée",
+    "connected": "Connecté",
+    "connecting": "Connexion..."
   }
 }

@@ -280,6 +280,7 @@
     "preferences": "偏好管理",
     "communities": "社群管理",
     "announcements": "公告管理",
+    "chatStats": "聊天统计",
     "settings": "系统设置"
   },
   "admin": {
@@ -834,5 +835,50 @@
   },
   "languageSwitcher": {
     "label": "切换语言"
+  },
+  "secondaryNav": {
+    "studentNetwork": "学生网络",
+    "shareCalendar": "分享日历",
+    "crossCalendar": "交叉日历",
+    "shareActivities": "分享活动",
+    "friendChat": "好友聊天",
+    "comingSoon": "即将推出"
+  },
+  "chat": {
+    "title": "聊天",
+    "groups": "群聊",
+    "friends": "好友",
+    "typeMessage": "输入消息...",
+    "send": "发送",
+    "noMessages": "暂无消息",
+    "noGroups": "暂未加入任何群组",
+    "noFriends": "暂无好友",
+    "noMembersFound": "未找到成员",
+    "selectChat": "选择一个对话开始聊天",
+    "memoryWarning": "消息服务仅为活动交流使用，不保存记录。如需后续联系，请私聊交换联系方式。",
+    "externalLinkWarning": "你将要离开本站",
+    "externalLinkDisclaimer": "后续操作均与本站无关，请自行判断是否继续前往此链接。",
+    "continue": "继续前往",
+    "goBack": "返回",
+    "addFriend": "添加好友",
+    "friendRequestSent": "已发送",
+    "requestSent": "已发送请求",
+    "friendRequestReceived": "{name} 想添加你为好友",
+    "accept": "接受",
+    "reject": "拒绝",
+    "blocked": "已被限制",
+    "online": "在线",
+    "offline": "离线",
+    "members": "成员",
+    "mention": "提及",
+    "you": "我",
+    "friendLabel": "好友",
+    "communityLabel": "社区",
+    "groupLabel": "小组",
+    "openChat": "进入聊天",
+    "studentNetwork": "学生网络",
+    "privateChat": "私聊",
+    "connected": "已连接",
+    "connecting": "连接中..."
   }
 }
