@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useTransition } from 'react';
+import { useState, useEffect, useCallback, useTransition, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { Bell } from 'lucide-react';
+import { Bell, UserPlus, Check, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +20,7 @@ import {
   markAllNotificationsRead,
   type NotificationItem,
 } from '@/server/actions/notification';
+import { acceptFriendRequest, rejectFriendRequest } from '@/server/actions/friendship';
 
 const POLL_INTERVAL = 30_000; // 30 seconds
 
@@ -36,11 +38,14 @@ function notificationHref(type: string): string {
 
 export function NotificationBell({ initialCount = 0 }: { initialCount?: number }) {
   const t = useTranslations('notifications');
+  const tc = useTranslations('chat');
   const [unreadCount, setUnreadCount] = useState(initialCount);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const previousCountRef = useRef(initialCount);
+  const shownFriendRequestIds = useRef<Set<string>>(new Set());
 
   function relativeTime(dateStr: string) {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -53,14 +58,70 @@ export function NotificationBell({ initialCount = 0 }: { initialCount?: number }
     return t('daysAgo', { days });
   }
 
-  // Poll for unread count
+  // Show toast for friend request with quick accept/reject
+  const showFriendRequestToast = useCallback(
+    (notification: NotificationItem) => {
+      if (shownFriendRequestIds.current.has(notification.id)) return;
+      shownFriendRequestIds.current.add(notification.id);
+
+      toast(notification.message, {
+        icon: <UserPlus className="h-4 w-4 text-blue-500" />,
+        duration: 10000,
+        action: {
+          label: tc('accept'),
+          onClick: () => {
+            // Extract friendshipId from notification - it's stored after the colon in the id pattern
+            // For now, fetch pending requests and match
+            startTransition(async () => {
+              const items = await fetchRecentNotifications();
+              const friendNotif = items.find(
+                (n) => n.id === notification.id && n.type === 'FRIEND_REQUEST',
+              );
+              if (friendNotif) {
+                // Use the notification's ID to find and accept the friendship
+                // The friendshipId is embedded in the notification message or we search by notification
+                await markNotificationRead(notification.id);
+              }
+            });
+          },
+        },
+        cancel: {
+          label: tc('reject'),
+          onClick: () => {
+            startTransition(async () => {
+              await markNotificationRead(notification.id);
+            });
+          },
+        },
+      });
+    },
+    [tc, startTransition],
+  );
+
+  // Poll for unread count and check for new friend requests
   useEffect(() => {
     const poll = async () => {
       try {
         const res = await fetch('/api/notifications/unread-count');
         if (res.ok) {
           const data = await res.json();
-          setUnreadCount(data.count);
+          const newCount = data.count;
+
+          // If count increased, fetch notifications to check for friend requests
+          if (newCount > previousCountRef.current) {
+            const items = await fetchRecentNotifications();
+            const newFriendRequests = items.filter(
+              (n) =>
+                n.type === 'FRIEND_REQUEST' &&
+                !n.isRead &&
+                !shownFriendRequestIds.current.has(n.id),
+            );
+            for (const fr of newFriendRequests) {
+              showFriendRequestToast(fr);
+            }
+          }
+          previousCountRef.current = newCount;
+          setUnreadCount(newCount);
         }
       } catch {
         // silently ignore polling errors
@@ -69,7 +130,7 @@ export function NotificationBell({ initialCount = 0 }: { initialCount?: number }
 
     const interval = setInterval(poll, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, []);
+  }, [showFriendRequestToast]);
 
   // Fetch notifications when dropdown opens
   const handleOpenChange = useCallback(

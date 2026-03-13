@@ -40,6 +40,9 @@
   "exclude": [
     "node_modules",
     "prisma.config.ts",
-    "prisma/seed.ts"
+    "prisma/seed.ts",
+    "prisma/seed-uiqa.ts",
+    "e2e/**",
+    "scripts/**"
   ]
 }

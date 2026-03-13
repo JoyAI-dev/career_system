@@ -5,11 +5,19 @@ import { Header } from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
 import { AnnouncementPopup } from '@/components/AnnouncementPopup';
 import { ActivityTracker } from '@/components/ActivityTracker';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { auth } from '@/lib/auth';
 import { hasCompletedPreference } from '@/server/queries/preference';
 import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 import { getUnreadCount } from '@/server/queries/notification';
 import { getActiveAnnouncement, hasUserViewedAnnouncement } from '@/server/queries/announcement';
+import { getUserFriends } from '@/server/queries/friendship';
+import { getUserChatGroups } from '@/server/queries/chatGroups';
+import { ChatProvider } from '@/components/chat/ChatProvider';
+import { SecondaryNavBar } from '@/components/SecondaryNavBar';
+import { ChatPopup } from '@/components/chat/ChatPopup';
+import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
+import { StudentNetworkDrawer } from '@/components/chat/StudentNetworkDrawer';
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -41,38 +49,69 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     }
   }
 
+  // Chat data for all authenticated users
+  const friends = session?.user
+    ? await getUserFriends(session.user.id)
+    : [];
+  const groups = session?.user
+    ? await getUserChatGroups(session.user.id)
+    : [];
+
   if (isAdmin) {
     return (
       <SessionProvider>
-        <ActivityTracker />
-        <div className="flex min-h-screen">
-          {/* Desktop sidebar — admin only */}
-          <aside className="hidden w-64 flex-shrink-0 border-r bg-sidebar md:block">
-            <Sidebar />
-            <Separator />
-          </aside>
+        <TooltipProvider>
+          <ActivityTracker />
+          <ChatProvider
+            userId={session!.user.id}
+            username={session!.user.username}
+            initialFriends={friends}
+          >
+            <div className="flex min-h-screen">
+              {/* Desktop sidebar — admin only */}
+              <aside className="hidden w-64 flex-shrink-0 border-r bg-sidebar md:block">
+                <Sidebar />
+                <Separator />
+              </aside>
 
-          <div className="flex flex-1 flex-col">
-            <Header initialUnreadCount={unreadCount} variant="admin" />
-            <main className="flex-1 p-4 md:p-6">{children}</main>
-          </div>
-        </div>
+              <div className="flex flex-1 flex-col">
+                <Header initialUnreadCount={unreadCount} variant="admin" />
+                <main className="flex-1 p-4 md:p-6">{children}</main>
+              </div>
+            </div>
+            <FloatingChatButton />
+            <ChatPopup userId={session!.user.id} />
+            <StudentNetworkDrawer groups={groups} userId={session!.user.id} />
+          </ChatProvider>
+        </TooltipProvider>
       </SessionProvider>
     );
   }
 
-  // Student layout — full-width, no sidebar
+  // Student layout — full-width, no sidebar, with secondary nav bar
   return (
     <SessionProvider>
-      <ActivityTracker />
-      <div className="flex min-h-screen flex-col bg-[#F5F8FF]">
-        <Header initialUnreadCount={unreadCount} variant="student" />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
-      </div>
-      <AnnouncementPopup
-        announcement={announcementData}
-        hasViewed={hasViewed}
-      />
+      <TooltipProvider>
+        <ActivityTracker />
+        <ChatProvider
+          userId={session!.user.id}
+          username={session!.user.username}
+          initialFriends={friends}
+        >
+          <div className="flex min-h-screen flex-col bg-[#F5F8FF]">
+            <Header initialUnreadCount={unreadCount} variant="student" />
+            <SecondaryNavBar />
+            <main className="flex-1 p-4 md:p-6">{children}</main>
+          </div>
+          <FloatingChatButton />
+          <ChatPopup userId={session!.user.id} />
+          <StudentNetworkDrawer groups={groups} userId={session!.user.id} />
+          <AnnouncementPopup
+            announcement={announcementData}
+            hasViewed={hasViewed}
+          />
+        </ChatProvider>
+      </TooltipProvider>
     </SessionProvider>
   );
 }

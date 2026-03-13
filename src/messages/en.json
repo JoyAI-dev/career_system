@@ -279,6 +279,7 @@
     "preferences": "Preferences",
     "communities": "Communities",
     "announcements": "Announcements",
+    "chatStats": "Chat Stats",
     "settings": "Settings"
   },
   "admin": {
@@ -833,5 +834,50 @@
   },
   "languageSwitcher": {
     "label": "Switch language"
+  },
+  "secondaryNav": {
+    "studentNetwork": "Student Network",
+    "shareCalendar": "Share Calendar",
+    "crossCalendar": "Cross Calendar",
+    "shareActivities": "Share Activities",
+    "friendChat": "Chat",
+    "comingSoon": "Coming Soon"
+  },
+  "chat": {
+    "title": "Chat",
+    "groups": "Groups",
+    "friends": "Friends",
+    "typeMessage": "Type a message...",
+    "send": "Send",
+    "noMessages": "No messages yet",
+    "noGroups": "No groups joined yet",
+    "noFriends": "No friends yet",
+    "noMembersFound": "No members found",
+    "selectChat": "Select a chat to start messaging",
+    "memoryWarning": "This messaging service is for activity coordination only. Messages are not saved. Please exchange contact info privately if you wish to stay in touch.",
+    "externalLinkWarning": "You are about to leave this site",
+    "externalLinkDisclaimer": "Any actions beyond this point are not associated with this site. Please use your own judgment before proceeding.",
+    "continue": "Continue",
+    "goBack": "Go Back",
+    "addFriend": "Add Friend",
+    "friendRequestSent": "Sent",
+    "requestSent": "Request Sent",
+    "friendRequestReceived": "{name} wants to be your friend",
+    "accept": "Accept",
+    "reject": "Reject",
+    "blocked": "Blocked",
+    "online": "Online",
+    "offline": "Offline",
+    "members": "Members",
+    "mention": "Mention",
+    "you": "Me",
+    "friendLabel": "Friend",
+    "communityLabel": "Community",
+    "groupLabel": "Group",
+    "openChat": "Open Chat",
+    "studentNetwork": "Student Network",
+    "privateChat": "Private Chat",
+    "connected": "Connected",
+    "connecting": "Connecting..."
   }
 }

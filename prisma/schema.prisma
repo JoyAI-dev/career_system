@@ -45,6 +45,8 @@ model User {
   pairingsCreated            Pairing[]             @relation("PairingCreatedBy")
   standbyEntry               StandbyUser?
   standbyAddedBy             StandbyUser[]         @relation("StandbyAddedBy")
+  friendshipsRequested       Friendship[]          @relation("friendshipsRequested")
+  friendshipsReceived        Friendship[]          @relation("friendshipsReceived")
 
   @@map("users")
 }
@@ -441,6 +443,34 @@ enum NotificationType {
   ACTIVITY_UNLOCKED   // Next activity is available
   ACTIVITY_SCHEDULED  // Auto-scheduled activity time set
   STANDBY_MATCHED     // Standby user matched to a group
+  FRIEND_REQUEST      // Someone wants to be your friend
+  FRIEND_ACCEPTED     // Friend request accepted
+}
+
+// ─── Friendship System ─────────────────────────────────────────────
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED    // After 3 rejections from same person
+}
+
+model Friendship {
+  id              String           @id @default(cuid())
+  requesterId     String
+  addresseeId     String
+  status          FriendshipStatus @default(PENDING)
+  rejectionCount  Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  requester       User             @relation("friendshipsRequested", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee       User             @relation("friendshipsReceived", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@map("friendships")
 }
 
 model Notification {
