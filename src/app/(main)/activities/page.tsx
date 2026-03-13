@@ -21,6 +21,7 @@ export default async function ActivitiesPage() {
           ...a,
           scheduledAt: a.scheduledAt?.toISOString() ?? null,
         }))}
+        currentUserId={session.user.id}
       />
     </div>
   );

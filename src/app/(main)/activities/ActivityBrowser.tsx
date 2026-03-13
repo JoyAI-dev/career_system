@@ -1,9 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { ActivityCard } from '@/components/ActivityCard';
 import { ActivityDetailDialog } from '@/components/ActivityDetailDialog';
+import { getActivityForCalendarPopup } from '@/server/actions/activity';
+import { Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
 import type { ActivityStatus } from '@prisma/client';
 
 type Tag = { id: string; name: string };
@@ -27,19 +33,28 @@ type Activity = {
   memberRole?: string;
 };
 
+type ActivityDetail = NonNullable<Awaited<ReturnType<typeof getActivityForCalendarPopup>>>;
+
 type Props = {
   activities: Activity[];
   types: ActivityType[];
   tags: Tag[];
   /** When true, join calls joinActivityType(typeId) instead of joinActivity(id) */
   joinByType?: boolean;
+  /** Current user ID for community features in the detail dialog */
+  currentUserId?: string;
 };
 
-export function ActivityBrowser({ activities, types, tags, joinByType }: Props) {
+export function ActivityBrowser({ activities, types, tags, joinByType, currentUserId }: Props) {
   const t = useTranslations('activities');
+  const tCal = useTranslations('calendar');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [tagFilter, setTagFilter] = useState('ALL');
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+
+  // Lazy-loaded full detail for the popup
+  const [activityDetail, setActivityDetail] = useState<ActivityDetail | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const loadingRef = useRef<string | null>(null);
 
   const filtered = activities.filter((a) => {
     if (typeFilter !== 'ALL' && a.typeId !== typeFilter) return false;
@@ -50,6 +65,41 @@ export function ActivityBrowser({ activities, types, tags, joinByType }: Props) 
 
   // In joinByType mode, type filter is hidden since cards already represent types
   const showTypeFilter = !joinByType;
+
+  const handleCardClick = useCallback(async (activityId: string) => {
+    loadingRef.current = activityId;
+    setLoadingId(activityId);
+    setActivityDetail(null);
+
+    try {
+      const detail = await getActivityForCalendarPopup(activityId);
+      if (loadingRef.current === activityId && detail) {
+        setActivityDetail(detail);
+      }
+    } catch (err) {
+      console.error('Failed to load activity detail:', err);
+    } finally {
+      if (loadingRef.current === activityId) {
+        setLoadingId(null);
+      }
+    }
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setActivityDetail(null);
+    setLoadingId(null);
+    loadingRef.current = null;
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    if (!activityDetail) return;
+    try {
+      const detail = await getActivityForCalendarPopup(activityDetail.id);
+      if (detail) setActivityDetail(detail);
+    } catch (err) {
+      console.error('Failed to refresh activity detail:', err);
+    }
+  }, [activityDetail]);
 
   return (
     <div className="space-y-4">
@@ -99,17 +149,31 @@ export function ActivityBrowser({ activities, types, tags, joinByType }: Props) 
             <ActivityCard
               key={activity.id}
               activity={activity}
-              onClick={() => setSelectedActivity(activity)}
+              onClick={() => handleCardClick(activity.id)}
             />
           ))}
         </div>
       )}
 
-      {/* Detail Dialog */}
+      {/* Loading spinner */}
+      <Dialog open={!!loadingId} onOpenChange={(open) => {
+        if (!open) { setLoadingId(null); loadingRef.current = null; }
+      }}>
+        <DialogContent className="sm:max-w-xs">
+          <div className="flex flex-col items-center justify-center gap-3 py-8">
+            <Loader2 className="size-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">{tCal('loadingDetail')}</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full detail dialog */}
       <ActivityDetailDialog
-        activity={selectedActivity}
-        onClose={() => setSelectedActivity(null)}
+        activity={activityDetail}
+        onClose={handleClose}
         joinByType={joinByType}
+        currentUserId={currentUserId}
+        onRefresh={handleRefresh}
       />
     </div>
   );

@@ -46,13 +46,11 @@ function getInitials(name: string | null, username: string): string {
 export function VirtualGroupInfo({ group, currentUserId }: VirtualGroupInfoProps) {
   return (
     <div className="rounded-lg border p-3">
-      {/* Header: Group name + status */}
+      {/* Header: member count + status */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Users className="size-4 text-muted-foreground" />
-          <span className="text-sm font-medium">
-            {group.name ?? '我的小组'}
-          </span>
+          <span className="text-sm font-medium">我的小组</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">

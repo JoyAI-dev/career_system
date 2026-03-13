@@ -62,6 +62,7 @@ export default async function DashboardPage() {
           }))}
           types={activityTypes.map((at) => ({ id: at.id, name: at.name }))}
           tags={tags.map((tg) => ({ id: tg.id, name: tg.name }))}
+          currentUserId={session.user.id}
         />
       </section>
 
