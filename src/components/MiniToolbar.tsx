@@ -16,7 +16,13 @@ export function MiniToolbar() {
         variant="ghost"
         size="icon"
         className="h-9 w-9 text-muted-foreground hover:text-foreground"
-        onClick={() => signOut({ callbackUrl: '/login' })}
+        onClick={() => {
+          // Clear announcement dismissal so popup shows again on next login
+          Object.keys(sessionStorage).forEach((key) => {
+            if (key.startsWith('announcement_dismissed')) sessionStorage.removeItem(key);
+          });
+          signOut({ callbackUrl: '/login' });
+        }}
         title={t('logOut')}
       >
         <LogOut className="h-4 w-4" />

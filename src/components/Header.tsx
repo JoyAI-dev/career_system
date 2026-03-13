@@ -121,7 +121,13 @@ export function Header({ initialUnreadCount = 0, variant = 'admin' }: HeaderProp
             </DropdownMenuLabel>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
+          <DropdownMenuItem onClick={() => {
+            // Clear announcement dismissal so popup shows again on next login
+            Object.keys(sessionStorage).forEach((key) => {
+              if (key.startsWith('announcement_dismissed')) sessionStorage.removeItem(key);
+            });
+            signOut({ callbackUrl: '/login' });
+          }}>
             <LogOut className="h-4 w-4" />
             {t('logOut')}
           </DropdownMenuItem>
