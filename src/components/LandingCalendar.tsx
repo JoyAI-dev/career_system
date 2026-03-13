@@ -24,6 +24,7 @@ export async function LandingCalendar({ userId }: LandingCalendarProps) {
         events={JSON.parse(JSON.stringify(events))}
         recruitmentEvents={JSON.parse(JSON.stringify(recruitmentEvents))}
         activityTypes={enabledTypes}
+        userId={userId}
       />
     </section>
   );

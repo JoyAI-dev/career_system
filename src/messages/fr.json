@@ -206,7 +206,8 @@
     "company": "Entreprise :",
     "date": "Date :",
     "description": "Description :",
-    "viewInActivities": "Voir dans les activités"
+    "viewInActivities": "Voir dans les activités",
+    "loadingDetail": "Chargement des détails..."
   },
   "cognitiveReport": {
     "title": "Rapport de frontière cognitive",

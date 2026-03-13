@@ -207,7 +207,8 @@
     "company": "公司：",
     "date": "日期：",
     "description": "描述：",
-    "viewInActivities": "在活动中查看"
+    "viewInActivities": "在活动中查看",
+    "loadingDetail": "加载活动详情..."
   },
   "cognitiveReport": {
     "title": "认知边界报告",

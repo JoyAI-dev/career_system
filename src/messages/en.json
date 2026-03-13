@@ -206,7 +206,8 @@
     "company": "Company:",
     "date": "Date:",
     "description": "Description:",
-    "viewInActivities": "View in Activities"
+    "viewInActivities": "View in Activities",
+    "loadingDetail": "Loading activity details..."
   },
   "cognitiveReport": {
     "title": "Cognitive Boundary Report",

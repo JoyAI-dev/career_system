@@ -786,6 +786,146 @@ export async function getActivityComments(activityId: string) {
 }
 
 /**
+ * Get full activity data for the calendar popup.
+ * Returns the same shape as ActivityDetailDialog's Activity type.
+ * Returns null if activity not found.
+ */
+export async function getActivityForCalendarPopup(activityId: string) {
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  const activity = await prisma.activity.findUnique({
+    where: { id: activityId },
+    include: {
+      type: {
+        select: {
+          id: true,
+          name: true,
+          scope: true,
+          completionMode: true,
+          pairingMode: true,
+          guideContent: true,
+          allowViewLocked: true,
+        },
+      },
+      activityTags: {
+        include: { tag: { select: { id: true, name: true } } },
+      },
+      memberships: {
+        select: {
+          userId: true,
+          role: true,
+          completedAt: true,
+          user: { select: { id: true, username: true, name: true } },
+        },
+        orderBy: { joinedAt: 'asc' },
+      },
+      virtualGroup: {
+        include: {
+          leader: { select: { id: true, name: true, username: true } },
+          members: {
+            include: {
+              user: { select: { id: true, name: true, username: true } },
+            },
+            orderBy: { order: 'asc' },
+          },
+        },
+      },
+      pairings: {
+        include: {
+          user1: { select: { id: true, name: true, username: true } },
+          user2: { select: { id: true, name: true, username: true } },
+        },
+      },
+      _count: { select: { memberships: true } },
+    },
+  });
+
+  if (!activity) return null;
+
+  // Compute isEligible
+  const unlockedTypeIds = await getUnlockedTypeIds(userId);
+  const isEligible = unlockedTypeIds.has(activity.typeId);
+
+  // Compute membership info
+  const userMembership = activity.memberships.find((m) => m.userId === userId) ?? null;
+
+  // Load opponent group if cross-group competition
+  let opponentGroup = null;
+  if (activity.competitorActivityId) {
+    const competitor = await prisma.activity.findUnique({
+      where: { id: activity.competitorActivityId },
+      include: {
+        virtualGroup: {
+          include: {
+            members: {
+              include: { user: { select: { name: true, username: true } } },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+      },
+    });
+    if (competitor?.virtualGroup) {
+      opponentGroup = {
+        id: competitor.virtualGroup.id,
+        name: competitor.virtualGroup.name,
+        members: competitor.virtualGroup.members.map((m) => ({
+          user: { name: m.user.name, username: m.user.username },
+        })),
+      };
+    }
+  }
+
+  return {
+    id: activity.id,
+    title: activity.title,
+    capacity: activity.capacity,
+    status: activity.status,
+    guideMarkdown: activity.guideMarkdown,
+    isOnline: activity.isOnline,
+    location: activity.location,
+    scheduledAt: activity.scheduledAt?.toISOString() ?? null,
+    type: activity.type,
+    activityTags: activity.activityTags,
+    _count: activity._count,
+    isEligible,
+    isMember: !!userMembership,
+    memberRole: userMembership?.role,
+    memberCompletedAt: userMembership?.completedAt?.toISOString() ?? null,
+    members: activity.memberships.map((m) => ({
+      username: m.user.username,
+      name: m.user.name,
+      role: m.role,
+    })),
+    virtualGroup: activity.virtualGroup
+      ? {
+          id: activity.virtualGroup.id,
+          name: activity.virtualGroup.name,
+          status: activity.virtualGroup.status,
+          leaderId: activity.virtualGroup.leaderId,
+          leader: activity.virtualGroup.leader,
+          members: activity.virtualGroup.members.map((m) => ({
+            userId: m.userId,
+            order: m.order,
+            user: m.user,
+          })),
+        }
+      : null,
+    virtualGroupId: activity.virtualGroupId,
+    competitorActivityId: activity.competitorActivityId,
+    winnerId: activity.winnerId,
+    pairings: activity.pairings.map((p) => ({
+      id: p.id,
+      status: p.status,
+      user1: p.user1,
+      user2: p.user2,
+    })),
+    opponentGroup,
+  };
+}
+
+/**
  * Set the winner of a cross-group competition (leader action).
  */
 export async function setCompetitionWinnerAction(

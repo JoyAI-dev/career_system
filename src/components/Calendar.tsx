@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -9,7 +9,6 @@ import zhCnLocale from '@fullcalendar/core/locales/zh-cn';
 import enLocale from '@fullcalendar/core/locales/en-au';
 import frLocale from '@fullcalendar/core/locales/fr';
 import type { EventClickArg } from '@fullcalendar/core';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ActivityDetailDialog } from '@/components/ActivityDetailDialog';
+import { getActivityForCalendarPopup } from '@/server/actions/activity';
+import { Loader2 } from 'lucide-react';
 
 const FC_LOCALES: Record<string, typeof zhCnLocale> = {
   zh: zhCnLocale,
@@ -31,7 +33,7 @@ type CalendarEvent = {
   scheduledAt: string;
   location: string | null;
   isOnline: boolean;
-  type: { id: string; name: string };
+  type: { id: string; name: string; order: number };
 };
 
 type RecruitmentEvent = {
@@ -44,14 +46,11 @@ type RecruitmentEvent = {
 
 type ActivityType = { id: string; name: string };
 
-type SelectedItem =
-  | { kind: 'activity'; data: CalendarEvent }
-  | { kind: 'recruitment'; data: RecruitmentEvent };
-
 type Props = {
   events: CalendarEvent[];
   recruitmentEvents?: RecruitmentEvent[];
   activityTypes?: ActivityType[];
+  userId: string;
 };
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -62,25 +61,26 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }
   OPEN: { bg: '#d1fae5', border: '#10b981', text: '#065f46' },
 };
 
-const STATUS_KEYS: Record<string, string> = {
-  OPEN: 'statusOpen',
-  FULL: 'statusFull',
-  SCHEDULED: 'statusScheduled',
-  IN_PROGRESS: 'statusInProgress',
-  COMPLETED: 'statusCompleted',
-};
-
 const RECRUITMENT_COLORS = { bg: '#fce7f3', border: '#ec4899', text: '#9d174d' };
 
-export function CalendarView({ events, recruitmentEvents = [], activityTypes = [] }: Props) {
+// Type for ActivityDetailDialog's activity prop (inferred from server action return)
+type ActivityDetail = NonNullable<Awaited<ReturnType<typeof getActivityForCalendarPopup>>>;
+
+export function CalendarView({ events, recruitmentEvents = [], activityTypes = [], userId }: Props) {
   const t = useTranslations('calendar');
-  const tAct = useTranslations('activities');
   const locale = useLocale();
   const calendarRef = useRef<FullCalendar>(null);
-  const [selected, setSelected] = useState<SelectedItem | null>(null);
   const [showActivities, setShowActivities] = useState(true);
   const [showRecruitment, setShowRecruitment] = useState(true);
   const [selectedTypeId, setSelectedTypeId] = useState<string>('all');
+
+  // Activity detail popup state
+  const [activityDetail, setActivityDetail] = useState<ActivityDetail | null>(null);
+  const [loadingActivityId, setLoadingActivityId] = useState<string | null>(null);
+  const loadingRef = useRef<string | null>(null);
+
+  // Recruitment popup state (kept simple)
+  const [selectedRecruitment, setSelectedRecruitment] = useState<RecruitmentEvent | null>(null);
 
   const filteredActivityEvents = useMemo(() => {
     if (!showActivities) return [];
@@ -102,7 +102,7 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
         backgroundColor: colors.bg,
         borderColor: colors.border,
         textColor: colors.text,
-        extendedProps: { kind: 'activity' as const, data: event },
+        extendedProps: { kind: 'activity' as const, activityId: event.id, typeOrder: event.type.order },
       };
     });
 
@@ -119,10 +119,61 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
     return [...activityItems, ...recruitmentItems];
   }, [filteredActivityEvents, filteredRecruitmentEvents]);
 
-  function handleEventClick(info: EventClickArg) {
-    const props = info.event.extendedProps as SelectedItem;
-    setSelected(props);
-  }
+  const handleEventClick = useCallback(async (info: EventClickArg) => {
+    const props = info.event.extendedProps;
+
+    if (props.kind === 'recruitment') {
+      setSelectedRecruitment(props.data as RecruitmentEvent);
+      return;
+    }
+
+    // Activity click — lazy load full detail
+    const activityId = props.activityId as string;
+    loadingRef.current = activityId;
+    setLoadingActivityId(activityId);
+    setActivityDetail(null);
+
+    try {
+      const detail = await getActivityForCalendarPopup(activityId);
+      // Guard against race condition: only set if this is still the active request
+      if (loadingRef.current === activityId && detail) {
+        setActivityDetail(detail);
+      }
+    } catch (err) {
+      console.error('Failed to load activity detail:', err);
+    } finally {
+      if (loadingRef.current === activityId) {
+        setLoadingActivityId(null);
+      }
+    }
+  }, []);
+
+  const handleActivityDetailClose = useCallback(() => {
+    setActivityDetail(null);
+    setLoadingActivityId(null);
+    loadingRef.current = null;
+  }, []);
+
+  const handleActivityRefresh = useCallback(async () => {
+    if (!activityDetail) return;
+    try {
+      const detail = await getActivityForCalendarPopup(activityDetail.id);
+      if (detail) {
+        setActivityDetail(detail);
+      }
+    } catch (err) {
+      console.error('Failed to refresh activity detail:', err);
+    }
+  }, [activityDetail]);
+
+  // Sort events: activities by type order, then time
+  const eventOrder = useCallback((a: unknown, b: unknown) => {
+    const aObj = a as { extendedProps?: Record<string, unknown> };
+    const bObj = b as { extendedProps?: Record<string, unknown> };
+    const orderA = (aObj.extendedProps?.typeOrder as number) ?? 999;
+    const orderB = (bObj.extendedProps?.typeOrder as number) ?? 999;
+    return orderA - orderB;
+  }, []);
 
   // Derive unique types from the user's events for the filter
   const availableTypes = useMemo(() => {
@@ -191,6 +242,7 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
           }}
           events={calendarEvents}
           eventClick={handleEventClick}
+          eventOrder={eventOrder}
           height="auto"
           dayMaxEvents={3}
           nowIndicator
@@ -203,75 +255,52 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
         />
       </div>
 
-      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
+      {/* Loading spinner dialog */}
+      <Dialog open={!!loadingActivityId} onOpenChange={(open) => {
+        if (!open) {
+          setLoadingActivityId(null);
+          loadingRef.current = null;
+        }
+      }}>
+        <DialogContent className="sm:max-w-xs">
+          <div className="flex flex-col items-center justify-center gap-3 py-8">
+            <Loader2 className="size-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">{t('loadingDetail')}</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full activity detail dialog (reuses the same component as activities page) */}
+      <ActivityDetailDialog
+        activity={activityDetail}
+        onClose={handleActivityDetailClose}
+        currentUserId={userId}
+        onRefresh={handleActivityRefresh}
+      />
+
+      {/* Recruitment event dialog (kept simple) */}
+      <Dialog open={!!selectedRecruitment} onOpenChange={(open) => !open && setSelectedRecruitment(null)}>
         <DialogContent>
-          {selected?.kind === 'activity' && (
+          {selectedRecruitment && (
             <>
               <DialogHeader>
-                <DialogTitle>{selected.data.title}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">{t('type')}</span>
-                  <span className="text-sm">{selected.data.type.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">{t('status')}</span>
-                  <span
-                    className="rounded px-1.5 py-0.5 text-xs font-medium"
-                    style={{
-                      backgroundColor: STATUS_COLORS[selected.data.status]?.bg,
-                      color: STATUS_COLORS[selected.data.status]?.text,
-                    }}
-                  >
-                    {tAct(STATUS_KEYS[selected.data.status] ?? 'statusOpen')}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">{t('time')}</span>
-                  <span className="text-sm">
-                    {new Date(selected.data.scheduledAt).toLocaleString()}
-                  </span>
-                </div>
-                {(selected.data.location || selected.data.isOnline) && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-muted-foreground">{t('location')}</span>
-                    <span className="text-sm">
-                      {selected.data.isOnline ? t('online') : selected.data.location}
-                    </span>
-                  </div>
-                )}
-                <div className="pt-2">
-                  <Link
-                    href="/activities"
-                    className="text-sm text-primary underline-offset-4 hover:underline"
-                  >
-                    {t('viewInActivities')}
-                  </Link>
-                </div>
-              </div>
-            </>
-          )}
-          {selected?.kind === 'recruitment' && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selected.data.title}</DialogTitle>
+                <DialogTitle>{selectedRecruitment.title}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-muted-foreground">{t('company')}</span>
-                  <span className="text-sm">{selected.data.company}</span>
+                  <span className="text-sm">{selectedRecruitment.company}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-muted-foreground">{t('date')}</span>
                   <span className="text-sm">
-                    {new Date(selected.data.eventDate).toLocaleString()}
+                    {new Date(selectedRecruitment.eventDate).toLocaleString()}
                   </span>
                 </div>
-                {selected.data.description && (
+                {selectedRecruitment.description && (
                   <div>
                     <span className="text-sm font-medium text-muted-foreground">{t('description')}</span>
-                    <p className="mt-1 text-sm whitespace-pre-wrap">{selected.data.description}</p>
+                    <p className="mt-1 text-sm whitespace-pre-wrap">{selectedRecruitment.description}</p>
                   </div>
                 )}
                 <div className="pt-1">

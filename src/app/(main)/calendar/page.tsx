@@ -30,6 +30,7 @@ export default async function CalendarPage() {
         events={JSON.parse(JSON.stringify(events))}
         recruitmentEvents={JSON.parse(JSON.stringify(recruitmentEvents))}
         activityTypes={enabledTypes}
+        userId={session.user.id}
       />
       </Suspense>
     </div>

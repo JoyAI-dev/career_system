@@ -17,8 +17,11 @@ export async function getUserCalendarEvents(userId: string) {
       scheduledAt: true,
       location: true,
       isOnline: true,
-      type: { select: { id: true, name: true } },
+      type: { select: { id: true, name: true, order: true } },
     },
-    orderBy: { scheduledAt: 'asc' },
+    orderBy: [
+      { type: { order: 'asc' } },
+      { scheduledAt: 'asc' },
+    ],
   });
 }
