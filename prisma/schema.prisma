@@ -24,18 +24,20 @@ model User {
   studentIdUrl String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  lastActiveAt DateTime?
 
-  responseSnapshots  ResponseSnapshot[]
-  memberships        Membership[]
-  createdActivities  Activity[]
-  activityComments   ActivityComment[]
-  recruitmentInfos   RecruitmentInfo[]
-  responseComments   ResponseComment[]
-  reflections        Reflection[]
-  notifications      Notification[]
-  auditLogs          AuditLog[]     @relation("auditLogs")
-  announcementViews  AnnouncementView[]
-  preference         UserPreference?
+  responseSnapshots    ResponseSnapshot[]
+  memberships          Membership[]
+  createdActivities    Activity[]
+  activityComments     ActivityComment[]
+  recruitmentInfos     RecruitmentInfo[]
+  responseComments     ResponseComment[]
+  reflections          Reflection[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]     @relation("auditLogs")
+  announcementViews    AnnouncementView[]
+  preference           UserPreference?
+  communityMemberships CommunityMember[]
 
   @@map("users")
 }
@@ -431,12 +433,14 @@ model PreferenceCategory {
   description String?
   order       Int
   inputType   PreferenceInputType
-  isActive        Boolean             @default(true)
-  isGroupingBasis Boolean             @default(false)
+  isActive               Boolean             @default(true)
+  isGroupingBasis        Boolean             @default(false)
+  hierarchicalMatchLevel String?             // "PARENT" | "LEAF", only for HIERARCHICAL_MULTI
 
-  topics  Topic[]            @relation("TopicPreference")
-  options PreferenceOption[]
-  sliders PreferenceSlider[]
+  topics        Topic[]            @relation("TopicPreference")
+  options       PreferenceOption[]
+  sliders       PreferenceSlider[]
+  communityTags CommunityTag[]
 
   @@index([order])
   @@map("preference_categories")
@@ -459,6 +463,7 @@ model PreferenceOption {
   selections    UserPreferenceSelection[]
   subTopics     SubTopic[]
   repeatAnswers ResponseAnswer[]           @relation("RepeatAnswers")
+  communityTags CommunityTag[]
 
   @@index([categoryId])
   @@index([parentId])
@@ -520,6 +525,52 @@ model UserPreferenceSliderValue {
 
   @@unique([userPreferenceId, sliderId])
   @@map("user_preference_slider_values")
+}
+
+// ─── Community System ────────────────────────────────────────────────
+
+model Community {
+  id          String   @id @default(cuid())
+  fingerprint String   @unique
+  name        String
+  memberCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tags    CommunityTag[]
+  members CommunityMember[]
+
+  @@index([memberCount(sort: Desc)])
+  @@map("communities")
+}
+
+model CommunityTag {
+  id          String @id @default(cuid())
+  communityId String
+  categoryId  String
+  optionId    String
+
+  community Community          @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  category  PreferenceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  option    PreferenceOption   @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, categoryId])
+  @@index([categoryId, optionId])
+  @@map("community_tags")
+}
+
+model CommunityMember {
+  id          String   @id @default(cuid())
+  communityId String
+  userId      String
+  joinedAt    DateTime @default(now())
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, userId])
+  @@index([userId])
+  @@map("community_members")
 }
 
 // ─── Audit Log ──────────────────────────────────────────────────────

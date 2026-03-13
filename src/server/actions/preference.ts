@@ -6,6 +6,7 @@ import { requireAuth, requireAdmin } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getAllPreferenceCategories } from '@/server/queries/preference';
+import { computeUserCommunities } from '@/server/services/community';
 
 export type ActionState = {
   errors?: { [key: string]: string[] };
@@ -138,6 +139,9 @@ export async function submitPreferences(
       });
     }
   });
+
+  // Compute community memberships based on preferences
+  await computeUserCommunities(userId);
 
   redirect('/questionnaire');
 }

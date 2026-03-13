@@ -64,6 +64,7 @@ describe('updateProfile', () => {
       major: 'CS',
       grade: '大一',
       studentIdUrl: null,
+      lastActiveAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -103,6 +104,7 @@ describe('updateProfile', () => {
       major: null,
       grade: null,
       studentIdUrl: null,
+      lastActiveAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -179,6 +181,7 @@ describe('updateProfile', () => {
       major: null,
       grade: null,
       studentIdUrl: null,
+      lastActiveAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

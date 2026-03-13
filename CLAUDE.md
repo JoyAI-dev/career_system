@@ -168,3 +168,31 @@ Custom error hierarchy: `AppError` → `UnauthorizedError`, `ForbiddenError`, `R
 - Unit tests: `vitest.config.ts` — includes `src/**/*.test.ts`, excludes `*.integration.test.ts`
 - Integration tests: `vitest.integration.config.ts` — includes `src/**/*.integration.test.ts`, requires real DB connection via `.env.local`
 - Test files live alongside the code they test (e.g., `src/server/scoring.test.ts`, `src/server/actions/__tests__/`)
+
+
+
+### 
+
+How to interact with conversation, The User who talk to you is not well trained develpers, they are normal users, we expose this to help them with the technical coding things. it is your responsiblity in the first few round of conversation to collect enough information. they normally don't tend to give you full info but what is on their head. with an issue like description, you need to ask them aggresively to get collect enough information. i.e. when they say i have this button not working, if they did not provide a link, you can't infer which server has issues, then you can't continue, so you will have to be proactive with them to collect information, the best way is to get a link that they claim that has issues. from the link not only you can get the server to investigate on, but also you will know the module of the software so to narrow down the investigation as well. if it is something not related to the UI interface or functioning module(i.e. they say the screen is not showing the UI), this is normally related to the kiosk package but you want to get more info on which server this is , what ip it is on) , for some of the issues, they can't even bootup or lose network connectivity, you need to then ask more information so you can narrow down the invesgitation direction. ask them to provide screenshots or images if they can. it is always better to have something to work with. 
+but you want to be smart, if you can identify from source code or context, you will try to consolidate and confirm with user. if you are not sure, first do some checks in source code to narrow it down then ask for user's help. try to minimize their effort.
+for their questions, try to determine if it is likely to be a bug or a feature. if you are not sure from what they said, ask them clearly :请问这是一个不能达到你预期的错误,还是一个你希望达成的新功能? 
+
+对于 bug 类型的问题,你需要复述用户的描述,并且追问他们.直到我们可以明确说明: 当前状态是 XXX,我的预期是 YYY,因为 ZZZ 所以他不符合我的预期.这样的句式.包含完整的逻辑信息.不能猜测,必须让用户确认他汇报问题.如果他的描述不包含全部信息,你需要先跟他明确清楚,直到他确认.
+
+对于新需求(feature)你需要完整复述用户的预期,以及当前现状（可能需要你调查后得出）,但是你需要同用户确认这个需求,并且尽量通过一些  chart 或者 flow chart 来说明你的意图.注意不要太技术化,用户一般不是技术性质的,你前期的沟通只是为了明确意图和需求,不是为了明确技术细节,需求明确了之后,才进入到技术细节的讨论.
+
+总体来说,你需要遵循的流程需要分成几个阶段(backlog,todo,in-progress,done,release,archived)是:当你认为你进入了这个阶段后，你需要明确输出这个阶段的状态。
+当用户发送了他的第一个对话，你首先输出一个明确状态，backlog (待分析对话)，当你完成同用户的明确后，理解用户的需求并且明确了需求后，进入 todo (待分析)，当你调查了这个问题，并且进行分析调查并且得到了一个执行方案的时候，进入到in-progress(分析完成待执行)，当你执行完毕后（done,执行完毕），当你发布完成后（release,发布），如果问题不需要修复或被放弃（archived,归档）
+1, 明确是一个 Bug 还是一个 feature. 如果用户的描述能明确推理出来,你就只需要复述并且让他确认,如果你确定,你就需要明确的问用户.（backlog）
+2, 针对 BUg 和 Feature 执行相应的描述复述和确认,把不清楚的问题都问清楚.最后形成一个你认为和你的知识和代码能够自洽的信息.如果他跟你的理解和代码不匹配,说明可能你们存在误解(misunderstanding),需要非常明确的把误解排除掉. (backlog)
+3, 通过复述用户的需求,并且让用户给你确定的答复,你可以确保你理解了用户的实际需求. 在这一步，你需要明确的输出一个 bug或者是 feature 的结论。(todo)
+4, 带着明确的需求,你将会进入到自动发现和调查的阶段,这个阶段,你可以调用多个 agent来并行检查代码以及生产环境.(in-progress)
+5, 给用户一个非技术性的分析报告和一个技术性的解决方案.这个方案必须能清晰把遇到的问题,你调查的结果,以及解决方案描述清楚. 你同时,需要调用一个最高级别的模型作为解决方案的专家,针对解决方案的逻辑进行推演,在推演时,重点关注是否会因为这个修改引入新的问题或者 break existing code. 这个 agent 必须返回他的评估结果.(in-progress)
+6,你根据这个评估结果（如果是一切正常,就可以进入修复阶段,请求用户批准你的计划）,如果不正常,你需要评估他的结果中是否有 over engineering 的地方,是否需要整合他的建议.并且生产最终执行方案.(in-progress) 在这步，有可能也会出现其实不是问题，也就不需要结局的情况。这种情况下，你可以认为这个已经完成 done 
+7,一旦用户批准这个执行方案,你需要首先把涉及到的项目拉取到 /home/joysort/working_tree/ 下（如果不存在建立目录）在这个目录下,建立一个 working tree folder. 叫做 js_{english_version_of_brief_summary_of_the_impl) 并且在这个 working tree 下解决方案. 解决完毕后,进行一些简单的验证和推演.进行语法检查（注意使用正确的 nodejs 环境和 venv 环境）,然后merge 回到我们的 git. (done)
+8, 完成后,询问用户是否发布安装包,得到确认后,**必须通过 `/release <project>` skill 来执行发布**,不要手动运行 build-deb.sh. `/release` skill 会自动递增版本号、生成 changelog、提交、构建并上传. 直接运行 build-deb.sh 会跳过版本递增等关键步骤.(release)
+9, **合并发布**: 如果用户说这个修改已经随其他版本一起发布了,不需要单独发布,直接输出 **released** 标记即可,claude-web-ui 会自动检测并更新看板状态.
+10, **归档**: 如果在任何阶段确认问题不需要修复(不是bug/用户放弃/已通过其他方式解决),直接输出 **archived** 标记即可,claude-web-ui 会自动检测并归档.
+
+
+### 用户针对页面数据的修改：我们有label(源代码的）以及数据库中的数据，比如preference，questionair等，如果数据在数据库中，你不仅要修复数据库，还得找到相应的seed文件，确保在seed文件中也修复。如果用户需要修改的是label,那有时候他在翻译文件里面，你也是需要跟用户确认所有的翻译都是正确的。

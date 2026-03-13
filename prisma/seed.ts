@@ -147,6 +147,7 @@ async function main() {
     order: number;
     inputType: 'SINGLE_SELECT' | 'MULTI_SELECT' | 'HIERARCHICAL_MULTI' | 'SLIDER';
     isGroupingBasis?: boolean;
+    hierarchicalMatchLevel?: string;
     options?: SeedPrefOption[];
     sliders?: SeedPrefSlider[];
   }
@@ -172,7 +173,7 @@ async function main() {
     },
     {
       name: '自我定位', slug: 'self-positioning', icon: 'UserCircle', order: 2,
-      inputType: 'HIERARCHICAL_MULTI', isGroupingBasis: true,
+      inputType: 'HIERARCHICAL_MULTI', isGroupingBasis: true, hierarchicalMatchLevel: 'PARENT', isGroupingBasis: true,
       options: [
         { label: '商人', value: 'businessman', order: 1 },
         { label: '创业者', value: 'entrepreneur', order: 2 },
@@ -188,7 +189,7 @@ async function main() {
     },
     {
       name: '发展方向', slug: 'development-direction', icon: 'Compass', order: 3,
-      inputType: 'HIERARCHICAL_MULTI', isGroupingBasis: true,
+      inputType: 'HIERARCHICAL_MULTI', isGroupingBasis: true, hierarchicalMatchLevel: 'PARENT', isGroupingBasis: true,
       options: [
         {
           label: '公共部门', value: 'public-sector', order: 1,
@@ -367,15 +368,16 @@ async function main() {
     );
     let categoryId: string;
     const isGroupingBasis = cat.isGroupingBasis ?? false;
+    const hierarchicalMatchLevel = cat.hierarchicalMatchLevel ?? null;
     if (existing.length > 0) {
       categoryId = existing[0].id;
       await prisma.$queryRaw(
-        Prisma.sql`UPDATE preference_categories SET "isGroupingBasis" = ${isGroupingBasis} WHERE id = ${categoryId}`,
+        Prisma.sql`UPDATE preference_categories SET "isGroupingBasis" = ${isGroupingBasis}, "hierarchicalMatchLevel" = ${hierarchicalMatchLevel} WHERE id = ${categoryId}`,
       );
     } else {
       const inserted = await prisma.$queryRaw<{ id: string }[]>(
-        Prisma.sql`INSERT INTO preference_categories (id, name, slug, icon, description, "order", "inputType", "isActive", "isGroupingBasis")
-          VALUES (gen_random_uuid(), ${cat.name}, ${cat.slug}, ${cat.icon}, ${cat.description ?? null}, ${cat.order}, ${cat.inputType}::"PreferenceInputType", true, ${isGroupingBasis})
+        Prisma.sql`INSERT INTO preference_categories (id, name, slug, icon, description, "order", "inputType", "isActive", "isGroupingBasis", "hierarchicalMatchLevel")
+          VALUES (gen_random_uuid(), ${cat.name}, ${cat.slug}, ${cat.icon}, ${cat.description ?? null}, ${cat.order}, ${cat.inputType}::"PreferenceInputType", true, ${isGroupingBasis}, ${hierarchicalMatchLevel})
           RETURNING id`,
       );
       categoryId = inserted[0].id;

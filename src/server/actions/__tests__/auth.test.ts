@@ -102,6 +102,7 @@ describe('register', () => {
       major: null,
       grade: null,
       studentIdUrl: null,
+      lastActiveAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -129,6 +130,7 @@ describe('register', () => {
       major: null,
       grade: null,
       studentIdUrl: null,
+      lastActiveAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

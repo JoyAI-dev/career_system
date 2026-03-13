@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
 import { AnnouncementPopup } from '@/components/AnnouncementPopup';
+import { ActivityTracker } from '@/components/ActivityTracker';
 import { auth } from '@/lib/auth';
 import { hasCompletedPreference } from '@/server/queries/preference';
 import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
@@ -43,6 +44,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   if (isAdmin) {
     return (
       <SessionProvider>
+        <ActivityTracker />
         <div className="flex min-h-screen">
           {/* Desktop sidebar — admin only */}
           <aside className="hidden w-64 flex-shrink-0 border-r bg-sidebar md:block">
@@ -62,6 +64,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   // Student layout — full-width, no sidebar
   return (
     <SessionProvider>
+      <ActivityTracker />
       <div className="flex min-h-screen flex-col bg-[#F5F8FF]">
         <Header initialUnreadCount={unreadCount} variant="student" />
         <main className="flex-1 p-4 md:p-6">{children}</main>
