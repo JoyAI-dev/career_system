@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 export type AnswerWithComments = {
   id: string;
   questionId: string;
+  preferenceOptionId: string | null;
   selectedOption: { id: string; label: string; score: number };
   question: {
     id: string;
@@ -10,7 +11,11 @@ export type AnswerWithComments = {
     dimension: {
       id: string;
       name: string;
-      topic: { id: string; name: string };
+      subTopic: {
+        id: string;
+        name: string;
+        topic: { id: string; name: string };
+      };
     };
   };
   comments: {
@@ -22,7 +27,7 @@ export type AnswerWithComments = {
 };
 
 /**
- * Get a snapshot's answers with their comments, grouped by topic/dimension.
+ * Get a snapshot's answers with their comments, grouped by topic/subTopic/dimension.
  */
 export async function getSnapshotAnswersWithComments(snapshotId: string): Promise<AnswerWithComments[]> {
   return prisma.responseAnswer.findMany({
@@ -30,6 +35,7 @@ export async function getSnapshotAnswersWithComments(snapshotId: string): Promis
     select: {
       id: true,
       questionId: true,
+      preferenceOptionId: true,
       selectedOption: { select: { id: true, label: true, score: true } },
       question: {
         select: {
@@ -39,7 +45,13 @@ export async function getSnapshotAnswersWithComments(snapshotId: string): Promis
             select: {
               id: true,
               name: true,
-              topic: { select: { id: true, name: true } },
+              subTopic: {
+                select: {
+                  id: true,
+                  name: true,
+                  topic: { select: { id: true, name: true } },
+                },
+              },
             },
           },
         },

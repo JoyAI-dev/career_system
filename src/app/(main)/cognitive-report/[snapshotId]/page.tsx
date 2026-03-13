@@ -52,7 +52,7 @@ export default async function SnapshotDetailPage({ params }: Props) {
 
   const topicMap = new Map<string, TopicGroup>();
   for (const answer of answersWithComments) {
-    const topic = answer.question.dimension.topic;
+    const topic = answer.question.dimension.subTopic.topic;
     const dim = answer.question.dimension;
 
     if (!topicMap.has(topic.id)) {

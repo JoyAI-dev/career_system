@@ -1,0 +1,8 @@
+{
+  "id": "Q-2",
+  "title": "Preference过滤问卷验证",
+  "user": "a12",
+  "description": "验证用户偏好选择对问卷展示的影响：FILTER模式话题是否只显示选中的subtopic，CONTEXT模式是否显示所有问题，REPEAT模式是否按选择重复",
+  "tags": ["preference", "questionnaire", "filter", "repeat", "context"],
+  "status": "ready"
+}

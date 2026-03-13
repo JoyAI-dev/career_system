@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useActionState, useTransition } from 'react';
+import { useState, useActionState, useTransition, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,43 +14,24 @@ import {
 } from '@/components/ui/dialog';
 import { submitQuestionnaire, saveQuestionnaireDraft, type ActionState } from '@/server/actions/questionnaire';
 import { DimensionNav } from '@/components/DimensionNav';
-import { SectionProgress } from '@/components/SectionProgress';
 import { QuestionReflections } from '@/components/QuestionReflections';
-
-type AnswerOption = {
-  id: string;
-  label: string;
-  score: number;
-  order: number;
-};
-
-type QuestionNote = {
-  id: string;
-  label: string;
-  content: string;
-};
-
-type Question = {
-  id: string;
-  title: string;
-  order: number;
-  notes: QuestionNote[];
-  answerOptions: AnswerOption[];
-};
-
-type Dimension = {
-  id: string;
-  name: string;
-  order: number;
-  questions: Question[];
-};
-
-type Topic = {
-  id: string;
-  name: string;
-  order: number;
-  dimensions: Dimension[];
-};
+import {
+  type Question,
+  type Topic,
+  type UserPreferences,
+  type VisibleContent,
+  getVisibleContent,
+  getAnswerKey,
+  getExpectedAnswerCount,
+  getAnsweredCount,
+  getUnansweredQuestions,
+  shouldShowSubTopicSections,
+  shouldShowSubTopicTabs,
+  buildSubTopicGroups,
+  getGroupAnsweredCount,
+  formatPercent,
+  findFirstUnanswered,
+} from './questionnaire-helpers';
 
 type Version = {
   id: string;
@@ -60,57 +41,147 @@ type Version = {
 
 type ReflectionItem = { id: string; content: string; activityTag: string | null; createdAt: string };
 
+// ─── Component ────────────────────────────────────────────────────────
+
 export function QuestionnaireFlow({
   version,
   reflectionsByQuestion = {},
   savedAnswers = {},
+  userPreferences = {},
 }: {
   version: Version;
   reflectionsByQuestion?: Record<string, ReflectionItem[]>;
   savedAnswers?: Record<string, string>;
+  userPreferences?: UserPreferences;
 }) {
   const t = useTranslations('questionnaire');
-  const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>(savedAnswers);
   const [state, formAction] = useActionState<ActionState, FormData>(submitQuestionnaire, {});
-  const [, saveDraftAction] = useActionState<ActionState, FormData>(saveQuestionnaireDraft, {});
+  const [saveState, saveDraftAction] = useActionState<ActionState, FormData>(saveQuestionnaireDraft, {});
   const [isPending, startTransition] = useTransition();
   const [isSaving, startSavingTransition] = useTransition();
-  const [showSaved, setShowSaved] = useState(false);
+  // Auto-save toast state: idle → saving → saved/error → idle
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [unansweredDialogOpen, setUnansweredDialogOpen] = useState(false);
-  const [unansweredQuestions, setUnansweredQuestions] = useState<Question[]>([]);
+  const [unansweredItems, setUnansweredItems] = useState<{ question: Question; answerKey: string; instanceLabel?: string }[]>([]);
   const [isSubmitAttempt, setIsSubmitAttempt] = useState(false);
+  // For REPEAT mode: track which tab is active per topic
+  const [activeRepeatTab, setActiveRepeatTab] = useState<Record<string, number>>({});
 
-  const topics = version.topics;
-  const currentTopic = topics[currentTopicIndex];
+  // Compute visible topics (skip topics with no visible content)
+  const visibleTopics = useMemo(() => {
+    return version.topics.filter(topic => {
+      const content = getVisibleContent(topic, userPreferences);
+      if (content.questions.length === 0) return false;
+      if (content.mode === 'REPEAT' && content.repeatInstances.length === 0) return false;
+      return true;
+    });
+  }, [version.topics, userPreferences]);
+
+  const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
+  const currentTopic = visibleTopics[currentTopicIndex];
   const isFirstTopic = currentTopicIndex === 0;
-  const isLastTopic = currentTopicIndex === topics.length - 1;
+  const isLastTopic = currentTopicIndex === visibleTopics.length - 1;
 
-  const topicQuestions = currentTopic.dimensions.flatMap((d) => d.questions);
-  const allQuestions = topics.flatMap((t) => t.dimensions.flatMap((d) => d.questions));
-  const totalQuestions = allQuestions.length;
-  const answeredCount = Object.keys(answers).length;
+  // Current topic's visible content
+  const currentContent = useMemo(
+    () => currentTopic ? getVisibleContent(currentTopic, userPreferences) : null,
+    [currentTopic, userPreferences]
+  );
 
-  // Section progress
-  const sectionAnswered = topicQuestions.filter((q) => answers[q.id]).length;
-  const sectionTotal = topicQuestions.length;
+  // Progress calculations
+  const totalExpected = useMemo(() => {
+    return visibleTopics.reduce((sum, topic) => {
+      return sum + getExpectedAnswerCount(getVisibleContent(topic, userPreferences));
+    }, 0);
+  }, [visibleTopics, userPreferences]);
 
-  function selectAnswer(questionId: string, optionId: string) {
-    setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
+  const totalAnswered = useMemo(() => {
+    return visibleTopics.reduce((sum, topic) => {
+      return sum + getAnsweredCount(getVisibleContent(topic, userPreferences), answers);
+    }, 0);
+  }, [visibleTopics, userPreferences, answers]);
+
+  const sectionExpected = currentContent ? getExpectedAnswerCount(currentContent) : 0;
+  const sectionAnswered = currentContent ? getAnsweredCount(currentContent, answers) : 0;
+
+  if (!currentTopic || !currentContent) {
+    return (
+      <div className="text-center">
+        <h1 className="text-2xl font-bold">{t('notAvailable')}</h1>
+      </div>
+    );
   }
 
-  function scrollToQuestion(questionId: string) {
+  // ─── Auto-save: debounced save after each answer selection ───────────
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
+  const prevIsSavingRef = useRef(false);
+
+  // Detect when isSaving transitions from true → false (save completed)
+  useEffect(() => {
+    if (prevIsSavingRef.current && !isSaving) {
+      // Transition ended: check result
+      if (saveState?.errors && Object.keys(saveState.errors).length > 0) {
+        setSaveStatus('error');
+      } else {
+        setSaveStatus('saved');
+      }
+      // Auto-dismiss after 1s
+      dismissTimerRef.current = setTimeout(() => setSaveStatus('idle'), 1000);
+    }
+    prevIsSavingRef.current = isSaving;
+  }, [isSaving, saveState]);
+
+  const doAutoSave = useCallback(() => {
+    if (Object.keys(answersRef.current).length === 0) return;
+    const formData = new FormData();
+    formData.set('versionId', version.id);
+    for (const [answerKey, optionId] of Object.entries(answersRef.current)) {
+      if (answerKey.includes('::')) {
+        const [questionId, prefOptionId] = answerKey.split('::');
+        formData.set(`repeat_${questionId}_${prefOptionId}`, optionId);
+      } else {
+        formData.set(`answer_${answerKey}`, optionId);
+      }
+    }
+    setSaveStatus('saving');
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    startSavingTransition(() => {
+      saveDraftAction(formData);
+    });
+  }, [version.id, saveDraftAction, startSavingTransition]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    };
+  }, []);
+
+  function selectAnswer(answerKey: string, optionId: string) {
+    setAnswers(prev => ({ ...prev, [answerKey]: optionId }));
+    // Debounce auto-save: wait 1s after last click before saving
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(doAutoSave, 1000);
+  }
+
+  function scrollToQuestion(answerKey: string) {
     setUnansweredDialogOpen(false);
     setTimeout(() => {
-      const el = document.getElementById(`question-${questionId}`);
+      const el = document.getElementById(`question-${answerKey}`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
   }
 
   function handleNext() {
-    const unanswered = topicQuestions.filter((q) => !answers[q.id]);
+    if (!currentContent) return;
+    const unanswered = getUnansweredQuestions(currentContent, answers);
     if (unanswered.length > 0) {
-      setUnansweredQuestions(unanswered);
+      setUnansweredItems(unanswered);
       setIsSubmitAttempt(false);
       setUnansweredDialogOpen(true);
     } else {
@@ -124,58 +195,126 @@ export function QuestionnaireFlow({
   }
 
   function goNext() {
-    if (currentTopicIndex < topics.length - 1) {
-      setCurrentTopicIndex((i) => i + 1);
+    if (currentTopicIndex < visibleTopics.length - 1) {
+      setCurrentTopicIndex(i => i + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
   function goPrev() {
     if (currentTopicIndex > 0) {
-      setCurrentTopicIndex((i) => i - 1);
+      setCurrentTopicIndex(i => i - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
-  function handleSave() {
-    if (Object.keys(answers).length === 0) return;
+  function buildFormData() {
     const formData = new FormData();
     formData.set('versionId', version.id);
-    for (const [questionId, optionId] of Object.entries(answers)) {
-      formData.set(`answer_${questionId}`, optionId);
+    for (const [answerKey, optionId] of Object.entries(answers)) {
+      if (answerKey.includes('::')) {
+        // REPEAT: answerKey = questionId::prefOptionId
+        const [questionId, prefOptionId] = answerKey.split('::');
+        formData.set(`repeat_${questionId}_${prefOptionId}`, optionId);
+      } else {
+        formData.set(`answer_${answerKey}`, optionId);
+      }
     }
+    return formData;
+  }
+
+  function handleSave() {
+    if (Object.keys(answers).length === 0) return;
+    const formData = buildFormData();
+    setSaveStatus('saving');
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     startSavingTransition(() => {
       saveDraftAction(formData);
-      setShowSaved(true);
-      setTimeout(() => setShowSaved(false), 2000);
     });
   }
 
   function doSubmit() {
-    const formData = new FormData();
-    formData.set('versionId', version.id);
-    for (const [questionId, optionId] of Object.entries(answers)) {
-      formData.set(`answer_${questionId}`, optionId);
-    }
+    const formData = buildFormData();
     startTransition(() => {
       formAction(formData);
     });
   }
 
   function handleSubmit() {
-    const allUnanswered = allQuestions.filter((q) => !answers[q.id]);
+    // Check all visible topics for unanswered questions
+    const allUnanswered: { question: Question; answerKey: string; instanceLabel?: string }[] = [];
+    for (const topic of visibleTopics) {
+      const content = getVisibleContent(topic, userPreferences);
+      allUnanswered.push(...getUnansweredQuestions(content, answers));
+    }
     if (allUnanswered.length > 0) {
-      setUnansweredQuestions(allUnanswered);
+      setUnansweredItems(allUnanswered);
       setIsSubmitAttempt(true);
       setUnansweredDialogOpen(true);
       return;
     }
-
     doSubmit();
   }
 
+  // Get current REPEAT tab index for current topic
+  const currentRepeatTabIdx = activeRepeatTab[currentTopic.id] ?? 0;
+  const currentRepeatInstance = currentContent.mode === 'REPEAT'
+    ? currentContent.repeatInstances[currentRepeatTabIdx]
+    : null;
+
+  // Use helpers for SubTopic section visibility and navigation
+  const showSections = shouldShowSubTopicSections(currentContent);
+  const showTabs = shouldShowSubTopicTabs(currentContent);
+
+  // Build groups for vertical tab navigation (only used when showTabs is true)
+  const subTopicGroups = useMemo(() => {
+    if (!showTabs || !currentContent) return undefined;
+    return buildSubTopicGroups(currentContent).map(g => ({
+      ...g,
+      answeredCount: getGroupAnsweredCount(g, answers),
+      totalCount: g.questionIds.length,
+    }));
+  }, [showTabs, currentContent, answers]);
+
+  // Flat dimensions for single-group mode
+  const flatDimensions = useMemo(() => {
+    if (showTabs) return [];
+    return currentContent.dimensions.map(d => ({ id: d.id, name: d.name }));
+  }, [showTabs, currentContent]);
+
   return (
     <div>
+      {/* Auto-save toast — fixed top-left, non-intrusive, 3 states */}
+      {saveStatus !== 'idle' && (
+        <div className="fixed left-4 top-4 z-50 animate-in fade-in slide-in-from-left-2 duration-200">
+          {saveStatus === 'saving' && (
+            <div className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 shadow-sm ring-1 ring-blue-200/60">
+              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="8" cy="8" r="6" strokeOpacity="0.3" />
+                <path d="M8 2a6 6 0 014.243 10.243" strokeLinecap="round" />
+              </svg>
+              {t('saving')}
+            </div>
+          )}
+          {saveStatus === 'saved' && (
+            <div className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 shadow-sm ring-1 ring-green-200/60">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor">
+                <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm3.354-9.354a.5.5 0 00-.708-.708L7 8.586 5.354 6.94a.5.5 0 10-.708.708l2 2a.5.5 0 00.708 0l4-4z" />
+              </svg>
+              {t('saved')}
+            </div>
+          )}
+          {saveStatus === 'error' && (
+            <div className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 shadow-sm ring-1 ring-red-200/60">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor">
+                <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zM5.354 5.354a.5.5 0 01.707 0L8 7.293l1.94-1.94a.5.5 0 01.707.708L8.707 8l1.94 1.94a.5.5 0 01-.708.707L8 8.707l-1.94 1.94a.5.5 0 01-.707-.708L7.293 8 5.354 6.06a.5.5 0 010-.707z" />
+              </svg>
+              {t('saveFailed')}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
@@ -184,108 +323,188 @@ export function QuestionnaireFlow({
         </p>
       </div>
 
-      {/* Progress bar */}
+      {/* Total progress bar */}
       <div className="mb-6">
         <div className="mb-2 flex items-center justify-between text-sm text-muted-foreground">
-          <span>{t('progress')}</span>
-          <span>{t('questionsCount', { answered: answeredCount, total: totalQuestions })}</span>
+          <span>{t('totalProgress')}</span>
+          <span>
+            {t('questionsCount', { answered: totalAnswered, total: totalExpected })}
+            {' '}
+            <span className="font-medium tabular-nums">
+              ({formatPercent(totalAnswered, totalExpected)})
+            </span>
+          </span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className="h-full rounded-full bg-primary transition-all duration-300"
-            style={{ width: `${totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0}%` }}
+            className={`h-full rounded-full transition-all duration-300 ${totalAnswered === totalExpected && totalExpected > 0 ? 'bg-green-500' : 'bg-primary'}`}
+            style={{ width: `${totalExpected > 0 ? (totalAnswered / totalExpected) * 100 : 0}%` }}
           />
         </div>
       </div>
 
-      {/* Topic stepper tabs */}
-      <div className="mb-6 flex gap-1 overflow-x-auto">
-        {topics.map((topic, idx) => {
-          const topicQs = topic.dimensions.flatMap((d) => d.questions);
-          const topicAnswered = topicQs.every((q) => answers[q.id]);
+      {/* Topic stepper tabs — wrap to multiple lines, with completion % */}
+      <div className="mb-6 flex flex-wrap gap-1.5">
+        {visibleTopics.map((topic, idx) => {
+          const content = getVisibleContent(topic, userPreferences);
+          const expected = getExpectedAnswerCount(content);
+          const answered = getAnsweredCount(content, answers);
+          const topicComplete = expected > 0 && answered >= expected;
           const isCurrent = idx === currentTopicIndex;
+          const pct = formatPercent(answered, expected);
 
           return (
             <button
               key={topic.id}
-              onClick={() => setCurrentTopicIndex(idx)}
-              className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              onClick={() => {
+                setCurrentTopicIndex(idx);
+                // If clicking the current topic, jump to first unanswered question
+                if (idx === currentTopicIndex) {
+                  const firstUnanswered = findFirstUnanswered(content, answers);
+                  if (firstUnanswered) {
+                    setTimeout(() => {
+                      const el = document.getElementById(`question-${firstUnanswered}`);
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                  }
+                } else {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 isCurrent
                   ? 'bg-primary text-primary-foreground'
-                  : topicAnswered
+                  : topicComplete
                     ? 'bg-primary/10 text-primary'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
               {idx + 1}. {topic.name}
+              <span className={`ml-1 text-[10px] tabular-nums ${
+                isCurrent ? 'opacity-80' : topicComplete ? 'text-green-600' : 'opacity-50'
+              }`}>
+                {pct}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* Dimension navigation */}
-      <DimensionNav
-        dimensions={currentTopic.dimensions.map((d) => ({ id: d.id, name: d.name }))}
-      />
+      {/* REPEAT mode: instance tabs */}
+      {currentContent.mode === 'REPEAT' && currentContent.repeatInstances.length > 0 && (
+        <div className="mb-4 flex gap-1 overflow-x-auto rounded-lg bg-muted/50 p-1">
+          {currentContent.repeatInstances.map((inst, idx) => {
+            const isActive = idx === currentRepeatTabIdx;
+            const instAnswered = currentContent.questions.filter(
+              q => answers[getAnswerKey(q.id, 'REPEAT', inst.id)]
+            ).length;
+            const instTotal = currentContent.questions.length;
+            return (
+              <button
+                key={inst.id}
+                onClick={() => setActiveRepeatTab(prev => ({ ...prev, [currentTopic.id]: idx }))}
+                className={`flex-shrink-0 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-white text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {inst.label}
+                <span className="ml-1.5 text-xs opacity-60">
+                  {instAnswered}/{instTotal}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Floating section progress */}
-      <SectionProgress
-        answered={sectionAnswered}
-        total={sectionTotal}
-        label={t('questionsCount', { answered: sectionAnswered, total: sectionTotal })}
+      {/* CONTEXT/FILTER mode: preference labels */}
+      {(currentContent.mode === 'CONTEXT' || currentContent.mode === 'FILTER') && currentContent.contextLabels.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">{t('yourSelection')}:</span>
+          {currentContent.contextLabels.map(label => (
+            <span key={label} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+              {label}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Dimension navigation with integrated section progress */}
+      <DimensionNav
+        dimensions={flatDimensions}
+        groups={subTopicGroups}
+        sectionAnswered={sectionAnswered}
+        sectionTotal={sectionExpected}
       />
 
       {/* Current topic content */}
       <div className="space-y-6">
         <h2 className="text-lg font-semibold">{currentTopic.name}</h2>
 
-        {currentTopic.dimensions.map((dimension) => (
-          <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-24 space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">{dimension.name}</h3>
-
-            {dimension.questions.map((question) => (
-              <Card key={question.id} id={`question-${question.id}`} className="scroll-mt-28">
-                <CardHeader>
-                  <CardTitle className="text-sm">{question.title}</CardTitle>
-                  {question.notes.length > 0 && (
-                    <CardDescription>
-                      {question.notes.map((note) => (
-                        <span key={note.id} className="block text-xs">
-                          <strong>{note.label}:</strong> {note.content}
-                        </span>
-                      ))}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {question.answerOptions.map((option) => {
-                      const isSelected = answers[question.id] === option.id;
-                      return (
-                        <button
-                          key={option.id}
-                          type="button"
-                          onClick={() => selectAnswer(question.id, option.id)}
-                          className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
-                            isSelected
-                              ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
-                              : 'border-border bg-background text-foreground hover:border-primary/50 hover:bg-muted/50'
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <QuestionReflections
-                    questionId={question.id}
-                    initialReflections={reflectionsByQuestion[question.id] ?? []}
+        {currentContent.mode === 'REPEAT' && currentRepeatInstance ? (
+          // REPEAT: render template questions for the active tab
+          currentContent.dimensions.map(dimension => (
+            <div key={`${dimension.id}-${currentRepeatInstance.id}`} id={`dimension-${dimension.id}`} className="scroll-mt-24 space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">{dimension.name}</h3>
+              {dimension.questions.map(question => {
+                const answerKey = getAnswerKey(question.id, 'REPEAT', currentRepeatInstance.id);
+                return (
+                  <QuestionCard
+                    key={answerKey}
+                    question={question}
+                    answerKey={answerKey}
+                    selectedOptionId={answers[answerKey]}
+                    onSelect={selectAnswer}
+                    reflections={reflectionsByQuestion[question.id] ?? []}
                   />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ))}
+                );
+              })}
+            </div>
+          ))
+        ) : showSections ? (
+          // FILTER (always) or CONTEXT with multiple SubTopics: render each SubTopic as a labeled section
+          currentContent.subTopics.map(subTopic => (
+            <div key={subTopic.id} className="space-y-4">
+              <h3 className="border-l-4 border-primary pl-3 text-base font-medium text-primary">
+                {subTopic.name}
+              </h3>
+              {subTopic.dimensions.map(dimension => (
+                <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-24 space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">{dimension.name}</h4>
+                  {dimension.questions.map(question => (
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      answerKey={question.id}
+                      selectedOptionId={answers[question.id]}
+                      onSelect={selectAnswer}
+                      reflections={reflectionsByQuestion[question.id] ?? []}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ))
+        ) : (
+          // Single SubTopic (CONTEXT with 1 SubTopic): render dimensions directly
+          currentContent.dimensions.map(dimension => (
+            <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-24 space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">{dimension.name}</h3>
+              {dimension.questions.map(question => (
+                <QuestionCard
+                  key={question.id}
+                  question={question}
+                  answerKey={question.id}
+                  selectedOptionId={answers[question.id]}
+                  onSelect={selectAnswer}
+                  reflections={reflectionsByQuestion[question.id] ?? []}
+                />
+              ))}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Error display */}
@@ -306,9 +525,6 @@ export function QuestionnaireFlow({
         </Button>
 
         <div className="flex items-center gap-2">
-          {showSaved && (
-            <span className="text-sm text-green-600">{t('saved')}</span>
-          )}
           <Button
             variant="outline"
             onClick={handleSave}
@@ -338,17 +554,20 @@ export function QuestionnaireFlow({
           <DialogHeader>
             <DialogTitle>{t('unansweredTitle')}</DialogTitle>
             <DialogDescription>
-              {t('unansweredDescription', { count: unansweredQuestions.length })}
+              {t('unansweredDescription', { count: unansweredItems.length })}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-60 space-y-1 overflow-y-auto">
-            {unansweredQuestions.map((q) => (
+            {unansweredItems.map(item => (
               <button
-                key={q.id}
-                onClick={() => scrollToQuestion(q.id)}
+                key={item.answerKey}
+                onClick={() => scrollToQuestion(item.answerKey)}
                 className="w-full rounded-md px-3 py-2 text-left text-sm text-primary hover:bg-muted"
               >
-                {q.title}
+                {item.instanceLabel && (
+                  <span className="mr-1 text-xs text-muted-foreground">[{item.instanceLabel}]</span>
+                )}
+                {item.question.title}
               </button>
             ))}
           </div>
@@ -369,5 +588,63 @@ export function QuestionnaireFlow({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ─── QuestionCard Component ───────────────────────────────────────────
+
+function QuestionCard({
+  question,
+  answerKey,
+  selectedOptionId,
+  onSelect,
+  reflections,
+}: {
+  question: Question;
+  answerKey: string;
+  selectedOptionId?: string;
+  onSelect: (answerKey: string, optionId: string) => void;
+  reflections: ReflectionItem[];
+}) {
+  return (
+    <Card id={`question-${answerKey}`} className="scroll-mt-28">
+      <CardHeader>
+        <CardTitle className="text-sm">{question.title}</CardTitle>
+        {question.notes.length > 0 && (
+          <CardDescription>
+            {question.notes.map(note => (
+              <span key={note.id} className="block text-xs">
+                <strong>{note.label}:</strong> {note.content}
+              </span>
+            ))}
+          </CardDescription>
+        )}
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {question.answerOptions.map(option => {
+            const isSelected = selectedOptionId === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onSelect(answerKey, option.id)}
+                className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
+                  isSelected
+                    ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
+                    : 'border-border bg-background text-foreground hover:border-primary/50 hover:bg-muted/50'
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        <QuestionReflections
+          questionId={question.id}
+          initialReflections={reflections}
+        />
+      </CardContent>
+    </Card>
   );
 }

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { hasCompletedQuestionnaire, getActiveVersionWithStructure, getSavedDraftAnswers } from '@/server/queries/questionnaire';
+import { hasCompletedPreference, getUserPreferenceLabels } from '@/server/queries/preference';
 import { getUserReflections } from '@/server/queries/reflection';
 import { QuestionnaireFlow } from './QuestionnaireFlow';
 import { getTranslations } from 'next-intl/server';
@@ -17,10 +18,17 @@ export default async function QuestionnairePage() {
     redirect('/dashboard');
   }
 
-  const [version, reflectionsByQuestion, savedAnswers, t] = await Promise.all([
+  // Must complete preferences before questionnaire
+  const hasPref = await hasCompletedPreference(session.user.id);
+  if (!hasPref) {
+    redirect('/preferences');
+  }
+
+  const [version, reflectionsByQuestion, savedAnswers, userPreferences, t] = await Promise.all([
     getActiveVersionWithStructure(),
     getUserReflections(session.user.id),
     getSavedDraftAnswers(session.user.id),
+    getUserPreferenceLabels(session.user.id),
     getTranslations('questionnaire'),
   ]);
 
@@ -35,5 +43,12 @@ export default async function QuestionnairePage() {
     );
   }
 
-  return <QuestionnaireFlow version={version} reflectionsByQuestion={reflectionsByQuestion} savedAnswers={savedAnswers} />;
+  return (
+    <QuestionnaireFlow
+      version={version}
+      reflectionsByQuestion={reflectionsByQuestion}
+      savedAnswers={savedAnswers}
+      userPreferences={userPreferences}
+    />
+  );
 }

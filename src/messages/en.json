@@ -114,6 +114,7 @@
     "notAvailable": "Questionnaire Not Available",
     "notConfigured": "No active questionnaire is currently configured. Please contact an administrator.",
     "progress": "Progress",
+    "totalProgress": "Total Progress",
     "questionsCount": "{answered} / {total} questions",
     "previous": "Previous",
     "nextTopic": "Next Topic",
@@ -124,6 +125,12 @@
     "unansweredDescription": "You have {count} unanswered question(s). Click a question to jump to it.",
     "goBack": "Go Back",
     "continueAnyway": "Continue Anyway",
+    "save": "Save Progress",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "yourSelection": "Your selection",
+    "noContentForTopic": "No content available for this topic",
     "update": {
       "title": "Update Your Cognitive Profile",
       "descriptionWithActivity": "Reflect on your experience from <strong>{activity}</strong> and update your answers.",
@@ -447,7 +454,16 @@
         "adding": "Adding...",
         "saving": "Saving...",
         "save": "Save"
-      }
+      },
+      "preferenceMode": "Preference Mode",
+      "preferenceModeRepeat": "Repeat",
+      "preferenceModeFilter": "Filter",
+      "preferenceModeContext": "Context",
+      "showInReport": "Show in Report",
+      "hiddenFromReport": "Hidden from Report",
+      "linkedCategory": "Linked Preference",
+      "noLinkedCategory": "No Link",
+      "preferenceCategoryLabel": "Preference Category"
     },
     "activities": {
       "title": "Activities",
@@ -644,7 +660,9 @@
       "noSliders": "No sliders yet.",
       "sliderRange": "Range: {min}-{max}",
       "sliderDefault": "Default: {value}",
-      "sliderStep": "Step: {step}"
+      "sliderStep": "Step: {step}",
+      "groupingBasis": "Community Grouping",
+      "inputTypeLabel": "Selection Mode"
     },
     "settings": {
       "title": "System Settings",

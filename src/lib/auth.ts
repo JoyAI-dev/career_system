@@ -115,12 +115,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 /**
  * Helper to require authentication in Server Actions.
  * Throws if not authenticated. Returns the session.
+ * Also verifies the user still exists in the database (handles stale JWT sessions
+ * after database reset or user deletion).
  */
 export async function requireAuth() {
   const session = await auth();
   if (!session?.user) {
     throw new UnauthorizedError();
   }
+
+  // Verify user still exists in DB (guards against stale JWT tokens)
+  const userExists = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true },
+  });
+  if (!userExists) {
+    throw new UnauthorizedError();
+  }
+
   return session;
 }
 
@@ -139,12 +151,23 @@ export async function requireAdmin() {
 /**
  * Require authentication in Server Components (pages/layouts).
  * Redirects to /login instead of throwing, which avoids 500 errors.
+ * Also verifies the user still exists in the database.
  */
 export async function requireAuthPage() {
   const session = await auth();
   if (!session?.user) {
     redirect('/login');
   }
+
+  // Verify user still exists in DB (guards against stale JWT tokens)
+  const userExists = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true },
+  });
+  if (!userExists) {
+    redirect('/login');
+  }
+
   return session;
 }
 

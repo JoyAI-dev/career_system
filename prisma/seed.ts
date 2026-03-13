@@ -146,6 +146,7 @@ async function main() {
     description?: string;
     order: number;
     inputType: 'SINGLE_SELECT' | 'MULTI_SELECT' | 'HIERARCHICAL_MULTI' | 'SLIDER';
+    isGroupingBasis?: boolean;
     options?: SeedPrefOption[];
     sliders?: SeedPrefSlider[];
   }
@@ -153,7 +154,7 @@ async function main() {
   const prefCategories: SeedPrefCategory[] = [
     {
       name: '地点', slug: 'location', icon: 'MapPin', order: 1,
-      inputType: 'MULTI_SELECT',
+      inputType: 'MULTI_SELECT', isGroupingBasis: true,
       options: [
         { label: '北京', value: 'beijing', order: 1 },
         { label: '上海', value: 'shanghai', order: 2 },
@@ -171,7 +172,7 @@ async function main() {
     },
     {
       name: '自我定位', slug: 'self-positioning', icon: 'UserCircle', order: 2,
-      inputType: 'HIERARCHICAL_MULTI',
+      inputType: 'HIERARCHICAL_MULTI', isGroupingBasis: true,
       options: [
         { label: '商人', value: 'businessman', order: 1 },
         { label: '创业者', value: 'entrepreneur', order: 2 },
@@ -187,7 +188,7 @@ async function main() {
     },
     {
       name: '发展方向', slug: 'development-direction', icon: 'Compass', order: 3,
-      inputType: 'HIERARCHICAL_MULTI',
+      inputType: 'HIERARCHICAL_MULTI', isGroupingBasis: true,
       options: [
         {
           label: '公共部门', value: 'public-sector', order: 1,
@@ -216,7 +217,7 @@ async function main() {
     },
     {
       name: '行业领域', slug: 'industry', icon: 'Building2', order: 4,
-      inputType: 'MULTI_SELECT',
+      inputType: 'MULTI_SELECT', isGroupingBasis: true,
       options: [
         { label: '科技', value: 'tech', order: 1 },
         { label: '金融', value: 'finance', order: 2 },
@@ -231,7 +232,7 @@ async function main() {
     },
     {
       name: '平台性质', slug: 'platform-type', icon: 'Flag', order: 5,
-      inputType: 'SINGLE_SELECT',
+      inputType: 'SINGLE_SELECT', isGroupingBasis: true,
       options: [
         { label: '国内', value: 'domestic', order: 1 },
         { label: '外资', value: 'foreign', order: 2 },
@@ -240,7 +241,7 @@ async function main() {
     },
     {
       name: '企业规模', slug: 'company-size', icon: 'Building', order: 6,
-      inputType: 'SINGLE_SELECT',
+      inputType: 'SINGLE_SELECT', isGroupingBasis: true,
       options: [
         { label: '财富500强/跨国企业 (万亿/千亿)', value: 'fortune500', order: 1 },
         { label: '百亿', value: 'ten-billion', order: 2 },
@@ -365,12 +366,16 @@ async function main() {
       Prisma.sql`SELECT id FROM preference_categories WHERE slug = ${cat.slug} LIMIT 1`,
     );
     let categoryId: string;
+    const isGroupingBasis = cat.isGroupingBasis ?? false;
     if (existing.length > 0) {
       categoryId = existing[0].id;
+      await prisma.$queryRaw(
+        Prisma.sql`UPDATE preference_categories SET "isGroupingBasis" = ${isGroupingBasis} WHERE id = ${categoryId}`,
+      );
     } else {
       const inserted = await prisma.$queryRaw<{ id: string }[]>(
-        Prisma.sql`INSERT INTO preference_categories (id, name, slug, icon, description, "order", "inputType", "isActive")
-          VALUES (gen_random_uuid(), ${cat.name}, ${cat.slug}, ${cat.icon}, ${cat.description ?? null}, ${cat.order}, ${cat.inputType}::"PreferenceInputType", true)
+        Prisma.sql`INSERT INTO preference_categories (id, name, slug, icon, description, "order", "inputType", "isActive", "isGroupingBasis")
+          VALUES (gen_random_uuid(), ${cat.name}, ${cat.slug}, ${cat.icon}, ${cat.description ?? null}, ${cat.order}, ${cat.inputType}::"PreferenceInputType", true, ${isGroupingBasis})
           RETURNING id`,
       );
       categoryId = inserted[0].id;

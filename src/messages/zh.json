@@ -114,6 +114,7 @@
     "notAvailable": "问卷暂不可用",
     "notConfigured": "当前没有配置有效的问卷，请联系管理员。",
     "progress": "进度",
+    "totalProgress": "总进度",
     "questionsCount": "{answered} / {total} 题",
     "previous": "上一步",
     "nextTopic": "下一主题",
@@ -122,12 +123,15 @@
     "save": "保存进度",
     "saving": "保存中...",
     "saved": "已保存",
+    "saveFailed": "保存失败",
     "submitAnyway": "仍然提交",
     "loadingChart": "加载图表中...",
     "unansweredTitle": "有未回答的问题",
     "unansweredDescription": "还有 {count} 道题未回答。点击问题可快速跳转。",
     "goBack": "返回作答",
     "continueAnyway": "继续下一步",
+    "yourSelection": "你的选择",
+    "noContentForTopic": "此话题暂无可回答的内容",
     "update": {
       "title": "更新认知档案",
       "descriptionWithActivity": "回顾您在 <strong>{activity}</strong> 中的体验，更新您的答案。",
@@ -451,7 +455,16 @@
         "adding": "添加中...",
         "saving": "保存中...",
         "save": "保存"
-      }
+      },
+      "preferenceMode": "偏好模式",
+      "preferenceModeRepeat": "重复",
+      "preferenceModeFilter": "过滤",
+      "preferenceModeContext": "上下文",
+      "showInReport": "在报告中显示",
+      "hiddenFromReport": "不在报告中",
+      "linkedCategory": "关联偏好",
+      "noLinkedCategory": "无关联",
+      "preferenceCategoryLabel": "偏好分类"
     },
     "activities": {
       "title": "活动",
@@ -648,7 +661,9 @@
       "noSliders": "暂无滑块。",
       "sliderRange": "范围: {min}-{max}",
       "sliderDefault": "默认: {value}",
-      "sliderStep": "步长: {step}"
+      "sliderStep": "步长: {step}",
+      "groupingBasis": "社群分组依据",
+      "inputTypeLabel": "选择模式"
     },
     "settings": {
       "title": "系统设置",

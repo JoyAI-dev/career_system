@@ -22,12 +22,15 @@ function getUpdateTopicSchema(t: (key: string) => string) {
   return z.object({
     id: z.string().min(1),
     name: z.string().min(1, t('nameRequired')).max(200),
+    preferenceMode: z.enum(['REPEAT', 'FILTER', 'CONTEXT']).optional(),
+    showInReport: z.boolean().optional(),
+    preferenceCategoryId: z.string().nullable().optional(),
   });
 }
 
 function getCreateDimensionSchema(t: (key: string) => string) {
   return z.object({
-    topicId: z.string().min(1, t('topicRequired')),
+    subTopicId: z.string().min(1, t('topicRequired')),
     name: z.string().min(1, t('nameRequired')).max(200),
   });
 }
@@ -126,13 +129,22 @@ async function getVersionIdFromTopic(topicId: string, te: (key: string) => strin
   return topic.versionId;
 }
 
+async function getVersionIdFromSubTopic(subTopicId: string, te: (key: string) => string) {
+  const subTopic = await prisma.subTopic.findUnique({
+    where: { id: subTopicId },
+    include: { topic: { select: { versionId: true } } },
+  });
+  if (!subTopic) throw new Error(te('topicNotFound'));
+  return subTopic.topic.versionId;
+}
+
 async function getVersionIdFromDimension(dimensionId: string, te: (key: string) => string) {
   const dimension = await prisma.dimension.findUnique({
     where: { id: dimensionId },
-    include: { topic: { select: { versionId: true } } },
+    include: { subTopic: { include: { topic: { select: { versionId: true } } } } },
   });
   if (!dimension) throw new Error(te('dimensionNotFound'));
-  return dimension.topic.versionId;
+  return dimension.subTopic.topic.versionId;
 }
 
 async function getVersionIdFromQuestion(questionId: string, te: (key: string) => string) {
@@ -140,12 +152,12 @@ async function getVersionIdFromQuestion(questionId: string, te: (key: string) =>
     where: { id: questionId },
     include: {
       dimension: {
-        include: { topic: { select: { versionId: true } } },
+        include: { subTopic: { include: { topic: { select: { versionId: true } } } } },
       },
     },
   });
   if (!question) throw new Error(te('questionNotFound'));
-  return question.dimension.topic.versionId;
+  return question.dimension.subTopic.topic.versionId;
 }
 
 // ─── Version Management ─────────────────────────────────────────────
@@ -168,14 +180,19 @@ export async function createDraftVersion(): Promise<ActionState> {
       topics: {
         orderBy: { order: 'asc' },
         include: {
-          dimensions: {
+          subTopics: {
             orderBy: { order: 'asc' },
             include: {
-              questions: {
+              dimensions: {
                 orderBy: { order: 'asc' },
                 include: {
-                  notes: true,
-                  answerOptions: true,
+                  questions: {
+                    orderBy: { order: 'asc' },
+                    include: {
+                      notes: true,
+                      answerOptions: true,
+                    },
+                  },
                 },
               },
             },
@@ -206,42 +223,55 @@ export async function createDraftVersion(): Promise<ActionState> {
             versionId: newVersion.id,
             name: topic.name,
             order: topic.order,
+            preferenceMode: topic.preferenceMode,
+            showInReport: topic.showInReport,
+            preferenceCategoryId: topic.preferenceCategoryId,
           },
         });
-        for (const dim of topic.dimensions) {
-          const newDim = await tx.dimension.create({
+        for (const subTopic of topic.subTopics) {
+          const newSubTopic = await tx.subTopic.create({
             data: {
               topicId: newTopic.id,
-              name: dim.name,
-              order: dim.order,
+              name: subTopic.name,
+              order: subTopic.order,
+              preferenceOptionId: subTopic.preferenceOptionId,
             },
           });
-          for (const q of dim.questions) {
-            const newQ = await tx.question.create({
+          for (const dim of subTopic.dimensions) {
+            const newDim = await tx.dimension.create({
               data: {
-                dimensionId: newDim.id,
-                title: q.title,
-                order: q.order,
+                subTopicId: newSubTopic.id,
+                name: dim.name,
+                order: dim.order,
               },
             });
-            for (const note of q.notes) {
-              await tx.questionNote.create({
+            for (const q of dim.questions) {
+              const newQ = await tx.question.create({
                 data: {
-                  questionId: newQ.id,
-                  label: note.label,
-                  content: note.content,
+                  dimensionId: newDim.id,
+                  title: q.title,
+                  order: q.order,
                 },
               });
-            }
-            for (const opt of q.answerOptions) {
-              await tx.answerOption.create({
-                data: {
-                  questionId: newQ.id,
-                  label: opt.label,
-                  score: opt.score,
-                  order: opt.order,
-                },
-              });
+              for (const note of q.notes) {
+                await tx.questionNote.create({
+                  data: {
+                    questionId: newQ.id,
+                    label: note.label,
+                    content: note.content,
+                  },
+                });
+              }
+              for (const opt of q.answerOptions) {
+                await tx.answerOption.create({
+                  data: {
+                    questionId: newQ.id,
+                    label: opt.label,
+                    score: opt.score,
+                    order: opt.order,
+                  },
+                });
+              }
             }
           }
         }
@@ -323,9 +353,19 @@ export async function deleteDraftVersion(versionId: string): Promise<ActionState
 
 // ─── Bulk Import ───────────────────────────────────────────────────
 
-export type ImportTopic = {
+export type ImportSubTopic = {
   name: string;
   dimensions: {
+    name: string;
+    questions: string[];
+  }[];
+};
+
+export type ImportTopic = {
+  name: string;
+  subTopics?: ImportSubTopic[];
+  // Legacy: if subTopics not provided, dimensions are wrapped in a default SubTopic
+  dimensions?: {
     name: string;
     questions: string[];
   }[];
@@ -358,25 +398,41 @@ export async function importQuestionnaireStructure(
         },
       });
 
-      let dimOrder = 1;
-      for (const dim of topic.dimensions) {
-        const newDim = await tx.dimension.create({
+      // Normalize: if subTopics provided, use them; otherwise wrap dimensions in a default SubTopic
+      const subTopics: ImportSubTopic[] = topic.subTopics ?? [
+        { name: topic.name, dimensions: topic.dimensions ?? [] },
+      ];
+
+      let stOrder = 1;
+      for (const st of subTopics) {
+        const newSubTopic = await tx.subTopic.create({
           data: {
             topicId: newTopic.id,
-            name: dim.name,
-            order: dimOrder++,
+            name: st.name,
+            order: stOrder++,
           },
         });
 
-        let qOrder = 1;
-        for (const questionTitle of dim.questions) {
-          await tx.question.create({
+        let dimOrder = 1;
+        for (const dim of st.dimensions) {
+          const newDim = await tx.dimension.create({
             data: {
-              dimensionId: newDim.id,
-              title: questionTitle,
-              order: qOrder++,
+              subTopicId: newSubTopic.id,
+              name: dim.name,
+              order: dimOrder++,
             },
           });
+
+          let qOrder = 1;
+          for (const questionTitle of dim.questions) {
+            await tx.question.create({
+              data: {
+                dimensionId: newDim.id,
+                title: questionTitle,
+                order: qOrder++,
+              },
+            });
+          }
         }
       }
     }
@@ -431,9 +487,13 @@ export async function updateTopic(
   const te = await getTranslations('serverErrors');
   const updateTopicSchema = getUpdateTopicSchema(tv);
 
+  const rawCategoryId = formData.get('preferenceCategoryId');
   const parsed = updateTopicSchema.safeParse({
     id: formData.get('id'),
     name: formData.get('name'),
+    preferenceMode: formData.get('preferenceMode') || undefined,
+    showInReport: formData.has('showInReport') ? formData.get('showInReport') === 'on' : false,
+    preferenceCategoryId: rawCategoryId && rawCategoryId !== '' ? rawCategoryId : null,
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
@@ -442,7 +502,14 @@ export async function updateTopic(
 
   await prisma.topic.update({
     where: { id: parsed.data.id },
-    data: { name: parsed.data.name },
+    data: {
+      name: parsed.data.name,
+      ...(parsed.data.preferenceMode !== undefined && { preferenceMode: parsed.data.preferenceMode }),
+      ...(parsed.data.showInReport !== undefined && { showInReport: parsed.data.showInReport }),
+      ...(parsed.data.preferenceCategoryId !== undefined && {
+        preferenceCategoryId: parsed.data.preferenceCategoryId,
+      }),
+    },
   });
 
   revalidatePath(ADMIN_PATH);
@@ -505,22 +572,22 @@ export async function createDimension(
   const createDimensionSchema = getCreateDimensionSchema(tv);
 
   const parsed = createDimensionSchema.safeParse({
-    topicId: formData.get('topicId'),
+    subTopicId: formData.get('subTopicId'),
     name: formData.get('name'),
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  const versionId = await getVersionIdFromTopic(parsed.data.topicId, te);
+  const versionId = await getVersionIdFromSubTopic(parsed.data.subTopicId, te);
   await requireDraftVersion(versionId, te);
 
   const maxOrder = await prisma.dimension.aggregate({
-    where: { topicId: parsed.data.topicId },
+    where: { subTopicId: parsed.data.subTopicId },
     _max: { order: true },
   });
 
   await prisma.dimension.create({
     data: {
-      topicId: parsed.data.topicId,
+      subTopicId: parsed.data.subTopicId,
       name: parsed.data.name,
       order: (maxOrder._max.order ?? -1) + 1,
     },
@@ -580,12 +647,12 @@ export async function reorderDimension(
   const dim = await prisma.dimension.findUnique({ where: { id: dimensionId } });
   if (!dim) return { errors: { _form: [te('dimensionNotFound')] } };
 
-  const versionId = await getVersionIdFromTopic(dim.topicId, te);
+  const versionId = await getVersionIdFromSubTopic(dim.subTopicId, te);
   await requireDraftVersion(versionId, te);
 
   const sibling = await prisma.dimension.findFirst({
     where: {
-      topicId: dim.topicId,
+      subTopicId: dim.subTopicId,
       order: direction === 'up' ? { lt: dim.order } : { gt: dim.order },
     },
     orderBy: { order: direction === 'up' ? 'desc' : 'asc' },
@@ -945,39 +1012,43 @@ export async function saveQuestionnaireDraft(
     return { errors: { _form: [te('questionnaireInactive')] } };
   }
 
-  const rawAnswers: Record<string, string> = {};
+  // Parse answers from FormData:
+  //   answer_<questionId> = optionId           (FILTER/CONTEXT)
+  //   repeat_<questionId>_<prefOptionId> = optionId  (REPEAT)
+  const parsedAnswers: { questionId: string; selectedOptionId: string; preferenceOptionId: string | null }[] = [];
   for (const [key, value] of formData.entries()) {
-    if (key.startsWith('answer_') && typeof value === 'string') {
+    if (typeof value !== 'string') continue;
+    if (key.startsWith('repeat_')) {
+      const match = key.match(/^repeat_(.+)_([^_]+)$/);
+      if (match) {
+        parsedAnswers.push({ questionId: match[1], selectedOptionId: value, preferenceOptionId: match[2] });
+      }
+    } else if (key.startsWith('answer_')) {
       const questionId = key.replace('answer_', '');
-      rawAnswers[questionId] = value;
+      parsedAnswers.push({ questionId, selectedOptionId: value, preferenceOptionId: null });
     }
   }
 
-  if (Object.keys(rawAnswers).length === 0) {
+  if (parsedAnswers.length === 0) {
     return { errors: { _form: [te('atLeastOneAnswer')] } };
   }
 
   // Validate all selected options belong to the right questions
-  const selectedOptionIds = Object.values(rawAnswers);
+  const selectedOptionIds = parsedAnswers.map((a) => a.selectedOptionId);
   const validOptions = await prisma.answerOption.findMany({
     where: { id: { in: selectedOptionIds } },
     select: { id: true, questionId: true },
   });
   const optionMap = new Map(validOptions.map((o) => [o.id, o.questionId]));
-  for (const [questionId, optionId] of Object.entries(rawAnswers)) {
-    const ownerQuestion = optionMap.get(optionId);
-    if (!ownerQuestion || ownerQuestion !== questionId) {
+  for (const answer of parsedAnswers) {
+    const ownerQuestion = optionMap.get(answer.selectedOptionId);
+    if (!ownerQuestion || ownerQuestion !== answer.questionId) {
       return { errors: { _form: [te('invalidAnswerOption')] } };
     }
   }
 
   // Save to the current (non-snapshot) record
   await prisma.$transaction(async (tx) => {
-    const answerData = Object.entries(rawAnswers).map(([questionId, selectedOptionId]) => ({
-      questionId,
-      selectedOptionId,
-    }));
-
     const existingCurrent = await tx.responseSnapshot.findFirst({
       where: { userId, isSnapshot: false },
       orderBy: { completedAt: 'desc' },
@@ -988,7 +1059,7 @@ export async function saveQuestionnaireDraft(
       // Delete old answers and insert new ones
       await tx.responseAnswer.deleteMany({ where: { snapshotId: existingCurrent.id } });
       await tx.responseAnswer.createMany({
-        data: answerData.map((a) => ({ ...a, snapshotId: existingCurrent.id })),
+        data: parsedAnswers.map((a) => ({ ...a, snapshotId: existingCurrent.id })),
       });
       await tx.responseSnapshot.update({
         where: { id: existingCurrent.id },
@@ -1004,7 +1075,7 @@ export async function saveQuestionnaireDraft(
         },
       });
       await tx.responseAnswer.createMany({
-        data: answerData.map((a) => ({ ...a, snapshotId: current.id })),
+        data: parsedAnswers.map((a) => ({ ...a, snapshotId: current.id })),
       });
     }
   });
@@ -1020,25 +1091,12 @@ export async function submitQuestionnaire(
 ): Promise<ActionState> {
   const session = await requireAuth();
   const userId = session.user.id;
-  const tv = await getTranslations('validation');
   const te = await getTranslations('serverErrors');
-  const submitQuestionnaireSchema = getSubmitQuestionnaireSchema(tv);
 
-  const rawAnswers: Record<string, string> = {};
-  for (const [key, value] of formData.entries()) {
-    if (key.startsWith('answer_') && typeof value === 'string') {
-      const questionId = key.replace('answer_', '');
-      rawAnswers[questionId] = value;
-    }
+  const versionId = formData.get('versionId') as string;
+  if (!versionId) {
+    return { errors: { _form: [te('versionRequired')] } };
   }
-
-  const parsed = submitQuestionnaireSchema.safeParse({
-    versionId: formData.get('versionId'),
-    answers: rawAnswers,
-  });
-  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
-
-  const { versionId, answers } = parsed.data;
 
   // Verify the version is active
   const version = await prisma.questionnaireVersion.findUnique({
@@ -1049,28 +1107,42 @@ export async function submitQuestionnaire(
     return { errors: { _form: [te('questionnaireInactive')] } };
   }
 
+  // Parse answers from FormData (supports both FILTER/CONTEXT and REPEAT modes)
+  const parsedAnswers: { questionId: string; selectedOptionId: string; preferenceOptionId: string | null }[] = [];
+  for (const [key, value] of formData.entries()) {
+    if (typeof value !== 'string') continue;
+    if (key.startsWith('repeat_')) {
+      const match = key.match(/^repeat_(.+)_([^_]+)$/);
+      if (match) {
+        parsedAnswers.push({ questionId: match[1], selectedOptionId: value, preferenceOptionId: match[2] });
+      }
+    } else if (key.startsWith('answer_')) {
+      const questionId = key.replace('answer_', '');
+      parsedAnswers.push({ questionId, selectedOptionId: value, preferenceOptionId: null });
+    }
+  }
+
+  if (parsedAnswers.length === 0) {
+    return { errors: { _form: [te('atLeastOneAnswer')] } };
+  }
+
   // Validate all selected options exist and belong to the right questions
-  const selectedOptionIds = Object.values(answers);
+  const selectedOptionIds = parsedAnswers.map((a) => a.selectedOptionId);
   const validOptions = await prisma.answerOption.findMany({
     where: { id: { in: selectedOptionIds } },
     select: { id: true, questionId: true },
   });
 
   const optionMap = new Map(validOptions.map((o) => [o.id, o.questionId]));
-  for (const [questionId, optionId] of Object.entries(answers)) {
-    const ownerQuestion = optionMap.get(optionId);
-    if (!ownerQuestion || ownerQuestion !== questionId) {
+  for (const answer of parsedAnswers) {
+    const ownerQuestion = optionMap.get(answer.selectedOptionId);
+    if (!ownerQuestion || ownerQuestion !== answer.questionId) {
       return { errors: { _form: [te('invalidAnswerOption')] } };
     }
   }
 
   // Save/update current record (editable) + ensure initial snapshot (frozen) exists.
   await prisma.$transaction(async (tx) => {
-    const answerData = Object.entries(answers).map(([questionId, selectedOptionId]) => ({
-      questionId,
-      selectedOptionId,
-    }));
-
     // Upsert current editable record with submitted answers.
     const existingCurrent = await tx.responseSnapshot.findFirst({
       where: { userId, isSnapshot: false },
@@ -1083,7 +1155,7 @@ export async function submitQuestionnaire(
       currentId = existingCurrent.id;
       await tx.responseAnswer.deleteMany({ where: { snapshotId: currentId } });
       await tx.responseAnswer.createMany({
-        data: answerData.map((a) => ({ ...a, snapshotId: currentId })),
+        data: parsedAnswers.map((a) => ({ ...a, snapshotId: currentId })),
       });
       await tx.responseSnapshot.update({
         where: { id: currentId },
@@ -1105,7 +1177,7 @@ export async function submitQuestionnaire(
       });
       currentId = current.id;
       await tx.responseAnswer.createMany({
-        data: answerData.map((a) => ({ ...a, snapshotId: currentId })),
+        data: parsedAnswers.map((a) => ({ ...a, snapshotId: currentId })),
       });
     }
 
@@ -1126,7 +1198,7 @@ export async function submitQuestionnaire(
         },
       });
       await tx.responseAnswer.createMany({
-        data: answerData.map((a) => ({ ...a, snapshotId: snapshot.id })),
+        data: parsedAnswers.map((a) => ({ ...a, snapshotId: snapshot.id })),
       });
     }
   });
@@ -1144,9 +1216,7 @@ export async function submitQuestionnaireUpdate(
 ): Promise<ActionState> {
   const session = await requireAuth();
   const userId = session.user.id;
-  const tv = await getTranslations('validation');
   const te = await getTranslations('serverErrors');
-  const submitQuestionnaireSchema = getSubmitQuestionnaireSchema(tv);
 
   const activityId = formData.get('activityId') as string | null;
 
@@ -1162,21 +1232,29 @@ export async function submitQuestionnaireUpdate(
     }
   }
 
-  const rawAnswers: Record<string, string> = {};
+  // Parse answers from FormData (supports both FILTER/CONTEXT and REPEAT modes)
+  const parsedAnswers: { questionId: string; selectedOptionId: string; preferenceOptionId: string | null }[] = [];
   for (const [key, value] of formData.entries()) {
-    if (key.startsWith('answer_') && typeof value === 'string') {
+    if (typeof value !== 'string') continue;
+    if (key.startsWith('repeat_')) {
+      const match = key.match(/^repeat_(.+)_([^_]+)$/);
+      if (match) {
+        parsedAnswers.push({ questionId: match[1], selectedOptionId: value, preferenceOptionId: match[2] });
+      }
+    } else if (key.startsWith('answer_')) {
       const questionId = key.replace('answer_', '');
-      rawAnswers[questionId] = value;
+      parsedAnswers.push({ questionId, selectedOptionId: value, preferenceOptionId: null });
     }
   }
 
-  const parsed = submitQuestionnaireSchema.safeParse({
-    versionId: formData.get('versionId'),
-    answers: rawAnswers,
-  });
-  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
+  const versionId = formData.get('versionId') as string;
+  if (!versionId) {
+    return { errors: { _form: [te('versionRequired')] } };
+  }
 
-  const { versionId, answers } = parsed.data;
+  if (parsedAnswers.length === 0) {
+    return { errors: { _form: [te('atLeastOneAnswer')] } };
+  }
 
   // Verify the version is active
   const version = await prisma.questionnaireVersion.findUnique({
@@ -1188,15 +1266,15 @@ export async function submitQuestionnaireUpdate(
   }
 
   // Validate all selected options belong to the right questions
-  const selectedOptionIds = Object.values(answers);
+  const selectedOptionIds = parsedAnswers.map((a) => a.selectedOptionId);
   const validOptions = await prisma.answerOption.findMany({
     where: { id: { in: selectedOptionIds } },
     select: { id: true, questionId: true },
   });
   const optionMap = new Map(validOptions.map((o) => [o.id, o.questionId]));
-  for (const [questionId, optionId] of Object.entries(answers)) {
-    const ownerQuestion = optionMap.get(optionId);
-    if (!ownerQuestion || ownerQuestion !== questionId) {
+  for (const answer of parsedAnswers) {
+    const ownerQuestion = optionMap.get(answer.selectedOptionId);
+    if (!ownerQuestion || ownerQuestion !== answer.questionId) {
       return { errors: { _form: [te('invalidAnswerOption')] } };
     }
   }
@@ -1225,11 +1303,6 @@ export async function submitQuestionnaireUpdate(
 
   // Update current record + create frozen snapshot in a single transaction
   await prisma.$transaction(async (tx) => {
-    const answerData = Object.entries(answers).map(([questionId, selectedOptionId]) => ({
-      questionId,
-      selectedOptionId,
-    }));
-
     // Update or create current record
     const existingCurrent = await tx.responseSnapshot.findFirst({
       where: { userId, isSnapshot: false },
@@ -1241,7 +1314,7 @@ export async function submitQuestionnaireUpdate(
       // Delete old answers and insert new ones
       await tx.responseAnswer.deleteMany({ where: { snapshotId: existingCurrent.id } });
       await tx.responseAnswer.createMany({
-        data: answerData.map((a) => ({ ...a, snapshotId: existingCurrent.id })),
+        data: parsedAnswers.map((a) => ({ ...a, snapshotId: existingCurrent.id })),
       });
       await tx.responseSnapshot.update({
         where: { id: existingCurrent.id },
@@ -1252,7 +1325,7 @@ export async function submitQuestionnaireUpdate(
         data: { userId, versionId, isSnapshot: false, context: contextStr },
       });
       await tx.responseAnswer.createMany({
-        data: answerData.map((a) => ({ ...a, snapshotId: current.id })),
+        data: parsedAnswers.map((a) => ({ ...a, snapshotId: current.id })),
       });
     }
 
@@ -1267,7 +1340,7 @@ export async function submitQuestionnaireUpdate(
       },
     });
     await tx.responseAnswer.createMany({
-      data: answerData.map((a) => ({ ...a, snapshotId: snapshot.id })),
+      data: parsedAnswers.map((a) => ({ ...a, snapshotId: snapshot.id })),
     });
   });
 
@@ -1277,10 +1350,12 @@ export async function submitQuestionnaireUpdate(
 /**
  * Update a single answer in the user's current (editable) record.
  * If no current record exists, creates one from the latest snapshot.
+ * For REPEAT mode, preferenceOptionId identifies which preference selection the answer belongs to.
  */
 export async function updateCurrentAnswer(
   questionId: string,
   optionId: string,
+  preferenceOptionId?: string | null,
 ): Promise<ActionState> {
   const session = await requireAuth();
   const userId = session.user.id;
@@ -1304,6 +1379,8 @@ export async function updateCurrentAnswer(
     return { errors: { _form: [te('questionnaireInactive')] } };
   }
 
+  const prefOptId = preferenceOptionId ?? null;
+
   await prisma.$transaction(async (tx) => {
     // Lock any existing current record to prevent concurrent duplicate creation
     await tx.$queryRaw`SELECT id FROM "response_snapshots" WHERE "userId" = ${userId} AND "isSnapshot" = false LIMIT 1 FOR UPDATE`;
@@ -1319,7 +1396,7 @@ export async function updateCurrentAnswer(
       const latestSnapshot = await tx.responseSnapshot.findFirst({
         where: { userId, isSnapshot: true },
         orderBy: { completedAt: 'desc' },
-        include: { answers: { select: { questionId: true, selectedOptionId: true } } },
+        include: { answers: { select: { questionId: true, selectedOptionId: true, preferenceOptionId: true } } },
       });
 
       const newCurrent = await tx.responseSnapshot.create({
@@ -1337,6 +1414,7 @@ export async function updateCurrentAnswer(
             snapshotId: newCurrent.id,
             questionId: a.questionId,
             selectedOptionId: a.selectedOptionId,
+            preferenceOptionId: a.preferenceOptionId,
           })),
         });
       }
@@ -1344,9 +1422,13 @@ export async function updateCurrentAnswer(
       currentRecord = { id: newCurrent.id };
     }
 
-    // Upsert the answer
+    // Upsert the answer (include preferenceOptionId in lookup for REPEAT mode)
     const existingAnswer = await tx.responseAnswer.findFirst({
-      where: { snapshotId: currentRecord.id, questionId },
+      where: {
+        snapshotId: currentRecord.id,
+        questionId,
+        preferenceOptionId: prefOptId,
+      },
     });
 
     if (existingAnswer) {
@@ -1360,6 +1442,7 @@ export async function updateCurrentAnswer(
           snapshotId: currentRecord.id,
           questionId,
           selectedOptionId: optionId,
+          preferenceOptionId: prefOptId,
         },
       });
     }
@@ -1379,7 +1462,7 @@ export async function createSnapshot(label?: string): Promise<ActionState> {
   const currentRecord = await prisma.responseSnapshot.findFirst({
     where: { userId, isSnapshot: false },
     orderBy: { completedAt: 'desc' },
-    include: { answers: { select: { questionId: true, selectedOptionId: true } } },
+    include: { answers: { select: { questionId: true, selectedOptionId: true, preferenceOptionId: true } } },
   });
 
   if (!currentRecord || currentRecord.answers.length === 0) {
@@ -1401,6 +1484,7 @@ export async function createSnapshot(label?: string): Promise<ActionState> {
         snapshotId: snapshot.id,
         questionId: a.questionId,
         selectedOptionId: a.selectedOptionId,
+        preferenceOptionId: a.preferenceOptionId,
       })),
     });
   });

@@ -1,0 +1,8 @@
+{
+  "id": "Q-1",
+  "title": "新用户公告流程",
+  "user": "a11",
+  "description": "验证新注册用户的完整公告流程：首次登录看到20秒倒计时公告 → 关闭 → 进入偏好页 → 进入问卷页 → 登出 → 重新登录 → 公告无倒计时可立即关闭",
+  "tags": ["announcement", "countdown", "new-user", "login-flow"],
+  "status": "ready"
+}

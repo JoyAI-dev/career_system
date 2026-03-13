@@ -9,7 +9,11 @@ Student career exploration platform (学生职业探索平台) built with Next.j
 ## Commands
 
 ```bash
-./dev.sh                 # Local dev server (port 3450, public: career-staging.joysort.cn)
+pm2 start ecosystem.config.cjs   # Start dev server via pm2 (port 3450, public: career-staging.joysort.cn)
+pm2 restart career-staging       # Restart dev server (cleanly kills all child processes)
+pm2 stop career-staging          # Stop dev server
+pm2 logs career-staging          # View dev server logs
+pm2 status                       # Check dev server status
 npm run build            # Production build (runs prisma generate + next build)
 npm run lint             # ESLint (flat config, next/core-web-vitals + prettier)
 npm run typecheck        # TypeScript type checking
@@ -30,7 +34,19 @@ npx vitest run --testNamePattern "pattern"              # By test name
 
 ### Local Development (Staging)
 
-Run `./dev.sh` to start the dev server. It uses `.env.dev` (not `.env.local`) and listens on port 3450.
+Dev server is managed by **pm2** via `ecosystem.config.cjs` (pm2 name: `career-staging`, port 3450). Environment variables are embedded in `ecosystem.config.cjs` (sourced from `.env.dev`).
+
+```bash
+pm2 start ecosystem.config.cjs    # First time: register and start
+pm2 restart career-staging         # Restart (cleanly kills entire process tree including next-server)
+pm2 stop career-staging            # Stop
+pm2 logs career-staging            # View logs (stdout + stderr)
+pm2 status                         # Check status
+```
+
+**Why pm2 instead of `./dev.sh`**: `next dev` spawns a deep process tree (`npx` → `sh` → `node` → `next-server` → `node`). Manually killing the top process leaves orphan `next-server` processes holding the port. pm2's `treekill` ensures all child processes are properly terminated on stop/restart.
+
+`./dev.sh` is retained for manual one-off testing only, not for regular development.
 
 ```
 Local:  http://localhost:3450
@@ -51,14 +67,18 @@ DATABASE_URL="postgresql://career_staging:career_staging_2026@127.0.0.1:5432/car
 
 # Seed data (temporarily swap env, then restore)
 cp .env.dev .env.local && npx prisma db seed && rm .env.local
+
+# Start dev server
+pm2 start ecosystem.config.cjs
 ```
 
 **ai_helper on staging**: `https://career-staging.joysort.cn/ai_helper/` is protected by HTTP basic auth (admin / L0ndon2016!).
 
 **Env files**:
-- `.env.dev` — local dev/staging config (committed to .gitignore, not in git)
+- `ecosystem.config.cjs` — pm2 config with embedded env vars for dev/staging (the primary way to run dev server)
+- `.env.dev` — env var reference file (not directly used by pm2, kept for manual `./dev.sh` testing)
 - `.env.local` — production config (only exists on prod server `8.131.74.70:/opt/career_system/.env.local`)
-- Never use `.env.local` locally; use `.env.dev` via `./dev.sh`
+- Never use `.env.local` locally
 
 ### Deployment
 Use the `/deploy` skill with arguments: `full`, `code-only`, `db-migrate`, `restart`. Production is at `8.131.74.70` (pm2: career-system, port 3000), proxied through `career.joysort.cn`.

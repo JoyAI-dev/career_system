@@ -114,6 +114,7 @@
     "notAvailable": "Questionnaire non disponible",
     "notConfigured": "Aucun questionnaire actif n'est actuellement configuré. Veuillez contacter un administrateur.",
     "progress": "Progression",
+    "totalProgress": "Progression totale",
     "questionsCount": "{answered} / {total} questions",
     "previous": "Précédent",
     "nextTopic": "Sujet suivant",
@@ -124,6 +125,12 @@
     "unansweredDescription": "Vous avez {count} question(s) sans réponse. Cliquez pour y accéder.",
     "goBack": "Retour",
     "continueAnyway": "Continuer quand même",
+    "save": "Sauvegarder",
+    "saving": "Sauvegarde...",
+    "saved": "Sauvegardé",
+    "saveFailed": "Échec de sauvegarde",
+    "yourSelection": "Votre sélection",
+    "noContentForTopic": "Aucun contenu disponible pour ce sujet",
     "update": {
       "title": "Mettre à jour votre profil cognitif",
       "descriptionWithActivity": "Réfléchissez à votre expérience de <strong>{activity}</strong> et mettez à jour vos réponses.",
@@ -447,7 +454,16 @@
         "adding": "Ajout...",
         "saving": "Enregistrement...",
         "save": "Enregistrer"
-      }
+      },
+      "preferenceMode": "Mode de préférence",
+      "preferenceModeRepeat": "Répétition",
+      "preferenceModeFilter": "Filtre",
+      "preferenceModeContext": "Contexte",
+      "showInReport": "Afficher dans le rapport",
+      "hiddenFromReport": "Masqué du rapport",
+      "linkedCategory": "Préférence liée",
+      "noLinkedCategory": "Aucun lien",
+      "preferenceCategoryLabel": "Catégorie de préférence"
     },
     "activities": {
       "title": "Activités",
@@ -644,7 +660,9 @@
       "noSliders": "Aucun curseur pour le moment.",
       "sliderRange": "Plage : {min}-{max}",
       "sliderDefault": "Défaut : {value}",
-      "sliderStep": "Pas : {step}"
+      "sliderStep": "Pas : {step}",
+      "groupingBasis": "Base de regroupement",
+      "inputTypeLabel": "Mode de sélection"
     },
     "settings": {
       "title": "Paramètres système",

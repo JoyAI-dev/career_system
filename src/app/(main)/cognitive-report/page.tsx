@@ -92,24 +92,30 @@ export default async function CognitiveReportPage() {
           id: t.id,
           name: t.name,
           order: t.order,
-          dimensions: t.dimensions.map((d) => ({
-            id: d.id,
-            name: d.name,
-            order: d.order,
-            questions: d.questions.map((q) => ({
-              id: q.id,
-              title: q.title,
-              order: q.order,
-              notes: q.notes.map((n) => ({
-                id: n.id,
-                label: n.label,
-                content: n.content,
-              })),
-              answerOptions: q.answerOptions.map((o) => ({
-                id: o.id,
-                label: o.label,
-                score: o.score,
-                order: o.order,
+          showInReport: t.showInReport,
+          subTopics: t.subTopics.map((st) => ({
+            id: st.id,
+            name: st.name,
+            order: st.order,
+            dimensions: st.dimensions.map((d) => ({
+              id: d.id,
+              name: d.name,
+              order: d.order,
+              questions: d.questions.map((q) => ({
+                id: q.id,
+                title: q.title,
+                order: q.order,
+                notes: q.notes.map((n) => ({
+                  id: n.id,
+                  label: n.label,
+                  content: n.content,
+                })),
+                answerOptions: q.answerOptions.map((o) => ({
+                  id: o.id,
+                  label: o.label,
+                  score: o.score,
+                  order: o.order,
+                })),
               })),
             })),
           })),

@@ -1,0 +1,8 @@
+{
+  "id": "Q-3",
+  "title": "问卷恢复与完成流程",
+  "user": "a13",
+  "description": "验证部分完成的问卷恢复流程：公告已查看可立即关闭 → 偏好已完成跳过 → 问卷自动恢复草稿 → 导航到最后话题 → 回答留空题 → 提交 → 跳转dashboard",
+  "tags": ["questionnaire", "draft-resume", "completion", "dashboard"],
+  "status": "ready"
+}

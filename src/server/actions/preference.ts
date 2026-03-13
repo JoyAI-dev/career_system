@@ -228,6 +228,7 @@ export async function updatePreferenceCategory(
   const name = formData.get('name') as string;
   const icon = formData.get('icon') as string;
   const isActive = formData.get('isActive') === 'true';
+  const isGroupingBasis = formData.get('isGroupingBasis') === 'true';
 
   if (!id || !name) {
     return { errors: { _form: ['Name is required'] } };
@@ -235,7 +236,7 @@ export async function updatePreferenceCategory(
 
   await prisma.preferenceCategory.update({
     where: { id },
-    data: { name, icon: icon || undefined, isActive },
+    data: { name, icon: icon || undefined, isActive, isGroupingBasis },
   });
 
   revalidatePath('/admin/preferences');

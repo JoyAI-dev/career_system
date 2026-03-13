@@ -46,11 +46,18 @@ type Dimension = {
   questions: Question[];
 };
 
-type Topic = {
+type SubTopic = {
   id: string;
   name: string;
   order: number;
   dimensions: Dimension[];
+};
+
+type Topic = {
+  id: string;
+  name: string;
+  order: number;
+  subTopics: SubTopic[];
 };
 
 type Version = {
@@ -94,8 +101,9 @@ export function QuestionnaireUpdateFlow({
   const isFirstTopic = currentTopicIndex === 0;
   const isLastTopic = currentTopicIndex === topics.length - 1;
 
-  const topicQuestions = currentTopic.dimensions.flatMap((d) => d.questions);
-  const allQuestions = topics.flatMap((t) => t.dimensions.flatMap((d) => d.questions));
+  const topicDimensions = currentTopic.subTopics.flatMap((st) => st.dimensions);
+  const topicQuestions = topicDimensions.flatMap((d) => d.questions);
+  const allQuestions = topics.flatMap((t) => t.subTopics.flatMap((st) => st.dimensions.flatMap((d) => d.questions)));
   const totalQuestions = allQuestions.length;
   const answeredCount = allQuestions.filter((q) => answers[q.id]).length;
 
@@ -210,7 +218,7 @@ export function QuestionnaireUpdateFlow({
       {/* Topic stepper tabs */}
       <div className="mb-6 flex gap-1 overflow-x-auto">
         {topics.map((topic, idx) => {
-          const topicQs = topic.dimensions.flatMap((d) => d.questions);
+          const topicQs = topic.subTopics.flatMap((st) => st.dimensions.flatMap((d) => d.questions));
           const topicAnswered = topicQs.every((q) => answers[q.id]);
           const isCurrent = idx === currentTopicIndex;
 
@@ -234,7 +242,7 @@ export function QuestionnaireUpdateFlow({
 
       {/* Dimension navigation */}
       <DimensionNav
-        dimensions={currentTopic.dimensions.map((d) => ({ id: d.id, name: d.name }))}
+        dimensions={topicDimensions.map((d) => ({ id: d.id, name: d.name }))}
       />
 
       {/* Floating section progress */}
@@ -248,7 +256,7 @@ export function QuestionnaireUpdateFlow({
       <div className="space-y-6">
         <h2 className="text-lg font-semibold">{currentTopic.name}</h2>
 
-        {currentTopic.dimensions.map((dimension) => (
+        {topicDimensions.map((dimension) => (
           <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-24 space-y-4">
             <h3 className="text-sm font-medium text-muted-foreground">{dimension.name}</h3>
 

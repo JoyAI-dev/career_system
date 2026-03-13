@@ -431,7 +431,8 @@ model PreferenceCategory {
   description String?
   order       Int
   inputType   PreferenceInputType
-  isActive    Boolean             @default(true)
+  isActive        Boolean             @default(true)
+  isGroupingBasis Boolean             @default(false)
 
   topics  Topic[]            @relation("TopicPreference")
   options PreferenceOption[]

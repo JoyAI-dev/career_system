@@ -38,7 +38,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale}>
-      <body className={`${inter.variable} ${notoSansSC.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${inter.variable} ${notoSansSC.variable} ${geistMono.variable}`}>
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>

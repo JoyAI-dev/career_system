@@ -10,7 +10,9 @@ export async function hasCompletedQuestionnaire(userId: string) {
 
 /**
  * Get saved draft answers (from the current non-snapshot record).
- * Returns a map of questionId → optionId, or empty if no draft exists.
+ * Returns a map of answerKey → optionId, or empty if no draft exists.
+ * For REPEAT mode: key is `questionId::preferenceOptionId`
+ * For FILTER/CONTEXT: key is `questionId`
  */
 export async function getSavedDraftAnswers(userId: string): Promise<Record<string, string>> {
   const draft = await prisma.responseSnapshot.findFirst({
@@ -18,14 +20,17 @@ export async function getSavedDraftAnswers(userId: string): Promise<Record<strin
     orderBy: { completedAt: 'desc' },
     select: {
       answers: {
-        select: { questionId: true, selectedOptionId: true },
+        select: { questionId: true, selectedOptionId: true, preferenceOptionId: true },
       },
     },
   });
   if (!draft) return {};
   const map: Record<string, string> = {};
   for (const answer of draft.answers) {
-    map[answer.questionId] = answer.selectedOptionId;
+    const key = answer.preferenceOptionId
+      ? `${answer.questionId}::${answer.preferenceOptionId}`
+      : answer.questionId;
+    map[key] = answer.selectedOptionId;
   }
   return map;
 }
@@ -37,15 +42,21 @@ export async function getActiveVersionWithStructure() {
       topics: {
         orderBy: { order: 'asc' },
         include: {
-          dimensions: {
+          preferenceCategory: { select: { id: true, slug: true, name: true } },
+          subTopics: {
             orderBy: { order: 'asc' },
             include: {
-              questions: {
+              dimensions: {
                 orderBy: { order: 'asc' },
                 include: {
-                  notes: true,
-                  answerOptions: {
+                  questions: {
                     orderBy: { order: 'asc' },
+                    include: {
+                      notes: true,
+                      answerOptions: {
+                        orderBy: { order: 'asc' },
+                      },
+                    },
                   },
                 },
               },
@@ -76,15 +87,21 @@ export async function getVersionStructure(versionId: string) {
       topics: {
         orderBy: { order: 'asc' },
         include: {
-          dimensions: {
+          preferenceCategory: { select: { id: true, slug: true, name: true } },
+          subTopics: {
             orderBy: { order: 'asc' },
             include: {
-              questions: {
+              dimensions: {
                 orderBy: { order: 'asc' },
                 include: {
-                  notes: true,
-                  answerOptions: {
+                  questions: {
                     orderBy: { order: 'asc' },
+                    include: {
+                      notes: true,
+                      answerOptions: {
+                        orderBy: { order: 'asc' },
+                      },
+                    },
                   },
                 },
               },
@@ -161,13 +178,37 @@ export async function getQuestionWithOptions(questionId: string) {
       },
       dimension: {
         include: {
-          topic: {
+          subTopic: {
             include: {
-              version: {
-                select: { id: true, version: true, isActive: true },
+              topic: {
+                include: {
+                  version: {
+                    select: { id: true, version: true, isActive: true },
+                  },
+                },
               },
             },
           },
+        },
+      },
+    },
+  });
+}
+
+/**
+ * Get the user's current (non-snapshot) record answers including preferenceOptionId.
+ */
+export async function getCurrentRecordWithPreferenceInfo(userId: string) {
+  return prisma.responseSnapshot.findFirst({
+    where: { userId, isSnapshot: false },
+    orderBy: { completedAt: 'desc' },
+    include: {
+      answers: {
+        select: {
+          questionId: true,
+          selectedOptionId: true,
+          preferenceOptionId: true,
+          selectedOption: { select: { score: true } },
         },
       },
     },

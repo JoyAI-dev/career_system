@@ -22,7 +22,7 @@ export default async function AnswerOptionsPage({
     redirect('/admin/questionnaire');
   }
 
-  const version = question.dimension.topic.version;
+  const version = question.dimension.subTopic.topic.version;
   const isDraft = !version.isActive;
   const t = await getTranslations('admin.questionnaire.options');
 
@@ -40,7 +40,7 @@ export default async function AnswerOptionsPage({
         {t('title')}
       </h1>
       <p className="mb-6 text-muted-foreground">
-        <span className="font-medium">{question.dimension.topic.name}</span>
+        <span className="font-medium">{question.dimension.subTopic.topic.name}</span>
         {' > '}
         <span className="font-medium">{question.dimension.name}</span>
         {' > '}

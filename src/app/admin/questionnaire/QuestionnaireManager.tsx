@@ -67,10 +67,25 @@ type Question = {
 
 type Dimension = {
   id: string;
-  topicId: string;
+  subTopicId: string;
   name: string;
   order: number;
   questions: Question[];
+};
+
+type SubTopic = {
+  id: string;
+  topicId: string;
+  name: string;
+  order: number;
+  preferenceOptionId: string | null;
+  dimensions: Dimension[];
+};
+
+type PreferenceCategoryInfo = {
+  id: string;
+  slug: string;
+  name: string;
 };
 
 type Topic = {
@@ -78,6 +93,11 @@ type Topic = {
   versionId: string;
   name: string;
   order: number;
+  preferenceMode: string;
+  showInReport: boolean;
+  preferenceCategory: PreferenceCategoryInfo | null;
+  subTopics: SubTopic[];
+  // Flattened dimensions for admin rendering (populated by page.tsx)
   dimensions: Dimension[];
 };
 
@@ -100,6 +120,7 @@ type Props = {
   versions: VersionSummary[];
   initialStructure: VersionStructure;
   initialVersionId: string | null;
+  preferenceCategories: PreferenceCategoryInfo[];
 };
 
 // ─── Main Component ─────────────────────────────────────────────────
@@ -108,6 +129,7 @@ export function QuestionnaireManager({
   versions,
   initialStructure,
   initialVersionId,
+  preferenceCategories,
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [selectedVersionId, setSelectedVersionId] = useState(initialVersionId);
@@ -324,6 +346,7 @@ export function QuestionnaireManager({
               isDraft={!!isDraft}
               isFirst={topicIdx === 0}
               isLast={topicIdx === structure.topics.length - 1}
+              preferenceCategories={preferenceCategories}
             />
           ))}
         </div>
@@ -375,18 +398,26 @@ function AddTopicButton({ versionId }: { versionId: string }) {
 
 // ─── Topic Section ──────────────────────────────────────────────────
 
+const PREFERENCE_MODE_STYLES: Record<string, string> = {
+  REPEAT: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200',
+  FILTER: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200',
+  CONTEXT: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
+};
+
 function TopicSection({
   topic,
   index,
   isDraft,
   isFirst,
   isLast,
+  preferenceCategories,
 }: {
   topic: Topic;
   index: number;
   isDraft: boolean;
   isFirst: boolean;
   isLast: boolean;
+  preferenceCategories: PreferenceCategoryInfo[];
 }) {
   const [expanded, setExpanded] = useState(true);
   const [isPending, startTransition] = useTransition();
@@ -413,6 +444,19 @@ function TopicSection({
           >
             <span className="text-lg">{expanded ? '▼' : '▶'}</span>
             <CardTitle className="text-lg">{index}. {topic.name}</CardTitle>
+            <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${PREFERENCE_MODE_STYLES[topic.preferenceMode] ?? PREFERENCE_MODE_STYLES.CONTEXT}`}>
+              {t(`preferenceMode${topic.preferenceMode.charAt(0)}${topic.preferenceMode.slice(1).toLowerCase()}`)}
+            </span>
+            {topic.preferenceCategory && (
+              <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700 dark:bg-green-900 dark:text-green-200">
+                {topic.preferenceCategory.name}
+              </span>
+            )}
+            {!topic.showInReport && (
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700 dark:bg-amber-900 dark:text-amber-200">
+                {t('hiddenFromReport')}
+              </span>
+            )}
             <span className="text-sm text-muted-foreground">
               ({t('dimensionCount', { count: topic.dimensions.length })})
             </span>
@@ -465,6 +509,45 @@ function TopicSection({
                         name="name"
                         defaultValue={topic.name}
                         required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`edit-mode-${topic.id}`}>{t('preferenceMode')}</Label>
+                      <select
+                        id={`edit-mode-${topic.id}`}
+                        name="preferenceMode"
+                        defaultValue={topic.preferenceMode}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="CONTEXT">{t('preferenceModeContext')}</option>
+                        <option value="REPEAT">{t('preferenceModeRepeat')}</option>
+                        <option value="FILTER">{t('preferenceModeFilter')}</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`edit-category-${topic.id}`}>{t('preferenceCategoryLabel')}</Label>
+                      <select
+                        id={`edit-category-${topic.id}`}
+                        name="preferenceCategoryId"
+                        defaultValue={topic.preferenceCategory?.id ?? ''}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">{t('noLinkedCategory')}</option>
+                        {preferenceCategories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`edit-report-${topic.id}`}>{t('showInReport')}</Label>
+                      <input
+                        type="checkbox"
+                        id={`edit-report-${topic.id}`}
+                        name="showInReport"
+                        defaultChecked={topic.showInReport}
+                        className="h-4 w-4 rounded border-gray-300"
                       />
                     </div>
                     <Button type="submit" disabled={editPending}>
@@ -540,7 +623,7 @@ function AddDimensionButton({ topicId }: { topicId: string }) {
           <DialogTitle>{t('addDimension')}</DialogTitle>
         </DialogHeader>
         <form action={action} className="space-y-4">
-          <input type="hidden" name="topicId" value={topicId} />
+          <input type="hidden" name="subTopicId" value={topicId} />
           {state.errors?.name && (
             <p className="text-sm text-destructive">{state.errors.name[0]}</p>
           )}
@@ -1039,12 +1122,14 @@ function NoteItem({ note, isDraft }: { note: QuestionNote; isDraft: boolean }) {
 
 // ─── Import Button + Dialog ────────────────────────────────────────
 
-function parseImportText(text: string): { topics: ImportTopic[]; errors: string[] } {
+type ParsedImportTopic = { name: string; dimensions: { name: string; questions: string[] }[] };
+
+function parseImportText(text: string): { topics: ParsedImportTopic[]; errors: string[] } {
   const errors: string[] = [];
-  const topics: ImportTopic[] = [];
+  const topics: ParsedImportTopic[] = [];
   const lines = text.split('\n');
 
-  let currentTopic: ImportTopic | null = null;
+  let currentTopic: ParsedImportTopic | null = null;
   let currentDimension: { name: string; questions: string[] } | null = null;
 
   for (let i = 0; i < lines.length; i++) {
@@ -1122,7 +1207,7 @@ function parseImportText(text: string): { topics: ImportTopic[]; errors: string[
 function ImportButton({ versionId }: { versionId: string }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
-  const [parsed, setParsed] = useState<{ topics: ImportTopic[]; errors: string[] } | null>(null);
+  const [parsed, setParsed] = useState<{ topics: ParsedImportTopic[]; errors: string[] } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const t = useTranslations('admin.questionnaire');
@@ -1253,7 +1338,7 @@ function structureToMarkdown(structure: NonNullable<VersionStructure>): string {
   const lines: string[] = [];
   for (const topic of structure.topics) {
     lines.push(`# ${topic.name}`);
-    for (const dim of topic.dimensions) {
+    for (const dim of (topic.dimensions ?? [])) {
       lines.push(`## ${dim.name}`);
       for (const q of dim.questions) {
         lines.push(`### ${q.title}`);
@@ -1272,9 +1357,9 @@ function ExportButton({ structure }: { structure: NonNullable<VersionStructure> 
   const markdown = structureToMarkdown(structure);
 
   const totalTopics = structure.topics.length;
-  const totalDimensions = structure.topics.reduce((s, t) => s + t.dimensions.length, 0);
+  const totalDimensions = structure.topics.reduce((s, t) => s + (t.dimensions ?? []).length, 0);
   const totalQuestions = structure.topics.reduce(
-    (s, t) => s + t.dimensions.reduce((ds, d) => ds + d.questions.length, 0),
+    (s, t) => s + (t.dimensions ?? []).reduce((ds, d) => ds + d.questions.length, 0),
     0,
   );
 

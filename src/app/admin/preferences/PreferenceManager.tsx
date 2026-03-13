@@ -22,6 +22,27 @@ import {
   deletePreferenceOption,
 } from '@/server/actions/preference';
 import type { AdminPreferenceCategory } from '@/server/queries/preference';
+import {
+  MapPin, UserCircle, Compass, Building2, Flag, Building,
+  Network, Briefcase, Users, GraduationCap, Clock, Palmtree,
+  Heart, Baby, Settings,
+} from 'lucide-react';
+
+// ── Icon Map ─────────────────────────────────────────────────────────
+
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  MapPin, UserCircle, Compass, Building2, Flag, Building,
+  Network, Briefcase, Users, GraduationCap, Clock, Palmtree,
+  Heart, Baby,
+};
+
+function CategoryIcon({ name, className }: { name: string | null; className?: string }) {
+  const Icon = name ? ICON_MAP[name] : null;
+  if (Icon) return <Icon className={className || 'h-5 w-5'} />;
+  return <Settings className={className || 'h-5 w-5 text-muted-foreground'} />;
+}
+
+// ── Main Component ───────────────────────────────────────────────────
 
 type Props = {
   categories: AdminPreferenceCategory[];
@@ -54,7 +75,7 @@ export function PreferenceManager({ categories }: Props) {
 }
 
 function CategoryCard({ category }: { category: AdminPreferenceCategory }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [isPending, startTransition] = useTransition();
   const t = useTranslations('admin.preferences');
 
@@ -70,6 +91,7 @@ function CategoryCard({ category }: { category: AdminPreferenceCategory }) {
     formData.set('id', category.id);
     formData.set('name', category.name);
     formData.set('isActive', String(!category.isActive));
+    formData.set('isGroupingBasis', String(category.isGroupingBasis));
     startTransition(async () => {
       await updatePreferenceCategory({}, formData);
     });
@@ -82,7 +104,7 @@ function CategoryCard({ category }: { category: AdminPreferenceCategory }) {
         <div className="flex items-center gap-3">
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-lg">{category.icon || '⚙️'}</span>
+              <CategoryIcon name={category.icon} className="h-5 w-5" />
               <span className="font-semibold">{category.name}</span>
               <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {inputTypeLabels[category.inputType] || category.inputType}
@@ -90,6 +112,11 @@ function CategoryCard({ category }: { category: AdminPreferenceCategory }) {
               <span className="text-xs text-muted-foreground">
                 #{category.order}
               </span>
+              {category.isGroupingBasis && (
+                <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                  {t('groupingBasis')}
+                </span>
+              )}
               {!category.isActive && (
                 <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-xs text-destructive">
                   {t('disabled')}
@@ -141,13 +168,24 @@ function CategoryCard({ category }: { category: AdminPreferenceCategory }) {
 function EditCategoryButton({ category }: { category: AdminPreferenceCategory }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [selectedIcon, setSelectedIcon] = useState(category.icon || '');
+  const [isGroupingBasis, setIsGroupingBasis] = useState(category.isGroupingBasis);
   const t = useTranslations('admin.preferences');
+
+  const inputTypeLabels: Record<string, string> = {
+    SINGLE_SELECT: t('typeSingle'),
+    MULTI_SELECT: t('typeMulti'),
+    HIERARCHICAL_MULTI: t('typeHierarchical'),
+    SLIDER: t('typeSlider'),
+  };
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     formData.set('id', category.id);
     formData.set('isActive', String(category.isActive));
+    formData.set('icon', selectedIcon);
+    formData.set('isGroupingBasis', String(isGroupingBasis));
     startTransition(async () => {
       await updatePreferenceCategory({}, formData);
       setOpen(false);
@@ -155,7 +193,13 @@ function EditCategoryButton({ category }: { category: AdminPreferenceCategory })
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => {
+      setOpen(v);
+      if (v) {
+        setSelectedIcon(category.icon || '');
+        setIsGroupingBasis(category.isGroupingBasis);
+      }
+    }}>
       <DialogTrigger render={<Button variant="ghost" size="xs" />}>
         {t('edit')}
       </DialogTrigger>
@@ -168,10 +212,56 @@ function EditCategoryButton({ category }: { category: AdminPreferenceCategory })
             <Label htmlFor="cat-name">{t('name')}</Label>
             <Input id="cat-name" name="name" defaultValue={category.name} required />
           </div>
+
+          {/* Read-only inputType display */}
           <div>
-            <Label htmlFor="cat-icon">{t('icon')}</Label>
-            <Input id="cat-icon" name="icon" defaultValue={category.icon || ''} />
+            <Label>{t('inputTypeLabel')}</Label>
+            <div className="mt-1">
+              <span className="inline-block rounded bg-muted px-3 py-1.5 text-sm text-muted-foreground">
+                {inputTypeLabels[category.inputType] || category.inputType}
+              </span>
+            </div>
           </div>
+
+          {/* Icon picker */}
+          <div>
+            <Label>{t('icon')}</Label>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {Object.entries(ICON_MAP).map(([name, Icon]) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setSelectedIcon(name)}
+                  className={`flex h-9 w-9 items-center justify-center rounded border transition-colors ${
+                    selectedIcon === name
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                  }`}
+                  title={name}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              ))}
+            </div>
+            {selectedIcon && (
+              <p className="mt-1 text-xs text-muted-foreground">{selectedIcon}</p>
+            )}
+          </div>
+
+          {/* isGroupingBasis checkbox */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="cat-grouping-basis"
+              checked={isGroupingBasis}
+              onChange={(e) => setIsGroupingBasis(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <Label htmlFor="cat-grouping-basis" className="cursor-pointer">
+              {t('groupingBasis')}
+            </Label>
+          </div>
+
           <DialogFooter>
             <DialogClose render={<Button variant="outline" type="button" />}>
               {t('cancel')}
@@ -234,7 +324,7 @@ type OptionRowProps = {
   isChild?: boolean;
 };
 
-function OptionRow({ option, categoryId, isChild }: OptionRowProps) {
+function OptionRow({ option, isChild }: OptionRowProps) {
   const [isPending, startTransition] = useTransition();
   const t = useTranslations('admin.preferences');
   const usageCount = option._count?.selections ?? 0;
@@ -274,7 +364,7 @@ function OptionRow({ option, categoryId, isChild }: OptionRowProps) {
         disabled={isPending || usageCount > 0}
         title={usageCount > 0 ? t('cannotDeleteInUse') : t('delete')}
       >
-        ×
+        x
       </Button>
     </div>
   );

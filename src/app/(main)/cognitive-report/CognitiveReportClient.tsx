@@ -30,7 +30,8 @@ type Question = {
   answerOptions: AnswerOption[];
 };
 type Dimension = { id: string; name: string; order: number; questions: Question[] };
-type Topic = { id: string; name: string; order: number; dimensions: Dimension[] };
+type SubTopic = { id: string; name: string; order: number; dimensions: Dimension[] };
+type Topic = { id: string; name: string; order: number; showInReport: boolean; subTopics: SubTopic[] };
 type VersionStructure = { id: string; topics: Topic[] } | null;
 
 type SnapshotEntry = {
@@ -60,12 +61,14 @@ function computeScores(
   structure: VersionStructure,
 ): { topicScores: { topicId: string; topicName: string; score: number }[]; overallScore: number } {
   if (!structure) return { topicScores: [], overallScore: 0 };
-  const topicScores = structure.topics.map((topic) => {
-    const questions = topic.dimensions.flatMap((d) => d.questions);
+  const topicScores: { topicId: string; topicName: string; score: number }[] = [];
+  for (const topic of structure.topics) {
+    if (!topic.showInReport) continue;
+    const questions = topic.subTopics.flatMap((st) => st.dimensions.flatMap((d) => d.questions));
     const scores = questions.map((q) => answers[q.id]?.score ?? 0);
     const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-    return { topicId: topic.id, topicName: topic.name, score: Math.round(avg * 100) / 100 };
-  });
+    topicScores.push({ topicId: topic.id, topicName: topic.name, score: Math.round(avg * 100) / 100 });
+  }
   const overall = topicScores.length > 0
     ? topicScores.reduce((s, t) => s + t.score, 0) / topicScores.length
     : 0;
@@ -98,7 +101,9 @@ export function CognitiveReportClient({
     versionId: versionStructure?.id ?? '',
     topicScores: currentScores.topicScores.map((ts) => ({
       ...ts,
-      questionScores: [],
+      showInReport: true,
+      preferenceMode: 'CONTEXT',
+      subTopicScores: [],
     })),
     overallScore: currentScores.overallScore,
   };
@@ -253,7 +258,7 @@ export function CognitiveReportClient({
               const change = snapshotTopic ? topic.score - snapshotTopic.score : 0;
               const topicQuestions = versionStructure?.topics
                 .find((t) => t.id === topic.topicId)
-                ?.dimensions.flatMap((d) => d.questions) ?? [];
+                ?.subTopics.flatMap((st) => st.dimensions.flatMap((d) => d.questions)) ?? [];
               const topicReflections = topicQuestions
                 .flatMap((q) => reflectionsByQuestion[q.id] ?? [])
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -344,7 +349,7 @@ export function CognitiveReportClient({
                     </button>
                     {isExpanded && (
                       <div className="space-y-4 border-t px-4 py-4">
-                        {topic.dimensions.map((dimension) => (
+                        {topic.subTopics.flatMap((st) => st.dimensions).map((dimension) => (
                           <div key={dimension.id} className="space-y-3">
                             <h4 className="text-xs font-medium text-muted-foreground">
                               {dimension.name}

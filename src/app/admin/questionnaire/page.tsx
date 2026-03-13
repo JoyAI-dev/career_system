@@ -5,6 +5,7 @@ import {
   getQuestionnaireVersions,
   getVersionStructure,
 } from '@/server/queries/questionnaire';
+import { getAllPreferenceCategoriesForSelect } from '@/server/queries/preference';
 import { QuestionnaireManager } from './QuestionnaireManager';
 
 export default async function AdminQuestionnairePage({
@@ -27,10 +28,22 @@ export default async function AdminQuestionnairePage({
     (params.v && versions.find((v) => v.id === params.v)) ||
     (draftVersion ?? activeVersion);
 
-  const [structure, t] = await Promise.all([
+  const [rawStructure, t, preferenceCategories] = await Promise.all([
     selectedVersion ? getVersionStructure(selectedVersion.id) : Promise.resolve(null),
     getTranslations('admin.questionnaire'),
+    getAllPreferenceCategoriesForSelect(),
   ]);
+
+  // Flatten subTopics → dimensions for backward-compatible admin view
+  const structure = rawStructure
+    ? {
+        ...rawStructure,
+        topics: rawStructure.topics.map((topic) => ({
+          ...topic,
+          dimensions: topic.subTopics.flatMap((st) => st.dimensions),
+        })),
+      }
+    : null;
 
   return (
     <div>
@@ -41,6 +54,7 @@ export default async function AdminQuestionnairePage({
         versions={versions}
         initialStructure={structure}
         initialVersionId={selectedVersion?.id ?? null}
+        preferenceCategories={preferenceCategories}
       />
     </div>
   );

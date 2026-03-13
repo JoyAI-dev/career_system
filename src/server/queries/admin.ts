@@ -169,9 +169,14 @@ export async function searchUsers({
               select: {
                 topics: {
                   select: {
-                    dimensions: {
+                    showInReport: true,
+                    subTopics: {
                       select: {
-                        questions: { select: { id: true } },
+                        dimensions: {
+                          select: {
+                            questions: { select: { id: true } },
+                          },
+                        },
                       },
                     },
                   },
@@ -194,8 +199,11 @@ export async function searchUsers({
           snapshot.answers.map((a) => [a.questionId, a.selectedOption.score]),
         );
         const topics = snapshot.version.topics;
-        const topicAvgs = topics.map((topic) => {
-          const questionIds = topic.dimensions.flatMap((d) => d.questions.map((q) => q.id));
+        const reportTopics = topics.filter((t) => t.showInReport);
+        const topicAvgs = reportTopics.map((topic) => {
+          const questionIds = topic.subTopics.flatMap((st) =>
+            st.dimensions.flatMap((d) => d.questions.map((q) => q.id)),
+          );
           if (questionIds.length === 0) return 0;
           const sum = questionIds.reduce((s, qid) => s + (answerMap.get(qid) ?? 0), 0);
           return sum / questionIds.length;
