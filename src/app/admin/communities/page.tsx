@@ -6,7 +6,7 @@ import {
   getGroupingCategories,
   getCommunitySettings,
 } from '@/server/queries/community';
-import { CommunityManager } from './CommunityManager';
+import { CommunityAdminTabs } from './CommunityAdminTabs';
 
 export default async function CommunitiesPage() {
   await requireAdminPage();
@@ -26,7 +26,7 @@ export default async function CommunitiesPage() {
         <p className="text-sm text-muted-foreground">{t('description')}</p>
       </div>
 
-      <CommunityManager
+      <CommunityAdminTabs
         initialStats={stats}
         initialList={listData}
         groupingCategories={groupingCategories}

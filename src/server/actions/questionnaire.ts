@@ -1203,6 +1203,17 @@ export async function submitQuestionnaire(
     }
   });
 
+  // Auto-match user to first activity (roundtable) after questionnaire completion
+  try {
+    const { matchUserToFirstActivity } = await import(
+      '@/server/services/activityMatching'
+    );
+    await matchUserToFirstActivity(userId);
+  } catch (matchError) {
+    // Don't fail questionnaire submission if matching fails
+    console.error('Auto-matching failed:', matchError);
+  }
+
   redirect('/dashboard');
 }
 

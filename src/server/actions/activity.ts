@@ -626,6 +626,32 @@ export async function completeMeeting(activityId: string): Promise<ActionState> 
         data: { status: result.to },
       });
     });
+
+    // Auto-advance all members who have individually completed
+    try {
+      const { advanceUserToNextActivity } = await import(
+        '@/server/services/activityMatching'
+      );
+      const activity = await prisma.activity.findUnique({
+        where: { id: activityId },
+        select: { typeId: true },
+      });
+      if (activity) {
+        const memberships = await prisma.membership.findMany({
+          where: { activityId, completedAt: { not: null } },
+          select: { userId: true },
+        });
+        for (const m of memberships) {
+          try {
+            await advanceUserToNextActivity(m.userId, activity.typeId);
+          } catch (e) {
+            console.error(`Auto-advance failed for user ${m.userId}:`, e);
+          }
+        }
+      }
+    } catch (advanceError) {
+      console.error('Auto-advance failed:', advanceError);
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : te('failedToComplete');
     return { errors: { _form: [message] } };
@@ -675,6 +701,23 @@ export async function finishActivity(activityId: string): Promise<ActionState> {
         data: { completedAt: new Date() },
       });
     });
+
+    // Auto-advance: check if this completion triggers next activity
+    try {
+      const { advanceUserToNextActivity } = await import(
+        '@/server/services/activityMatching'
+      );
+      const activity = await prisma.activity.findUnique({
+        where: { id: activityId },
+        select: { typeId: true },
+      });
+      if (activity) {
+        await advanceUserToNextActivity(userId, activity.typeId);
+      }
+    } catch (advanceError) {
+      // Don't fail the completion if advance fails - log and continue
+      console.error('Auto-advance failed:', advanceError);
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : te('failedToFinish');
     return { errors: { _form: [message] } };
@@ -740,4 +783,46 @@ export async function getActivityComments(activityId: string) {
       user: { select: { id: true, name: true, username: true } },
     },
   });
+}
+
+/**
+ * Set the winner of a cross-group competition (leader action).
+ */
+export async function setCompetitionWinnerAction(
+  activityId: string,
+  winnerGroupId: string,
+): Promise<ActionState> {
+  const session = await requireAuth();
+
+  // Verify user is a leader of one of the competing groups or an admin
+  const activity = await prisma.activity.findUnique({
+    where: { id: activityId },
+    include: { virtualGroup: true },
+  });
+  if (!activity) {
+    return { errors: { _form: ['Activity not found'] } };
+  }
+  if (
+    activity.virtualGroup?.leaderId !== session.user.id &&
+    session.user.role !== 'ADMIN'
+  ) {
+    return {
+      errors: { _form: ['Only the group leader or admin can set the winner'] },
+    };
+  }
+
+  try {
+    const { setCompetitionWinner } = await import(
+      '@/server/services/activityMatching'
+    );
+    await setCompetitionWinner(activityId, winnerGroupId);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to set winner';
+    return { errors: { _form: [message] } };
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath(ACTIVITIES_PATH);
+  return { success: true };
 }

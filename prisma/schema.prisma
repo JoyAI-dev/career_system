@@ -38,6 +38,13 @@ model User {
   announcementViews    AnnouncementView[]
   preference           UserPreference?
   communityMemberships CommunityMember[]
+  ledGroups                  VirtualGroup[]        @relation("GroupLeader")
+  virtualGroupMemberships    VirtualGroupMember[]
+  pairingsAsUser1            Pairing[]             @relation("PairingUser1")
+  pairingsAsUser2            Pairing[]             @relation("PairingUser2")
+  pairingsCreated            Pairing[]             @relation("PairingCreatedBy")
+  standbyEntry               StandbyUser?
+  standbyAddedBy             StandbyUser[]         @relation("StandbyAddedBy")
 
   @@map("users")
 }
@@ -255,6 +262,42 @@ enum MemberRole {
   MEMBER
 }
 
+enum ActivityScope {
+  GROUP_6      // Full group activity (6 people)
+  PAIR_2       // Paired activity (2 people)
+  CROSS_GROUP  // Cross-group competition (2 groups of 6)
+  INDIVIDUAL   // Individual activity (1 person)
+}
+
+enum CompletionMode {
+  LEADER_ONLY   // Only leader marks completion
+  ALL_MEMBERS   // All members must mark completion
+}
+
+enum PairingMode {
+  AUTO                          // System auto-pairs
+  SELF_SELECT                   // Users choose their own partner
+  SELF_SELECT_WITH_LEADER       // Users choose, leader can pair remaining
+}
+
+enum PairingStatus {
+  PENDING     // Pairing request sent
+  ACCEPTED    // Both parties confirmed
+  DISSOLVED   // Leader dissolved the pairing
+}
+
+enum StandbyStatus {
+  AVAILABLE   // Ready to be matched
+  MATCHED     // Has been placed into a group
+  INACTIVE    // Removed by admin
+}
+
+enum VirtualGroupStatus {
+  FORMING     // Still gathering members
+  ACTIVE      // All members present, activities ongoing
+  COMPLETED   // All activities done
+}
+
 model ActivityType {
   id                 String  @id @default(cuid())
   name               String  @unique
@@ -262,10 +305,20 @@ model ActivityType {
   prerequisiteTypeId String?
   defaultCapacity    Int     @default(10)
   isEnabled          Boolean @default(true)
+  scope              ActivityScope   @default(GROUP_6)
+  peopleRequired     Int             @default(6)       // Actual people needed per activity instance
+  duration           String?                            // Recommended duration e.g. "2小时"
+  guideContent       String?         // Meeting guide content (markdown), stored as text
+  intervalHours      Int             @default(24)       // Hours between this and previous activity
+  completionMode     CompletionMode  @default(LEADER_ONLY)
+  pairingMode        PairingMode?                       // null for non-paired activities
+  allowViewLocked    Boolean         @default(true)     // Allow viewing content when locked
+  timeoutHours       Int             @default(24)       // Standby timeout in hours
 
   prerequisiteType ActivityType?  @relation("TypePrerequisite", fields: [prerequisiteTypeId], references: [id])
   dependentTypes   ActivityType[] @relation("TypePrerequisite")
   activities       Activity[]
+  pairings         Pairing[]
 
   @@map("activity_types")
 }
@@ -280,26 +333,40 @@ model Tag {
 }
 
 model Activity {
-  id            String         @id @default(cuid())
-  typeId        String
-  title         String
-  capacity      Int
-  guideMarkdown String?
-  status        ActivityStatus @default(OPEN)
-  scheduledAt   DateTime?
-  location      String?
-  isOnline      Boolean        @default(false)
-  createdBy     String
-  createdAt     DateTime       @default(now())
+  id                String         @id @default(cuid())
+  typeId            String
+  title             String
+  capacity          Int
+  guideMarkdown     String?
+  status            ActivityStatus @default(OPEN)
+  scheduledAt       DateTime?
+  location          String?
+  isOnline          Boolean        @default(false)
+  createdBy         String
+  createdAt         DateTime       @default(now())
+  communityId          String?       // Denormalized from virtualGroup.communityId for query performance
+  virtualGroupId       String?
+  competitorActivityId String?       // For cross-group competition: the opposing team's activity
+  winnerId             String?
+  autoScheduledAt      DateTime?     // System auto-scheduled time
 
-  type             ActivityType      @relation(fields: [typeId], references: [id])
-  creator          User              @relation(fields: [createdBy], references: [id])
-  activityTags     ActivityTag[]
-  memberships      Membership[]
-  activityComments ActivityComment[]
+  type                ActivityType      @relation(fields: [typeId], references: [id])
+  creator             User              @relation(fields: [createdBy], references: [id])
+  community           Community?        @relation(fields: [communityId], references: [id])
+  virtualGroup        VirtualGroup?     @relation(fields: [virtualGroupId], references: [id])
+  competitorActivity  Activity?         @relation("CompetitionPair", fields: [competitorActivityId], references: [id], onDelete: SetNull)
+  competedBy          Activity[]        @relation("CompetitionPair")
+  winner              VirtualGroup?     @relation("CompetitionWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  activityTags        ActivityTag[]
+  memberships         Membership[]
+  activityComments    ActivityComment[]
+  pairings            Pairing[]
 
   @@index([status])
   @@index([typeId])
+  @@index([communityId])
+  @@index([virtualGroupId])
+  @@index([competitorActivityId])
   @@map("activities")
 }
 
@@ -368,6 +435,12 @@ enum NotificationType {
   ACTIVITY_FULL
   TIME_CONFIRMED
   NEW_COMMENT
+  GROUP_FORMED        // Virtual group is complete
+  PAIRING_REQUEST     // Someone wants to pair with you
+  PAIRING_CONFIRMED   // Pairing accepted
+  ACTIVITY_UNLOCKED   // Next activity is available
+  ACTIVITY_SCHEDULED  // Auto-scheduled activity time set
+  STANDBY_MATCHED     // Standby user matched to a group
 }
 
 model Notification {
@@ -537,8 +610,10 @@ model Community {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tags    CommunityTag[]
-  members CommunityMember[]
+  tags           CommunityTag[]
+  members        CommunityMember[]
+  virtualGroups  VirtualGroup[]
+  activities     Activity[]
 
   @@index([memberCount(sort: Desc)])
   @@map("communities")
@@ -571,6 +646,98 @@ model CommunityMember {
   @@unique([communityId, userId])
   @@index([userId])
   @@map("community_members")
+}
+
+// ─── Virtual Groups & Pairing ───────────────────────────────────────
+
+model VirtualGroup {
+  id            String              @id @default(cuid())
+  communityId   String
+  community     Community           @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  name          String?
+  status        VirtualGroupStatus  @default(FORMING)
+  leaderId      String?
+  leader        User?               @relation("GroupLeader", fields: [leaderId], references: [id], onDelete: SetNull)
+  createdAt     DateTime            @default(now())
+
+  members           VirtualGroupMember[]
+  activities        Activity[]
+  pairings          Pairing[]
+  wonCompetitions   Activity[]      @relation("CompetitionWinner")
+
+  @@index([communityId])
+  @@map("virtual_groups")
+}
+
+// INVARIANT: A user can only be in one VirtualGroup per Community — enforced in application layer
+model VirtualGroupMember {
+  id              String        @id @default(cuid())
+  virtualGroupId  String
+  virtualGroup    VirtualGroup  @relation(fields: [virtualGroupId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt        DateTime      @default(now())
+  order           Int           // Join sequence number (informational; actual leader set via VirtualGroup.leaderId)
+
+  @@unique([virtualGroupId, userId])
+  @@index([userId])
+  @@map("virtual_group_members")
+}
+
+// INVARIANT: user1Id < user2Id (lexicographic ordering) — enforced in application layer to prevent duplicate pairings
+model Pairing {
+  id              String        @id @default(cuid())
+  virtualGroupId  String
+  virtualGroup    VirtualGroup  @relation(fields: [virtualGroupId], references: [id], onDelete: Cascade)
+  activityTypeId  String
+  activityType    ActivityType  @relation(fields: [activityTypeId], references: [id], onDelete: Restrict)
+  activityId      String?       // Linked activity once created
+  activity        Activity?     @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  user1Id         String
+  user1           User          @relation("PairingUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2Id         String
+  user2           User          @relation("PairingUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  status          PairingStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  createdById     String        // Who initiated the pairing
+  createdBy       User          @relation("PairingCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@unique([virtualGroupId, activityTypeId, user1Id, user2Id])
+  @@index([virtualGroupId, activityTypeId])
+  @@map("pairings")
+}
+
+// ─── Standby & Scheduling ──────────────────────────────────────────
+
+model StandbyUser {
+  id           String        @id @default(cuid())
+  userId       String        @unique   // One standby entry per user
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       StandbyStatus @default(AVAILABLE)
+  addedById    String?
+  addedBy      User?         @relation("StandbyAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  note         String?       // Admin note
+  createdAt    DateTime      @default(now())
+  matchedAt    DateTime?     // When matched to a group
+
+  @@index([status])
+  @@map("standby_users")
+}
+
+model SchedulingConfig {
+  id                      String   @id @default("default")
+  morningCutoff           String   @default("10:00")  // Before this = morning rule
+  eveningCutoff           String   @default("17:00")  // After this = evening rule
+  morningDelayHours       Int      @default(0)        // Hours delay if filled before morning cutoff
+  eveningDelayHours       Int      @default(24)       // Hours delay if filled after evening cutoff
+  defaultActivityTime     String   @default("09:00")  // Default scheduled time
+  suggestedMorningStart   String   @default("09:00")
+  suggestedMorningEnd     String   @default("11:00")
+  suggestedAfternoonStart String   @default("14:00")
+  suggestedAfternoonEnd   String   @default("16:00")
+  updatedAt               DateTime @updatedAt
+
+  @@map("scheduling_configs")
 }
 
 // ─── Audit Log ──────────────────────────────────────────────────────

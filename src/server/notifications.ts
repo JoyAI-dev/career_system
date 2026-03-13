@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
+import type { NotificationType } from '@prisma/client';
 
-type NotifType = 'ACTIVITY_FULL' | 'TIME_CONFIRMED' | 'NEW_COMMENT';
+type NotifType = NotificationType;
 
 type NotifData = {
   userId: string;

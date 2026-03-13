@@ -27,6 +27,15 @@ function getUpdateActivityTypeSchema(t: (key: string) => string) {
     name: z.string().min(1, t('nameRequired')).max(100),
     defaultCapacity: z.coerce.number().int().min(1, t('capacityMinOne')).max(1000),
     prerequisiteTypeId: z.string().optional().transform((v) => v || null),
+    scope: z.enum(['GROUP_6', 'PAIR_2', 'CROSS_GROUP', 'INDIVIDUAL']).optional(),
+    peopleRequired: z.coerce.number().int().min(1).max(100).optional(),
+    duration: z.string().max(50).optional().transform((v) => v || null),
+    intervalHours: z.coerce.number().int().min(0).max(720).optional(),
+    completionMode: z.enum(['LEADER_ONLY', 'ALL_MEMBERS']).optional(),
+    pairingMode: z.enum(['AUTO', 'SELF_SELECT', 'SELF_SELECT_WITH_LEADER']).optional().transform((v) => v || null),
+    allowViewLocked: z.preprocess((v) => v === 'true' || v === true, z.boolean()).optional(),
+    timeoutHours: z.coerce.number().int().min(1).max(720).optional(),
+    guideContent: z.string().optional().transform((v) => v || null),
   });
 }
 
@@ -77,6 +86,15 @@ export async function updateActivityType(
     name: formData.get('name'),
     defaultCapacity: formData.get('defaultCapacity'),
     prerequisiteTypeId: formData.get('prerequisiteTypeId'),
+    scope: formData.get('scope'),
+    peopleRequired: formData.get('peopleRequired'),
+    duration: formData.get('duration'),
+    intervalHours: formData.get('intervalHours'),
+    completionMode: formData.get('completionMode'),
+    pairingMode: formData.get('pairingMode'),
+    allowViewLocked: formData.get('allowViewLocked'),
+    timeoutHours: formData.get('timeoutHours'),
+    guideContent: formData.get('guideContent'),
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
@@ -85,13 +103,15 @@ export async function updateActivityType(
     return { errors: { prerequisiteTypeId: [te('cannotSelfPrerequisite')] } };
   }
 
+  const { id, ...updateData } = parsed.data;
+  // Remove undefined values so we only update fields that were submitted
+  const cleanData = Object.fromEntries(
+    Object.entries(updateData).filter(([, v]) => v !== undefined),
+  );
+
   await prisma.activityType.update({
-    where: { id: parsed.data.id },
-    data: {
-      name: parsed.data.name,
-      defaultCapacity: parsed.data.defaultCapacity,
-      prerequisiteTypeId: parsed.data.prerequisiteTypeId,
-    },
+    where: { id },
+    data: cleanData,
   });
 
   revalidatePath(ADMIN_PATH);

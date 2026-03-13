@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useActionState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import {
   Dialog,
@@ -29,8 +27,39 @@ import {
 } from '@/server/actions/activity';
 import { getAvailableActions, type TransitionAction } from '@/server/stateMachine';
 import type { ActivityStatus, MemberRole } from '@prisma/client';
+import { VirtualGroupInfo } from '@/components/VirtualGroupInfo';
+import { PairingPanel } from '@/components/PairingPanel';
+import { CompetitionPanel } from '@/components/CompetitionPanel';
+import { ActivityGuideView } from '@/components/ActivityGuideView';
+import { Users, UserCheck } from 'lucide-react';
 
 type Tag = { id: string; name: string };
+
+type VirtualGroupData = {
+  id: string;
+  name: string | null;
+  status: string;
+  leaderId: string | null;
+  leader: { id: string; name: string | null; username: string } | null;
+  members: Array<{
+    userId: string;
+    order: number;
+    user: { id: string; name: string | null; username: string };
+  }>;
+};
+
+type PairingData = {
+  id: string;
+  status: string;
+  user1: { id: string; name: string | null; username: string };
+  user2: { id: string; name: string | null; username: string };
+};
+
+type OpponentGroupData = {
+  id: string;
+  name: string | null;
+  members: Array<{ user: { name: string | null; username: string } }>;
+};
 
 type Activity = {
   id: string;
@@ -41,7 +70,15 @@ type Activity = {
   isOnline: boolean;
   location: string | null;
   scheduledAt: string | null;
-  type: { id: string; name: string };
+  type: {
+    id: string;
+    name: string;
+    scope?: string;
+    completionMode?: string;
+    pairingMode?: string | null;
+    guideContent?: string | null;
+    allowViewLocked?: boolean;
+  };
   activityTags: { tag: Tag }[];
   _count: { memberships: number };
   isEligible: boolean;
@@ -49,6 +86,13 @@ type Activity = {
   memberRole?: string;
   memberCompletedAt?: string | null;
   members?: { username: string; name: string | null; role?: string }[];
+  // New optional fields for community features
+  virtualGroup?: VirtualGroupData | null;
+  virtualGroupId?: string | null;
+  competitorActivityId?: string | null;
+  winnerId?: string | null;
+  pairings?: PairingData[];
+  opponentGroup?: OpponentGroupData | null;
 };
 
 type Comment = {
@@ -63,6 +107,10 @@ type Props = {
   onClose: () => void;
   /** When true, join calls joinActivityType(type.id) instead of joinActivity(id) */
   joinByType?: boolean;
+  /** Current user ID, needed for virtual group / pairing features */
+  currentUserId?: string;
+  /** Callback to refresh parent data after pairing/competition changes */
+  onRefresh?: () => void;
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -89,7 +137,7 @@ const ACTION_KEYS: Record<string, string> = {
 
 const FINISHABLE_STATUSES: ActivityStatus[] = ['FULL', 'COMPLETED'];
 
-export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
+export function ActivityDetailDialog({ activity, onClose, joinByType, currentUserId, onRefresh }: Props) {
   const t = useTranslations('activities');
   const tCommon = useTranslations('common');
   const [isPending, startTransition] = useTransition();
@@ -100,6 +148,13 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
 
   const isLocked = !activity.isEligible;
   const isFull = activity._count.memberships >= activity.capacity;
+
+  // Community feature helpers
+  const scope = activity.type.scope;
+  const hasVirtualGroup = !!activity.virtualGroup;
+  const isGroupLeader = hasVirtualGroup && currentUserId
+    ? activity.virtualGroup!.leaderId === currentUserId
+    : false;
   // In joinByType mode, user can always join (overflow creates new instance)
   const canJoin = joinByType
     ? activity.isEligible && !activity.isMember
@@ -242,6 +297,66 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
             )}
           </div>
 
+          {/* Virtual Group Info */}
+          {hasVirtualGroup && currentUserId && (
+            <div className="border-t pt-3">
+              <VirtualGroupInfo
+                group={activity.virtualGroup!}
+                currentUserId={currentUserId}
+              />
+            </div>
+          )}
+
+          {/* Completion mode indicator */}
+          {activity.type.completionMode && showInstanceFeatures && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {activity.type.completionMode === 'ALL_MEMBERS' ? (
+                <>
+                  <Users className="size-3.5" />
+                  <span>所有成员需标记完成</span>
+                </>
+              ) : (
+                <>
+                  <UserCheck className="size-3.5" />
+                  <span>组长标记完成即可</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Pairing Panel (for PAIR_2 activities) */}
+          {scope === 'PAIR_2' && hasVirtualGroup && currentUserId && (
+            <div className="border-t pt-3">
+              <PairingPanel
+                virtualGroupId={activity.virtualGroup!.id}
+                activityTypeId={activity.type.id}
+                currentUserId={currentUserId}
+                isLeader={isGroupLeader}
+                pairingMode={activity.type.pairingMode ?? null}
+                members={activity.virtualGroup!.members}
+                pairings={activity.pairings ?? []}
+                onPairingChange={onRefresh ?? (() => {})}
+              />
+            </div>
+          )}
+
+          {/* Competition Panel (for CROSS_GROUP activities) */}
+          {scope === 'CROSS_GROUP' && currentUserId && (
+            <div className="border-t pt-3">
+              <CompetitionPanel
+                activityId={activity.id}
+                activityStatus={activity.status}
+                winnerId={activity.winnerId ?? null}
+                currentGroupId={activity.virtualGroupId ?? null}
+                isLeader={isGroupLeader}
+                currentUserId={currentUserId}
+                opponentGroup={activity.opponentGroup}
+                hasCompetitor={!!activity.competitorActivityId}
+                onWinnerSet={onRefresh ?? (() => {})}
+              />
+            </div>
+          )}
+
           {/* Tags */}
           {activity.activityTags.length > 0 && (
             <div className="flex flex-wrap gap-1">
@@ -280,13 +395,14 @@ export function ActivityDetailDialog({ activity, onClose, joinByType }: Props) {
             />
           )}
 
-          {/* Markdown guide */}
-          {activity.guideMarkdown && (
+          {/* Activity guide (from ActivityType or legacy guideMarkdown) */}
+          {(activity.type.guideContent || activity.guideMarkdown) && (
             <div className="border-t pt-4">
-              <h3 className="mb-2 text-sm font-medium">{t('guide')}</h3>
-              <div className="prose prose-sm max-w-none overflow-hidden break-words [&_pre]:overflow-x-auto [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_li]:my-0">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{activity.guideMarkdown}</ReactMarkdown>
-              </div>
+              <ActivityGuideView
+                guideContent={activity.type.guideContent}
+                guideMarkdown={activity.guideMarkdown}
+                allowView={activity.isEligible || activity.type.allowViewLocked !== false}
+              />
             </div>
           )}
 
