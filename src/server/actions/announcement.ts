@@ -16,6 +16,7 @@ const announcementSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   content: z.string().min(1, 'Content is required'),
   countdownSeconds: z.coerce.number().int().min(0).max(300).default(20),
+  targetAudience: z.enum(['ALL', 'LEADER']).default('ALL'),
 });
 
 export async function createAnnouncement(
@@ -28,6 +29,7 @@ export async function createAnnouncement(
     title: formData.get('title'),
     content: formData.get('content'),
     countdownSeconds: formData.get('countdownSeconds') || 20,
+    targetAudience: formData.get('targetAudience') || 'ALL',
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
@@ -52,6 +54,7 @@ export async function updateAnnouncement(
     title: formData.get('title'),
     content: formData.get('content'),
     countdownSeconds: formData.get('countdownSeconds') || 20,
+    targetAudience: formData.get('targetAudience') || 'ALL',
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
@@ -83,9 +86,10 @@ export async function toggleAnnouncementActive(id: string): Promise<ActionState>
       data: { isActive: false },
     });
   } else {
+    // Only deactivate announcements with the same targetAudience
     await prisma.$transaction([
       prisma.announcement.updateMany({
-        where: { isActive: true },
+        where: { isActive: true, targetAudience: announcement.targetAudience },
         data: { isActive: false },
       }),
       prisma.announcement.update({
@@ -122,4 +126,24 @@ export async function markAnnouncementViewed(announcementId: string): Promise<Ac
   }
 
   return { success: true };
+}
+
+/**
+ * Fetch the active leader guide content. Used by client components
+ * (e.g., ActivityDetailDialog) to show the guide on demand.
+ */
+export async function fetchLeaderGuide(): Promise<{
+  id: string;
+  title: string;
+  content: string;
+} | null> {
+  await requireAuth();
+  try {
+    return await prisma.announcement.findFirst({
+      where: { isActive: true, targetAudience: 'LEADER' },
+      select: { id: true, title: true, content: true },
+    });
+  } catch {
+    return null;
+  }
 }

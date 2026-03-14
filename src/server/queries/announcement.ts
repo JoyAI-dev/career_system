@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/db';
 
-export async function getActiveAnnouncement() {
+export async function getActiveAnnouncement(audience: string = 'ALL') {
   try {
     return await prisma.announcement.findFirst({
-      where: { isActive: true },
+      where: { isActive: true, targetAudience: audience },
       select: { id: true, title: true, content: true, countdownSeconds: true },
     });
   } catch {
@@ -30,5 +30,21 @@ export async function getAllAnnouncements() {
     });
   } catch {
     return [];
+  }
+}
+
+/**
+ * Check if a user is the leader of any virtual group.
+ * Used to determine if they should see leader-specific announcements.
+ */
+export async function isUserLeaderInAnyGroup(userId: string): Promise<boolean> {
+  try {
+    const group = await prisma.virtualGroup.findFirst({
+      where: { leaderId: userId },
+      select: { id: true },
+    });
+    return !!group;
+  } catch {
+    return false;
   }
 }

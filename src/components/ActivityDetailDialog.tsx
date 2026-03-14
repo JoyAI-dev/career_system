@@ -32,7 +32,8 @@ import { VirtualGroupInfo } from '@/components/VirtualGroupInfo';
 import { PairingPanel } from '@/components/PairingPanel';
 import { CompetitionPanel } from '@/components/CompetitionPanel';
 import { ActivityGuideView } from '@/components/ActivityGuideView';
-import { Users, UserCheck } from 'lucide-react';
+import { Users, UserCheck, BookOpen } from 'lucide-react';
+import { LeaderGuideButton } from '@/components/LeaderGuideButton';
 
 type Tag = { id: string; name: string };
 
@@ -322,6 +323,11 @@ export function ActivityDetailDialog({ activity, onClose, joinByType, currentUse
               </div>
             );
           })()}
+
+          {/* Leader guide button — only visible to group leaders */}
+          {isGroupLeader && showInstanceFeatures && (
+            <LeaderGuideButton />
+          )}
 
           {/* Completion mode indicator */}
           {activity.type.completionMode && showInstanceFeatures && (

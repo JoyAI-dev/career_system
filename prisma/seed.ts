@@ -822,12 +822,30 @@ async function main() {
   );
   if (existingAnnouncement.length === 0) {
     await prisma.$queryRaw(
-      Prisma.sql`INSERT INTO announcements (id, title, content, "isActive", "countdownSeconds", "createdAt", "updatedAt")
-        VALUES (gen_random_uuid(), '公告', ${announcementContent}, true, 20, NOW(), NOW())`,
+      Prisma.sql`INSERT INTO announcements (id, title, content, "isActive", "countdownSeconds", "targetAudience", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid(), '公告', ${announcementContent}, true, 20, 'ALL', NOW(), NOW())`,
     );
     console.log('Seeded announcement: 公告');
   } else {
     console.log('Announcement already exists, skipping');
+  }
+
+  // ── Leader Guide Seed ──────────────────────────────────────────────────
+  const leaderGuideContent = `恭喜你成为小组长！
+
+小组长的职责就是确保按照活动或会议指南协调组员以及主持会议，提交或者监督组员（如果有事或不方便）提交会议转写文档或纪要，线上会议尤其要你费心与组员沟通！这是模拟真实面试场景以及真实工作场景的无领导小组沟通。`;
+
+  const existingLeaderGuide = await prisma.$queryRaw<{ id: string }[]>(
+    Prisma.sql`SELECT id FROM announcements WHERE title = '小组长指南' AND "targetAudience" = 'LEADER' LIMIT 1`,
+  );
+  if (existingLeaderGuide.length === 0) {
+    await prisma.$queryRaw(
+      Prisma.sql`INSERT INTO announcements (id, title, content, "isActive", "countdownSeconds", "targetAudience", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid(), '小组长指南', ${leaderGuideContent}, true, 0, 'LEADER', NOW(), NOW())`,
+    );
+    console.log('Seeded leader guide: 小组长指南');
+  } else {
+    console.log('Leader guide already exists, skipping');
   }
 
   // ── Questionnaire V2 (4-tier: Topic → SubTopic → Dimension → Question) ──
