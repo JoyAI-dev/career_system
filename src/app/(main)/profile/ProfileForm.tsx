@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,14 +25,23 @@ type ProfileFormProps = {
     id: string;
     label: string;
   }[];
+  onSuccess?: () => void;
 };
 
-export function ProfileForm({ user, gradeOptions }: ProfileFormProps) {
+export function ProfileForm({ user, gradeOptions, onSuccess }: ProfileFormProps) {
   const t = useTranslations('profile');
   const [state, formAction, isPending] = useActionState<UpdateProfileState, FormData>(
     updateProfile,
     {},
   );
+  const prevSuccessRef = useRef(false);
+
+  useEffect(() => {
+    if (state.success && !prevSuccessRef.current) {
+      onSuccess?.();
+    }
+    prevSuccessRef.current = !!state.success;
+  }, [state.success, onSuccess]);
 
   return (
     <form action={formAction} className="space-y-4">

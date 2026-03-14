@@ -3,39 +3,28 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import {
   Menu,
-  LogOut,
   LayoutDashboard,
   Activity,
   Calendar,
-  User,
   ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Sidebar } from '@/components/Sidebar';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { ProfileDrawer } from '@/components/ProfileDrawer';
 
 const studentNavItems = [
   { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
   { href: '/activities', labelKey: 'activities', icon: Activity },
   { href: '/calendar', labelKey: 'calendar', icon: Calendar },
   { href: '/cognitive-report', labelKey: 'cognitiveReport', icon: ClipboardList },
-  { href: '/profile', labelKey: 'profile', icon: User },
 ] as const;
 
 interface HeaderProps {
@@ -49,8 +38,10 @@ export function Header({ initialUnreadCount = 0, variant = 'admin' }: HeaderProp
   const tn = useTranslations('nav');
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const username = session?.user?.username ?? 'User';
+  const role = session?.user?.role ?? 'USER';
   const initials = username.slice(0, 2).toUpperCase();
 
   return (
@@ -102,37 +93,23 @@ export function Header({ initialUnreadCount = 0, variant = 'admin' }: HeaderProp
       {/* Notification bell */}
       <NotificationBell initialCount={initialUnreadCount} />
 
-      {/* User menu */}
-      <DropdownMenu>
-        <DropdownMenuTrigger className="relative flex h-8 w-8 items-center justify-center rounded-full hover:bg-accent">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{username}</p>
-                <p className="text-xs text-muted-foreground">
-                  {session?.user?.role === 'ADMIN' ? t('administrator') : t('student')}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => {
-            // Clear announcement dismissal so popup shows again on next login
-            Object.keys(sessionStorage).forEach((key) => {
-              if (key.startsWith('announcement_dismissed')) sessionStorage.removeItem(key);
-            });
-            signOut({ callbackUrl: '/login' });
-          }}>
-            <LogOut className="h-4 w-4" />
-            {t('logOut')}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* User avatar — opens profile drawer */}
+      <button
+        type="button"
+        onClick={() => setProfileOpen(true)}
+        className="relative flex h-8 w-8 items-center justify-center rounded-full hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring outline-none"
+      >
+        <Avatar className="h-8 w-8">
+          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+        </Avatar>
+      </button>
+
+      <ProfileDrawer
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+        username={username}
+        role={role}
+      />
     </header>
   );
 }
