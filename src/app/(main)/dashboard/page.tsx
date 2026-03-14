@@ -7,6 +7,7 @@ import {
   getUserJoinedActivities,
   hasAnyVirtualGroupMembership,
   getUserFormingGroupsSummary,
+  getPairingDataForStep,
 } from '@/server/queries/activity';
 import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 import { ActivityStepper } from '@/components/ActivityStepper';
@@ -89,6 +90,11 @@ export default async function DashboardPage() {
           typeName: a.type.name,
         }));
 
+  // Fetch pairing data when current step has no activities (PAIR_2 type needs pairing first)
+  const pairingData = currentStep && currentActivities.length === 0
+    ? await getPairingDataForStep(session.user.id, currentStep.typeId)
+    : null;
+
   return (
     <div className="space-y-8">
       {/* Floating cognitive report button */}
@@ -110,6 +116,7 @@ export default async function DashboardPage() {
           currentUserId={session.user.id}
           hasCompletedQuestionnaire={questionnaireCompleted}
           formingGroupsSummary={formingGroupsSummary}
+          pairingData={pairingData}
         />
       </section>
 

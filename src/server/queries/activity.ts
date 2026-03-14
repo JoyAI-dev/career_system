@@ -326,6 +326,75 @@ export async function getUserFormingGroupsSummary(userId: string) {
   };
 }
 
+/**
+ * Get pairing data for the current dashboard step.
+ * Used when the current step is a PAIR_2 activity type and no activities exist yet,
+ * so the dashboard can show the PairingPanel inline.
+ */
+export async function getPairingDataForStep(userId: string, activityTypeId: string) {
+  // 1. Get the activity type details
+  const activityType = await prisma.activityType.findUnique({
+    where: { id: activityTypeId },
+    select: { id: true, name: true, scope: true, pairingMode: true },
+  });
+
+  if (!activityType || activityType.scope !== 'PAIR_2') return null;
+
+  // 2. Find user's ACTIVE virtual group
+  const vgMembership = await prisma.virtualGroupMember.findFirst({
+    where: {
+      userId,
+      virtualGroup: { status: 'ACTIVE' },
+    },
+    select: {
+      virtualGroup: {
+        select: {
+          id: true,
+          leaderId: true,
+          members: {
+            orderBy: { order: 'asc' },
+            select: {
+              userId: true,
+              user: { select: { id: true, name: true, username: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!vgMembership) return null;
+
+  const vg = vgMembership.virtualGroup;
+
+  // 3. Get pairings for this group and activity type
+  const pairings = await prisma.pairing.findMany({
+    where: {
+      virtualGroupId: vg.id,
+      activityTypeId,
+      status: { in: ['PENDING', 'ACCEPTED'] },
+    },
+    select: {
+      id: true,
+      status: true,
+      user1: { select: { id: true, name: true, username: true } },
+      user2: { select: { id: true, name: true, username: true } },
+    },
+  });
+
+  return {
+    activityTypeId: activityType.id,
+    activityTypeName: activityType.name,
+    pairingMode: activityType.pairingMode,
+    virtualGroupId: vg.id,
+    isLeader: vg.leaderId === userId,
+    members: vg.members,
+    pairings,
+  };
+}
+
+export type PairingDataForStep = NonNullable<Awaited<ReturnType<typeof getPairingDataForStep>>>;
+
 /** Get activity detail with full info for the detail popup */
 export async function getActivityDetail(id: string) {
   return prisma.activity.findUnique({
