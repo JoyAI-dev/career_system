@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getUserCalendarEvents } from '@/server/queries/calendar';
+import { getUserCalendarEvents, getUserPendingActivities, getProjectedActivityChain } from '@/server/queries/calendar';
 import { getRecruitmentEvents } from '@/server/queries/recruitment';
 import { getActivityTypes } from '@/server/queries/activityType';
 import { CalendarView } from '@/components/Calendar';
@@ -11,10 +11,12 @@ export default async function CalendarPage() {
   const session = await auth();
   if (!session?.user) redirect('/login');
 
-  const [events, recruitmentEvents, types, t] = await Promise.all([
+  const [events, pendingActivities, recruitmentEvents, types, projectedChain, t] = await Promise.all([
     getUserCalendarEvents(session.user.id),
+    getUserPendingActivities(session.user.id),
     getRecruitmentEvents(),
     getActivityTypes(),
+    getProjectedActivityChain(session.user.id),
     getTranslations('calendar'),
   ]);
 
@@ -28,9 +30,11 @@ export default async function CalendarPage() {
       <Suspense fallback={<div className="flex h-96 items-center justify-center text-muted-foreground">{t('loading')}</div>}>
       <CalendarView
         events={JSON.parse(JSON.stringify(events))}
+        pendingActivities={JSON.parse(JSON.stringify(pendingActivities))}
         recruitmentEvents={JSON.parse(JSON.stringify(recruitmentEvents))}
         activityTypes={enabledTypes}
         userId={session.user.id}
+        projectedChain={JSON.parse(JSON.stringify(projectedChain))}
       />
       </Suspense>
     </div>
