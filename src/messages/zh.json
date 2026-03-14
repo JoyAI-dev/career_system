@@ -80,6 +80,7 @@
     "journeyFlowTitle": "探索流程",
     "step1Label": "摸索认知边界\n知与不知",
     "step2Empty": "暂无进行中的活动",
+    "step2Forming": "正在组队中…",
     "step3Label": "获取完整的\n认知边界对比图"
   },
   "profile": {
@@ -214,7 +215,15 @@
     "loadingDetail": "加载活动详情...",
     "pendingActivities": "等待中的活动",
     "waitingForMembers": "等待组队",
-    "waitingForSchedule": "等待安排时间"
+    "waitingForSchedule": "等待安排时间",
+    "projected": "预计",
+    "projectedHint": "此活动尚未创建，日期为根据活动间隔推算的预计时间，实际时间以组队完成后的安排为准。",
+    "forming": "组队中",
+    "formingNeedMembers": "缺{count}人",
+    "formingHint": "此活动正在组队中，等待更多成员加入后将自动安排。",
+    "formingProgress": "当前 {current}/{required} 人",
+    "guideTitle": "活动说明",
+    "lockedHint": "此活动还未解锁，你需要完成前序活动才能解锁。"
   },
   "cognitiveReport": {
     "title": "认知边界报告",

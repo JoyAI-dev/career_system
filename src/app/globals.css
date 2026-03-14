@@ -135,3 +135,9 @@
     @apply ring-2 ring-ring outline-none rounded-sm;
   }
 }
+
+/* FullCalendar: projected/preview events — dashed border, lower opacity */
+.fc-event-projected {
+  border-style: dashed !important;
+  opacity: 0.7;
+}

@@ -2,7 +2,12 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@/lib/auth';
-import { getActivityProgress, getUserJoinedActivities } from '@/server/queries/activity';
+import {
+  getActivityProgress,
+  getUserJoinedActivities,
+  hasAnyVirtualGroupMembership,
+  getUserFormingGroupsSummary,
+} from '@/server/queries/activity';
 import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 import { ActivityStepper } from '@/components/ActivityStepper';
 import { ActivityJourneyFlow } from '@/components/ActivityJourneyFlow';
@@ -27,12 +32,40 @@ export default async function DashboardPage() {
   }
 
   // Student landing page — fetch all data in parallel
-  const [steps, joinedActivities, questionnaireCompleted, t] = await Promise.all([
+  let [steps, joinedActivities, questionnaireCompleted, t] = await Promise.all([
     getActivityProgress(session.user.id),
     getUserJoinedActivities(session.user.id),
     hasCompletedQuestionnaire(session.user.id),
     getTranslations('dashboard'),
   ]);
+
+  // ── Catch-up: auto-match users who completed questionnaire before the
+  //    matching feature was deployed (or whose matching silently failed).
+  //    Only runs once per affected user — after matching, they'll have
+  //    virtual-group memberships and this block won't trigger again.
+  if (questionnaireCompleted && joinedActivities.length === 0) {
+    const hasGroups = await hasAnyVirtualGroupMembership(session.user.id);
+    if (!hasGroups) {
+      try {
+        const { matchUserToFirstActivity } = await import(
+          '@/server/services/activityMatching'
+        );
+        await matchUserToFirstActivity(session.user.id);
+        // Re-fetch data that may have changed after matching
+        [steps, joinedActivities] = await Promise.all([
+          getActivityProgress(session.user.id),
+          getUserJoinedActivities(session.user.id),
+        ]);
+      } catch (err) {
+        console.error('Dashboard catch-up matching failed:', err);
+      }
+    }
+  }
+
+  // Check if user is in FORMING groups (waiting for more members)
+  const formingGroupsSummary = questionnaireCompleted && joinedActivities.length === 0
+    ? await getUserFormingGroupsSummary(session.user.id)
+    : null;
 
   // Find current activity stage for the journey flow
   const currentStep = steps.find((s) => s.state === 'current');
@@ -76,6 +109,7 @@ export default async function DashboardPage() {
           currentActivities={currentActivities}
           currentUserId={session.user.id}
           hasCompletedQuestionnaire={questionnaireCompleted}
+          formingGroupsSummary={formingGroupsSummary}
         />
       </section>
 

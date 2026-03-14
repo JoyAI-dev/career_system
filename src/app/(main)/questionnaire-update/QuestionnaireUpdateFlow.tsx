@@ -257,13 +257,13 @@ export function QuestionnaireUpdateFlow({
         <h2 className="text-lg font-semibold">{currentTopic.name}</h2>
 
         {topicDimensions.map((dimension) => (
-          <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-24 space-y-4">
+          <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-56 space-y-4">
             <h3 className="text-sm font-medium text-muted-foreground">{dimension.name}</h3>
 
             {dimension.questions.map((question) => {
               const wasChanged = previousAnswers[question.id] && answers[question.id] !== previousAnswers[question.id];
               return (
-                <Card key={question.id} id={`question-${question.id}`} className={`scroll-mt-28 ${wasChanged ? 'ring-1 ring-primary/30' : ''}`}>
+                <Card key={question.id} id={`question-${question.id}`} className={`scroll-mt-60 ${wasChanged ? 'ring-1 ring-primary/30' : ''}`}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm">{question.title}</CardTitle>

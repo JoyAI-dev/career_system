@@ -18,6 +18,12 @@ type CurrentActivity = {
   typeName: string;
 };
 
+type FormingGroupsSummary = {
+  totalFormingGroups: number;
+  bestGroupMemberCount: number;
+  groupSize: number;
+} | null;
+
 interface Props {
   /** Name of the current activity type (e.g. "圆桌会议") */
   currentTypeName: string | null;
@@ -26,6 +32,8 @@ interface Props {
   currentUserId: string;
   /** Whether the user has completed the initial questionnaire */
   hasCompletedQuestionnaire?: boolean;
+  /** Summary of user's FORMING groups (waiting for more members) */
+  formingGroupsSummary?: FormingGroupsSummary;
 }
 
 const STATUS_DOT: Record<string, string> = {
@@ -44,7 +52,7 @@ const STATUS_LABEL: Record<string, string> = {
   COMPLETED: '已完成',
 };
 
-export function ActivityJourneyFlow({ currentTypeName, currentActivities, currentUserId, hasCompletedQuestionnaire }: Props) {
+export function ActivityJourneyFlow({ currentTypeName, currentActivities, currentUserId, hasCompletedQuestionnaire, formingGroupsSummary }: Props) {
   const t = useTranslations('dashboard');
   const tCal = useTranslations('calendar');
 
@@ -114,7 +122,31 @@ export function ActivityJourneyFlow({ currentTypeName, currentActivities, curren
           <div className="flex flex-col items-center gap-2 rounded-lg border bg-white p-4 text-center">
             <span className="text-2xl font-bold text-blue-600">2</span>
             <Users className="size-5 text-blue-600" />
-            {currentActivities.length === 0 ? (
+            {currentActivities.length === 0 && formingGroupsSummary ? (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-amber-600">
+                  {t('step2Forming')}
+                </span>
+                <div className="flex items-center justify-center gap-1">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: formingGroupsSummary.groupSize }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={cn(
+                          'size-2 rounded-full',
+                          i < formingGroupsSummary.bestGroupMemberCount
+                            ? 'bg-amber-500'
+                            : 'bg-gray-200'
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {formingGroupsSummary.bestGroupMemberCount}/{formingGroupsSummary.groupSize}
+                  </span>
+                </div>
+              </div>
+            ) : currentActivities.length === 0 ? (
               <span className="text-xs text-muted-foreground">
                 {t('step2Empty')}
               </span>

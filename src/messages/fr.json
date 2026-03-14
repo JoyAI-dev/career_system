@@ -80,6 +80,7 @@
     "journeyFlowTitle": "Flux d'exploration",
     "step1Label": "Explorer les frontières\ncognitives",
     "step2Empty": "Aucune activité en cours",
+    "step2Forming": "Formation du groupe…",
     "step3Label": "Obtenir le graphique\ncomparatif cognitif"
   },
   "profile": {
@@ -213,7 +214,15 @@
     "loadingDetail": "Chargement des détails...",
     "pendingActivities": "Activités en attente",
     "waitingForMembers": "En attente de membres",
-    "waitingForSchedule": "En attente de planification"
+    "waitingForSchedule": "En attente de planification",
+    "projected": "Prévu",
+    "projectedHint": "Cette activité n'a pas encore été créée. La date est estimée selon les intervalles d'activité. Le calendrier réel dépend de la formation du groupe.",
+    "forming": "En formation",
+    "formingNeedMembers": "Besoin de {count} de plus",
+    "formingHint": "Cette activité forme une équipe. Elle sera planifiée automatiquement une fois que suffisamment de membres se seront inscrits.",
+    "formingProgress": "Actuellement {current}/{required} membres",
+    "guideTitle": "Guide de l'activité",
+    "lockedHint": "Cette activité est verrouillée. Complétez les activités précédentes pour la déverrouiller."
   },
   "cognitiveReport": {
     "title": "Rapport de frontière cognitive",

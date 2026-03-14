@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ export function DimensionNav({ dimensions, groups, sectionAnswered = 0, sectionT
   const hasGroups = groups && groups.length > 1;
   const [activeGroupIdx, setActiveGroupIdx] = useState(0);
   const [activeDimId, setActiveDimId] = useState<string | null>(null);
+  const navRef = useRef<HTMLDivElement>(null);
 
   const displayDimensions = hasGroups
     ? groups[activeGroupIdx]?.dimensions ?? []
@@ -70,8 +71,18 @@ export function DimensionNav({ dimensions, groups, sectionAnswered = 0, sectionT
   }, [dimensions, groups, hasGroups, activeGroupIdx]);
 
   const scrollTo = useCallback((id: string) => {
-    document.getElementById(`dimension-${id}`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const el = document.getElementById(`dimension-${id}`);
+    if (!el) return;
+    // Dynamically calculate offset based on actual nav height
+    // so the target element appears just below the sticky nav
+    if (navRef.current) {
+      const navBottom = navRef.current.getBoundingClientRect().bottom;
+      const elTop = el.getBoundingClientRect().top;
+      const buffer = 16; // 16px breathing room below nav
+      window.scrollBy({ top: elTop - navBottom - buffer, behavior: 'smooth' });
+    } else {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }, []);
 
   // ── Progress ──
@@ -83,7 +94,7 @@ export function DimensionNav({ dimensions, groups, sectionAnswered = 0, sectionT
   if (!hasGroups && dimensions.length <= 1) {
     if (sectionTotal > 0) {
       return (
-        <div className="sticky top-14 z-20 py-3 md:top-16">
+        <div ref={navRef} className="sticky top-14 z-20 py-3 md:top-16">
           <Card>
             <CardContent>
               <ProgressBar width={pct} done={done} answered={sectionAnswered} total={sectionTotal} pctStr={pctStr} />
@@ -97,7 +108,7 @@ export function DimensionNav({ dimensions, groups, sectionAnswered = 0, sectionT
 
   // ── Main render ──
   return (
-    <div className="sticky top-14 z-20 py-3 md:top-16">
+    <div ref={navRef} className="sticky top-14 z-20 py-3 md:top-16">
       <Card>
         <CardContent className="space-y-4">
           {/* Progress */}

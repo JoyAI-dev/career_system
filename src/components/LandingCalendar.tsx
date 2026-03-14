@@ -1,4 +1,8 @@
-import { getUserCalendarEvents, getUserPendingActivities } from '@/server/queries/calendar';
+import {
+  getUserCalendarEvents,
+  getUserPendingActivities,
+  getProjectedActivityChain,
+} from '@/server/queries/calendar';
 import { getRecruitmentEvents } from '@/server/queries/recruitment';
 import { getActivityTypes } from '@/server/queries/activityType';
 import { CalendarView } from '@/components/Calendar';
@@ -8,12 +12,14 @@ interface LandingCalendarProps {
 }
 
 export async function LandingCalendar({ userId }: LandingCalendarProps) {
-  const [events, pendingActivities, recruitmentEvents, types] = await Promise.all([
-    getUserCalendarEvents(userId),
-    getUserPendingActivities(userId),
-    getRecruitmentEvents(),
-    getActivityTypes(),
-  ]);
+  const [events, pendingActivities, recruitmentEvents, types, projectedChain] =
+    await Promise.all([
+      getUserCalendarEvents(userId),
+      getUserPendingActivities(userId),
+      getRecruitmentEvents(),
+      getActivityTypes(),
+      getProjectedActivityChain(userId),
+    ]);
 
   const enabledTypes = types
     .filter((t) => t.isEnabled)
@@ -27,6 +33,7 @@ export async function LandingCalendar({ userId }: LandingCalendarProps) {
         recruitmentEvents={JSON.parse(JSON.stringify(recruitmentEvents))}
         activityTypes={enabledTypes}
         userId={userId}
+        projectedChain={JSON.parse(JSON.stringify(projectedChain))}
       />
     </section>
   );

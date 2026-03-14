@@ -277,6 +277,55 @@ export async function getActivityTypesForDashboard(userId: string) {
   });
 }
 
+/**
+ * Check whether a user has any virtual-group memberships.
+ * Used by the dashboard catch-up logic: if a user completed the questionnaire
+ * but has no virtual-group memberships, we need to trigger auto-matching.
+ */
+export async function hasAnyVirtualGroupMembership(userId: string): Promise<boolean> {
+  const membership = await prisma.virtualGroupMember.findFirst({
+    where: { userId },
+    select: { id: true },
+  });
+  return !!membership;
+}
+
+/**
+ * Get a summary of user's FORMING virtual groups (groups still waiting for members).
+ * Used to show "正在组队中 (2/6)" in the journey flow when the user has no activities yet.
+ */
+export async function getUserFormingGroupsSummary(userId: string) {
+  const groups = await prisma.virtualGroupMember.findMany({
+    where: {
+      userId,
+      virtualGroup: { status: 'FORMING' },
+    },
+    select: {
+      virtualGroup: {
+        select: {
+          id: true,
+          _count: { select: { members: true } },
+        },
+      },
+    },
+  });
+
+  if (groups.length === 0) return null;
+
+  // Return the group with the most members (closest to forming)
+  const bestGroup = groups.reduce((best, curr) => {
+    return curr.virtualGroup._count.members > best.virtualGroup._count.members
+      ? curr
+      : best;
+  });
+
+  return {
+    totalFormingGroups: groups.length,
+    bestGroupMemberCount: bestGroup.virtualGroup._count.members,
+    groupSize: 6, // getDefaultGroupSize()
+  };
+}
+
 /** Get activity detail with full info for the detail popup */
 export async function getActivityDetail(id: string) {
   return prisma.activity.findUnique({

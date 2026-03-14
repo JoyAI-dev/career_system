@@ -80,6 +80,7 @@
     "journeyFlowTitle": "Exploration Flow",
     "step1Label": "Explore Cognitive\nBoundaries",
     "step2Empty": "No activities in progress",
+    "step2Forming": "Forming group…",
     "step3Label": "Get Cognitive\nComparison Chart"
   },
   "profile": {
@@ -213,7 +214,15 @@
     "loadingDetail": "Loading activity details...",
     "pendingActivities": "Pending Activities",
     "waitingForMembers": "Waiting for members",
-    "waitingForSchedule": "Waiting for scheduling"
+    "waitingForSchedule": "Waiting for scheduling",
+    "projected": "Projected",
+    "projectedHint": "This activity hasn't been created yet. The date is estimated based on activity intervals. Actual timing depends on group formation.",
+    "forming": "Forming",
+    "formingNeedMembers": "Need {count} more",
+    "formingHint": "This activity is forming a team. It will be scheduled automatically once enough members join.",
+    "formingProgress": "Currently {current}/{required} members",
+    "guideTitle": "Activity Guide",
+    "lockedHint": "This activity is locked. Complete the preceding activities to unlock it."
   },
   "cognitiveReport": {
     "title": "Cognitive Boundary Report",

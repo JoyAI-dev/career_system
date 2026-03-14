@@ -71,7 +71,10 @@ function computeScores(
   for (const topic of structure.topics) {
     if (!topic.showInReport) continue;
     const questions = topic.subTopics.flatMap((st) => st.dimensions.flatMap((d) => d.questions));
-    const scores = questions.map((q) => answers[q.id]?.score ?? 0);
+    // Only score questions that have answers (handles FILTER mode where some subtopics are hidden)
+    const answeredQuestions = questions.filter((q) => answers[q.id] !== undefined);
+    const scoresToAvg = answeredQuestions.length > 0 ? answeredQuestions : questions;
+    const scores = scoresToAvg.map((q) => answers[q.id]?.score ?? 0);
     const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
     topicScores.push({ topicId: topic.id, topicName: topic.name, score: Math.round(avg * 100) / 100 });
   }

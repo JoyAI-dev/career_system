@@ -159,6 +159,13 @@ export function calculateScores(
           questionScores: qScores,
         };
       });
+
+      // FILTER mode: exclude subtopics with no answers (they were filtered out by user preferences)
+      if (topic.preferenceMode === 'FILTER') {
+        subTopicScores = subTopicScores.filter((st) =>
+          st.questionScores.some((qs) => answerMap.has(qs.questionId)),
+        );
+      }
     }
 
     const topicScore = subTopicScores.length > 0
@@ -225,7 +232,11 @@ export function calculateScoresFromMap(
     } else {
       // FILTER / CONTEXT
       const allQuestions = topic.subTopics.flatMap((st) => st.dimensions.flatMap((d) => d.questions));
-      const scores = allQuestions.map((q) => questionScoreMap[q.id] ?? 0);
+      // FILTER mode: only score questions the user actually answered (filtered subtopics have no answers)
+      const relevantQuestions = topic.preferenceMode === 'FILTER'
+        ? allQuestions.filter((q) => q.id in questionScoreMap)
+        : allQuestions;
+      const scores = relevantQuestions.map((q) => questionScoreMap[q.id] ?? 0);
       const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
       topicScores.push({ topicId: topic.id, topicName: topic.name, score: Math.round(avg * 100) / 100 });
     }

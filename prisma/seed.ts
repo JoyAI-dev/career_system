@@ -875,6 +875,11 @@ async function main() {
     let topicId: string;
     if (existingTopics.length > 0) {
       topicId = existingTopics[0].id;
+      // Update preferenceMode and showInReport for existing topics (in case seed data changed)
+      const topicOrder = QUESTIONNAIRE_V2_DATA.indexOf(topic) + 1;
+      await prisma.$executeRaw(
+        Prisma.sql`UPDATE topics SET "preferenceMode" = ${topic.preferenceMode}::"TopicPreferenceMode", "showInReport" = ${topic.showInReport}, "order" = ${topicOrder}, "preferenceCategoryId" = ${preferenceCategoryId} WHERE id = ${topicId}`,
+      );
     } else {
       const topicOrder = QUESTIONNAIRE_V2_DATA.indexOf(topic) + 1;
       const inserted = await prisma.$queryRaw<{ id: string }[]>(

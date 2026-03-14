@@ -55,12 +55,25 @@ type PendingActivity = {
 
 type ActivityType = { id: string; name: string };
 
+type ProjectedChainEvent = {
+  typeId: string;
+  typeName: string;
+  typeOrder: number;
+  date: string;
+  kind: 'actual' | 'forming' | 'projected';
+  activityId?: string;
+  status: string;
+  formingInfo?: { currentMembers: number; requiredMembers: number };
+  guideContent?: string | null;
+};
+
 type Props = {
   events: CalendarEvent[];
   pendingActivities?: PendingActivity[];
   recruitmentEvents?: RecruitmentEvent[];
   activityTypes?: ActivityType[];
   userId: string;
+  projectedChain?: ProjectedChainEvent[];
 };
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -73,10 +86,24 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }
 
 const RECRUITMENT_COLORS = { bg: '#fce7f3', border: '#ec4899', text: '#9d174d' };
 
+// Forming (team building) activities — orange
+const FORMING_COLORS = { bg: '#fff7ed', border: '#f97316', text: '#9a3412' };
+
+// Projected (preview) activities — dashed border style applied via CSS class
+const PROJECTED_COLORS = { bg: '#f3f4f6', border: '#9ca3af', text: '#6b7280' };
+
+const STATUS_LABELS: Record<string, string> = {
+  OPEN: '开放中',
+  FULL: '已满',
+  SCHEDULED: '已安排',
+  IN_PROGRESS: '进行中',
+  COMPLETED: '已完成',
+};
+
 // Type for ActivityDetailDialog's activity prop (inferred from server action return)
 type ActivityDetail = NonNullable<Awaited<ReturnType<typeof getActivityForCalendarPopup>>>;
 
-export function CalendarView({ events, pendingActivities = [], recruitmentEvents = [], activityTypes = [], userId }: Props) {
+export function CalendarView({ events, pendingActivities = [], recruitmentEvents = [], activityTypes = [], userId, projectedChain = [] }: Props) {
   const t = useTranslations('calendar');
   const locale = useLocale();
   const calendarRef = useRef<FullCalendar>(null);
@@ -126,8 +153,57 @@ export function CalendarView({ events, pendingActivities = [], recruitmentEvents
       extendedProps: { kind: 'recruitment' as const, data: event },
     }));
 
-    return [...activityItems, ...recruitmentItems];
-  }, [filteredActivityEvents, filteredRecruitmentEvents]);
+    // Forming activity — orange, shows missing member count
+    const formingItems = showActivities
+      ? projectedChain
+          .filter((p) => p.kind === 'forming')
+          .filter((p) => selectedTypeId === 'all' || p.typeId === selectedTypeId)
+          .map((p) => {
+            const needed = p.formingInfo
+              ? p.formingInfo.requiredMembers - p.formingInfo.currentMembers
+              : 0;
+            const needLabel = needed > 0 ? t('formingNeedMembers', { count: needed }) : '';
+            return {
+              id: `forming-${p.typeId}`,
+              title: `${p.typeName} (${t('forming')}${needLabel ? ' ' + needLabel : ''})`,
+              start: p.date,
+              backgroundColor: FORMING_COLORS.bg,
+              borderColor: FORMING_COLORS.border,
+              textColor: FORMING_COLORS.text,
+              extendedProps: {
+                kind: 'forming' as const,
+                typeOrder: p.typeOrder,
+                data: p,
+              },
+            };
+          })
+      : [];
+
+    // Projected activity chain — only show projected entries (actuals already covered above)
+    const projectedItems = showActivities
+      ? projectedChain
+          .filter((p) => p.kind === 'projected')
+          .filter((p) => selectedTypeId === 'all' || p.typeId === selectedTypeId)
+          .map((p) => {
+            return {
+              id: `projected-${p.typeId}`,
+              title: `${p.typeName} (${t('projected')})`,
+              start: p.date,
+              backgroundColor: PROJECTED_COLORS.bg,
+              borderColor: PROJECTED_COLORS.border,
+              textColor: PROJECTED_COLORS.text,
+              classNames: ['fc-event-projected'],
+              extendedProps: {
+                kind: 'projected' as const,
+                typeOrder: p.typeOrder,
+                data: p,
+              },
+            };
+          })
+      : [];
+
+    return [...activityItems, ...recruitmentItems, ...formingItems, ...projectedItems];
+  }, [filteredActivityEvents, filteredRecruitmentEvents, projectedChain, showActivities, selectedTypeId, t]);
 
   const handleActivityClick = useCallback(async (activityId: string) => {
     loadingRef.current = activityId;
@@ -149,10 +225,29 @@ export function CalendarView({ events, pendingActivities = [], recruitmentEvents
     }
   }, []);
 
+  // Projected/forming event info popup
+  const [selectedProjected, setSelectedProjected] = useState<ProjectedChainEvent | null>(null);
+  const [selectedForming, setSelectedForming] = useState<ProjectedChainEvent | null>(null);
+
   const handleEventClick = useCallback((info: EventClickArg) => {
     const props = info.event.extendedProps;
     if (props.kind === 'recruitment') {
       setSelectedRecruitment(props.data as RecruitmentEvent);
+      return;
+    }
+    if (props.kind === 'projected') {
+      setSelectedProjected(props.data as ProjectedChainEvent);
+      return;
+    }
+    if (props.kind === 'forming') {
+      const formingData = props.data as ProjectedChainEvent;
+      // If forming event has a real activity, open full ActivityDetailDialog
+      if (formingData.activityId) {
+        void handleActivityClick(formingData.activityId);
+      } else {
+        // No real activity yet (only virtual group forming) — show guide popup
+        setSelectedForming(formingData);
+      }
       return;
     }
     const activityId = props.activityId as string;
@@ -316,6 +411,97 @@ export function CalendarView({ events, pendingActivities = [], recruitmentEvents
         currentUserId={userId}
         onRefresh={handleActivityRefresh}
       />
+
+      {/* Forming event dialog — shows activity guide and team status */}
+      <Dialog open={!!selectedForming} onOpenChange={(open) => !open && setSelectedForming(null)}>
+        <DialogContent className="sm:max-w-md">
+          {selectedForming && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <span
+                    className="inline-block size-2.5 rounded-full"
+                    style={{ backgroundColor: FORMING_COLORS.border }}
+                  />
+                  {selectedForming.typeName}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                {/* Team forming status */}
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                  <div className="mb-1 flex items-center gap-2 text-sm font-medium text-orange-800">
+                    <Users className="size-4" />
+                    {t('formingHint')}
+                  </div>
+                  {selectedForming.formingInfo && (
+                    <p className="text-sm text-orange-700">
+                      {t('formingProgress', {
+                        current: selectedForming.formingInfo.currentMembers,
+                        required: selectedForming.formingInfo.requiredMembers,
+                      })}
+                    </p>
+                  )}
+                </div>
+                {/* Guide content */}
+                {selectedForming.guideContent && (
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <p className="mb-1 text-xs font-medium text-muted-foreground">{t('guideTitle')}</p>
+                    <div className="prose prose-sm max-h-60 overflow-y-auto text-sm whitespace-pre-wrap">
+                      {selectedForming.guideContent}
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">{t('date')}</span>
+                  <span className="text-sm">
+                    {new Date(selectedForming.date).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="pt-1">
+                  <span
+                    className="rounded px-1.5 py-0.5 text-xs font-medium"
+                    style={{ backgroundColor: FORMING_COLORS.bg, color: FORMING_COLORS.text }}
+                  >
+                    {t('forming')}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Projected (locked) event dialog */}
+      <Dialog open={!!selectedProjected} onOpenChange={(open) => !open && setSelectedProjected(null)}>
+        <DialogContent className="sm:max-w-sm">
+          {selectedProjected && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <span className="inline-block size-2.5 rounded-full bg-gray-400" />
+                  {selectedProjected.typeName}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3">
+                  <p className="text-sm text-muted-foreground">{t('lockedHint')}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">{t('date')}</span>
+                  <span className="text-sm">
+                    {new Date(selectedProjected.date).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="pt-1">
+                  <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-500">
+                    {t('projected')}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Recruitment event dialog (kept simple) */}
       <Dialog open={!!selectedRecruitment} onOpenChange={(open) => !open && setSelectedRecruitment(null)}>

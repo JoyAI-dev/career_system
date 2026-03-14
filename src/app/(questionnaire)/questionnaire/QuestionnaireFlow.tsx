@@ -446,7 +446,7 @@ export function QuestionnaireFlow({
         {currentContent.mode === 'REPEAT' && currentRepeatInstance ? (
           // REPEAT: render template questions for the active tab
           currentContent.dimensions.map(dimension => (
-            <div key={`${dimension.id}-${currentRepeatInstance.id}`} id={`dimension-${dimension.id}`} className="scroll-mt-24 space-y-4">
+            <div key={`${dimension.id}-${currentRepeatInstance.id}`} id={`dimension-${dimension.id}`} className="scroll-mt-56 space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">{dimension.name}</h3>
               {dimension.questions.map(question => {
                 const answerKey = getAnswerKey(question.id, 'REPEAT', currentRepeatInstance.id);
@@ -471,7 +471,7 @@ export function QuestionnaireFlow({
                 {subTopic.name}
               </h3>
               {subTopic.dimensions.map(dimension => (
-                <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-24 space-y-4">
+                <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-56 space-y-4">
                   <h4 className="text-sm font-medium text-muted-foreground">{dimension.name}</h4>
                   {dimension.questions.map(question => (
                     <QuestionCard
@@ -490,7 +490,7 @@ export function QuestionnaireFlow({
         ) : (
           // Single SubTopic (CONTEXT with 1 SubTopic): render dimensions directly
           currentContent.dimensions.map(dimension => (
-            <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-24 space-y-4">
+            <div key={dimension.id} id={`dimension-${dimension.id}`} className="scroll-mt-56 space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">{dimension.name}</h3>
               {dimension.questions.map(question => (
                 <QuestionCard
@@ -607,7 +607,7 @@ function QuestionCard({
   reflections: ReflectionItem[];
 }) {
   return (
-    <Card id={`question-${answerKey}`} className="scroll-mt-28">
+    <Card id={`question-${answerKey}`} className="scroll-mt-60">
       <CardHeader>
         <CardTitle className="text-sm">{question.title}</CardTitle>
         {question.notes.length > 0 && (
