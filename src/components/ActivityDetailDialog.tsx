@@ -302,7 +302,7 @@ export function ActivityDetailDialog({ activity, onClose, joinByType, currentUse
           {/* Side-by-side: Virtual Group + Activity Guide */}
           {(hasVirtualGroup || activity.type.guideContent || activity.guideMarkdown) && (
             <div className="border-t pt-3">
-              <div className={`grid gap-4 ${hasVirtualGroup && (activity.type.guideContent || activity.guideMarkdown) ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
+              <div className={`grid gap-4 ${hasVirtualGroup && (activity.type.guideContent || activity.guideMarkdown) ? 'grid-cols-2' : 'grid-cols-1'}`}>
                 {/* Virtual Group Info */}
                 {hasVirtualGroup && currentUserId && (
                   <VirtualGroupInfo

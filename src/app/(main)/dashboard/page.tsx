@@ -2,11 +2,9 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@/lib/auth';
-import { getActivityProgress, getUserActivities } from '@/server/queries/activity';
-import { getActivityTypes } from '@/server/queries/activityType';
-import { getTags } from '@/server/queries/tag';
+import { getActivityProgress, getUserJoinedActivities } from '@/server/queries/activity';
 import { ActivityStepper } from '@/components/ActivityStepper';
-import { ActivityBrowser } from '@/app/(main)/activities/ActivityBrowser';
+import { ActivityJourneyFlow } from '@/components/ActivityJourneyFlow';
 import { LandingCalendar } from '@/components/LandingCalendar';
 import { FloatingReportButton } from '@/components/FloatingReportButton';
 
@@ -28,16 +26,33 @@ export default async function DashboardPage() {
   }
 
   // Student landing page — fetch all data in parallel
-  const [steps, activities, activityTypes, tags, t] = await Promise.all([
+  const [steps, joinedActivities, t] = await Promise.all([
     getActivityProgress(session.user.id),
-    getUserActivities(session.user.id),
-    getActivityTypes(),
-    getTags(),
+    getUserJoinedActivities(session.user.id),
     getTranslations('dashboard'),
   ]);
 
-  // Find current activity stage name for floating button
+  // Find current activity stage for the journey flow
   const currentStep = steps.find((s) => s.state === 'current');
+
+  // Get activities that belong to the current step's type (or all non-completed if no current step)
+  const currentActivities = currentStep
+    ? joinedActivities
+        .filter((a) => a.type.name === currentStep.typeName)
+        .map((a) => ({
+          id: a.id,
+          title: a.title,
+          status: a.status,
+          typeName: a.type.name,
+        }))
+    : joinedActivities
+        .filter((a) => a.status !== 'COMPLETED')
+        .map((a) => ({
+          id: a.id,
+          title: a.title,
+          status: a.status,
+          typeName: a.type.name,
+        }));
 
   return (
     <div className="space-y-8">
@@ -52,16 +67,11 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Section: Available Activities with Filters */}
+      {/* Section: 3-Step Journey Flow */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">{t('availableActivities')}</h2>
-        <ActivityBrowser
-          activities={activities.map((a) => ({
-            ...a,
-            scheduledAt: a.scheduledAt?.toISOString() ?? null,
-          }))}
-          types={activityTypes.map((at) => ({ id: at.id, name: at.name }))}
-          tags={tags.map((tg) => ({ id: tg.id, name: tg.name }))}
+        <ActivityJourneyFlow
+          currentTypeName={currentStep?.typeName ?? null}
+          currentActivities={currentActivities}
           currentUserId={session.user.id}
         />
       </section>

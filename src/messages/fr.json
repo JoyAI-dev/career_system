@@ -10,8 +10,7 @@
     "competition": "Compétition",
     "trialCase": "Cas pratique",
     "focusDiscussion": "Groupe de discussion",
-    "mentorAuction": "Enchère mentor",
-    "internAuction": "Enchère stage"
+    "mentorAuction": "Enchère mentor"
   },
   "landing": {
     "title": "Plateforme d'Exploration de Carrière",
@@ -77,7 +76,11 @@
     "activitiesHint": "Vos activités de groupe rejointes apparaîtront dans le calendrier ci-dessous. Complétez chaque étape pour débloquer la suivante.",
     "noJoinedActivities": "Vous n'avez encore rejoint aucune activité. Parcourez les activités pour commencer !",
     "floatingReport": "Rapport cognitif",
-    "floatingReportStage": "Rapport cognitif · {stage}"
+    "floatingReportStage": "Rapport cognitif · {stage}",
+    "journeyFlowTitle": "Flux d'exploration",
+    "step1Label": "Explorer les frontières\ncognitives",
+    "step2Empty": "Aucune activité en cours",
+    "step3Label": "Obtenir le graphique\ncomparatif cognitif"
   },
   "profile": {
     "title": "Profil",
@@ -227,6 +230,7 @@
     "growthSummary": "Résumé de croissance",
     "topicsRankedByChange": "Sujets classés par changement",
     "topicScores": "Scores par sujet",
+    "topicScoresHint": "Ces scores sont fournis comme référence intuitive pour la comparaison et non comme un jugement. Ils vous aident à identifier rapidement les domaines que vous connaissez le moins et le mieux.",
     "assessmentBreakdown": "Détail de l'évaluation",
     "snapshotHistory": "Historique des instantanés",
     "allAssessments": "Toutes les évaluations et tendance du score global",

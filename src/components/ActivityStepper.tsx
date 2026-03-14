@@ -14,7 +14,6 @@ const stepKeyMap: Record<string, string> = {
   '试水案例': 'trialCase',
   '聚焦讨论': 'focusDiscussion',
   '导师拍卖': 'mentorAuction',
-  '实习拍卖': 'internAuction',
 };
 
 interface ActivityStepperProps {

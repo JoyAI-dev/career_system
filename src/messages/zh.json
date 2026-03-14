@@ -10,8 +10,7 @@
     "competition": "竞赛",
     "trialCase": "试水案例",
     "focusDiscussion": "聚焦讨论",
-    "mentorAuction": "导师拍卖",
-    "internAuction": "实习拍卖"
+    "mentorAuction": "导师拍卖"
   },
   "landing": {
     "title": "职业探索平台",
@@ -77,7 +76,11 @@
     "activitiesHint": "你参加的小组活动将显示在下方日历中。完成每个步骤以解锁下一个。",
     "noJoinedActivities": "你还没有参加任何活动。浏览活动开始探索吧！",
     "floatingReport": "认知报告",
-    "floatingReportStage": "认知报告 · {stage}"
+    "floatingReportStage": "认知报告 · {stage}",
+    "journeyFlowTitle": "探索流程",
+    "step1Label": "摸索认知边界\n知与不知",
+    "step2Empty": "暂无进行中的活动",
+    "step3Label": "获取完整的\n认知边界对比图"
   },
   "profile": {
     "title": "个人资料",

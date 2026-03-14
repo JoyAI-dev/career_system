@@ -10,8 +10,7 @@
     "competition": "Competition",
     "trialCase": "Trial Case",
     "focusDiscussion": "Focus Group",
-    "mentorAuction": "Mentor Auction",
-    "internAuction": "Intern Auction"
+    "mentorAuction": "Mentor Auction"
   },
   "landing": {
     "title": "Career Exploration Platform",
@@ -77,7 +76,11 @@
     "activitiesHint": "Your joined group activities will show in the calendar below. Complete each step to unlock the next.",
     "noJoinedActivities": "You haven't joined any activities yet. Browse activities to get started!",
     "floatingReport": "Cognitive Report",
-    "floatingReportStage": "Cognitive Report · {stage}"
+    "floatingReportStage": "Cognitive Report · {stage}",
+    "journeyFlowTitle": "Exploration Flow",
+    "step1Label": "Explore Cognitive\nBoundaries",
+    "step2Empty": "No activities in progress",
+    "step3Label": "Get Cognitive\nComparison Chart"
   },
   "profile": {
     "title": "Profile",
@@ -227,6 +230,7 @@
     "growthSummary": "Growth Summary",
     "topicsRankedByChange": "Topics ranked by change",
     "topicScores": "Topic Scores",
+    "topicScoresHint": "These scores are intended as an intuitive reference for comparison, not as a judgment. They help you quickly identify the areas you are least and most familiar with.",
     "assessmentBreakdown": "Assessment Breakdown",
     "snapshotHistory": "Snapshot History",
     "allAssessments": "All assessments and overall score trend",

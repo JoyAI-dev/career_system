@@ -157,7 +157,7 @@ async function onGroupFormed(
   const activity = await db.activity.create({
     data: {
       typeId: activityType.id,
-      title: `${activityType.name} - ${group?.name ?? 'Group'}`,
+      title: activityType.name,
       capacity: activityType.peopleRequired,
       status: 'FULL',
       communityId,
@@ -386,7 +386,7 @@ async function createGroupActivity(
   const activity = await prisma.activity.create({
     data: {
       typeId: activityType.id,
-      title: `${activityType.name} - ${group?.name ?? 'Group'}`,
+      title: activityType.name,
       capacity: activityType.peopleRequired,
       status: 'FULL',
       communityId,
@@ -512,7 +512,7 @@ async function registerForCrossGroupMatch(
     const newActivity = await tx.activity.create({
       data: {
         typeId: activityType.id,
-        title: `${activityType.name} - ${group?.name ?? 'Group'}`,
+        title: activityType.name,
         capacity: activityType.peopleRequired,
         status: 'FULL',
         communityId,
