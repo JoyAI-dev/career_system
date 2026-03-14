@@ -316,11 +316,11 @@ export function QuestionnaireFlow({
       )}
 
       {/* Header */}
-      <div className="mb-8 text-center">
+      <div className="mb-4 text-center">
         <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('description')}
-        </p>
+      </div>
+      <div className="mb-6 whitespace-pre-line rounded-lg bg-muted/50 p-4 text-sm leading-relaxed text-muted-foreground">
+        {t('description')}
       </div>
 
       {/* Total progress bar */}
