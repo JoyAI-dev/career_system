@@ -49,7 +49,7 @@ export function StudentNetworkDrawer({ groups, userId }: StudentNetworkDrawerPro
   };
 
   return (
-    <Drawer open={networkDrawerOpen} onOpenChange={setNetworkDrawerOpen}>
+    <Drawer open={networkDrawerOpen} onOpenChange={setNetworkDrawerOpen} handleOnly>
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader className="border-b pb-3">
           <DrawerTitle className="flex items-center gap-2">

@@ -43,7 +43,16 @@ export interface FriendInfo {
   name: string | null;
 }
 
+export interface GroupInfo {
+  id: string;
+  name: string;
+  type: 'community' | 'virtualGroup';
+  memberCount: number;
+  members: { userId: string; username: string; name: string | null }[];
+}
+
 interface ChatContextType {
+  userId: string;
   isConnected: boolean;
   isPopupOpen: boolean;
   activeRoom: string | null;
@@ -51,6 +60,7 @@ interface ChatContextType {
   messages: Map<string, ChatMessageData[]>;
   onlineUsers: Set<string>;
   friends: FriendInfo[];
+  groups: GroupInfo[];
   unreadTotal: number;
   networkDrawerOpen: boolean;
   openChat: (roomId?: string) => void;
@@ -71,6 +81,36 @@ export function useChat() {
   return ctx;
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────
+
+function groupToRoomId(group: GroupInfo): string {
+  return group.type === 'community' ? `community:${group.id}` : `group:${group.id}`;
+}
+
+function groupToChatRoomType(group: GroupInfo): ChatRoom['type'] {
+  return group.type === 'community' ? 'community' : 'group';
+}
+
+// Build initial rooms Map from groups
+function buildInitialRooms(groups: GroupInfo[]): Map<string, ChatRoom> {
+  const map = new Map<string, ChatRoom>();
+  for (const g of groups) {
+    const roomId = groupToRoomId(g);
+    map.set(roomId, {
+      roomId,
+      type: groupToChatRoomType(g),
+      name: g.name,
+      members: g.members.map((m) => ({
+        userId: m.userId,
+        username: m.username,
+        online: false,
+      })),
+      unreadCount: 0,
+    });
+  }
+  return map;
+}
+
 // ─── Provider ─────────────────────────────────────────────────────────
 
 interface ChatProviderProps {
@@ -78,6 +118,7 @@ interface ChatProviderProps {
   userId: string;
   username: string;
   initialFriends: FriendInfo[];
+  initialGroups: GroupInfo[];
 }
 
 export function ChatProvider({
@@ -85,21 +126,153 @@ export function ChatProvider({
   userId,
   username,
   initialFriends,
+  initialGroups,
 }: ChatProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [activeRoom, setActiveRoomState] = useState<string | null>(null);
-  const [rooms, setRooms] = useState<Map<string, ChatRoom>>(new Map());
+  const [rooms, setRooms] = useState<Map<string, ChatRoom>>(() => buildInitialRooms(initialGroups));
   const [messages, setMessages] = useState<Map<string, ChatMessageData[]>>(new Map());
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [friends, setFriends] = useState<FriendInfo[]>(initialFriends);
+  const [groups] = useState<GroupInfo[]>(initialGroups);
   const [networkDrawerOpen, setNetworkDrawerOpen] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
+  const initialGroupsRef = useRef(initialGroups);
+
+  // ─── Refs for avoiding stale closures in WebSocket handlers ──────
+  // The WebSocket onmessage handler is set once during connect() and captures
+  // a closure. Using refs ensures it always accesses the latest values.
+  const activeRoomRef = useRef<string | null>(null);
+
+  // Keep activeRoomRef in sync with activeRoom state
+  useEffect(() => {
+    activeRoomRef.current = activeRoom;
+  }, [activeRoom]);
 
   // Calculate total unread
   const unreadTotal = Array.from(rooms.values()).reduce((sum, r) => sum + r.unreadCount, 0);
+
+  // Auto-join all group rooms after WebSocket authentication
+  const autoJoinGroupRooms = useCallback((ws: WebSocket) => {
+    for (const g of initialGroupsRef.current) {
+      const roomId = groupToRoomId(g);
+      ws.send(JSON.stringify({ type: 'join_room', roomId }));
+    }
+  }, []);
+
+  // ─── Server message handler ──────────────────────────────────────
+  // Uses refs for values that change (activeRoom) to avoid stale closures
+  const handleServerMessage = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (data: any, ws?: WebSocket) => {
+      switch (data.type) {
+        case 'authenticated':
+          setIsConnected(true);
+          // Auto-join all group rooms after authentication
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            autoJoinGroupRooms(ws);
+          }
+          break;
+
+        case 'message': {
+          const msg = data.message as ChatMessageData;
+          setMessages((prev) => {
+            const next = new Map(prev);
+            const roomMsgs = [...(next.get(msg.roomId) || []), msg];
+            next.set(msg.roomId, roomMsgs);
+            return next;
+          });
+          // Increment unread if not active room (use ref to avoid stale closure)
+          setRooms((prev) => {
+            const room = prev.get(msg.roomId);
+            if (room && msg.senderId !== userId) {
+              const currentActiveRoom = activeRoomRef.current;
+              const next = new Map(prev);
+              next.set(msg.roomId, {
+                ...room,
+                unreadCount: room.unreadCount + (currentActiveRoom === msg.roomId ? 0 : 1),
+              });
+              return next;
+            }
+            return prev;
+          });
+          break;
+        }
+
+        case 'room_members': {
+          // Server sends members currently in the WS room.
+          // Merge with existing members instead of replacing, to preserve
+          // DB-sourced members who haven't connected via WebSocket yet.
+          const { roomId, members: serverMembers } = data as {
+            roomId: string;
+            members: RoomMember[];
+          };
+          setRooms((prev) => {
+            const room = prev.get(roomId);
+            if (room) {
+              const next = new Map(prev);
+              // Build a map of server-reported online members
+              const serverMemberMap = new Map(
+                serverMembers.map((m) => [m.userId, m]),
+              );
+              // Merge: keep all existing members, update online status from server
+              const mergedMembers = room.members.map((existing) => {
+                const serverInfo = serverMemberMap.get(existing.userId);
+                return {
+                  ...existing,
+                  online: serverInfo ? serverInfo.online : false,
+                };
+              });
+              // Add any new members from server that aren't in existing list
+              for (const sm of serverMembers) {
+                if (!room.members.some((m) => m.userId === sm.userId)) {
+                  mergedMembers.push(sm);
+                }
+              }
+              next.set(roomId, { ...room, members: mergedMembers });
+              return next;
+            }
+            return prev;
+          });
+          break;
+        }
+
+        case 'user_online':
+          setOnlineUsers((prev) => new Set([...prev, data.userId]));
+          break;
+
+        case 'user_offline':
+          setOnlineUsers((prev) => {
+            const next = new Set(prev);
+            next.delete(data.userId);
+            return next;
+          });
+          break;
+
+        case 'typing':
+          // TODO: Show typing indicator in UI
+          break;
+
+        case 'room_joined':
+          // Room join confirmed
+          break;
+
+        case 'error':
+          console.warn('[Chat]', data.message);
+          break;
+      }
+    },
+    [userId, autoJoinGroupRooms],
+  );
+
+  // Ref to always access latest handleServerMessage from WebSocket callbacks
+  const handleServerMessageRef = useRef(handleServerMessage);
+  useEffect(() => {
+    handleServerMessageRef.current = handleServerMessage;
+  }, [handleServerMessage]);
 
   const connect = useCallback(async () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -132,7 +305,8 @@ export function ChatProvider({
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        handleServerMessage(data);
+        // Use ref to always call the latest handler (avoids stale closure)
+        handleServerMessageRef.current(data, ws);
       } catch {
         // ignore
       }
@@ -151,79 +325,6 @@ export function ChatProvider({
       ws.close();
     };
   }, []);
-
-  const handleServerMessage = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (data: any) => {
-      switch (data.type) {
-        case 'authenticated':
-          setIsConnected(true);
-          break;
-
-        case 'message': {
-          const msg = data.message as ChatMessageData;
-          setMessages((prev) => {
-            const next = new Map(prev);
-            const roomMsgs = [...(next.get(msg.roomId) || []), msg];
-            next.set(msg.roomId, roomMsgs);
-            return next;
-          });
-          // Increment unread if not active room
-          setRooms((prev) => {
-            const room = prev.get(msg.roomId);
-            if (room && msg.senderId !== userId) {
-              const next = new Map(prev);
-              next.set(msg.roomId, {
-                ...room,
-                unreadCount: room.unreadCount + (activeRoom === msg.roomId ? 0 : 1),
-              });
-              return next;
-            }
-            return prev;
-          });
-          break;
-        }
-
-        case 'room_members': {
-          const { roomId, members } = data as {
-            roomId: string;
-            members: RoomMember[];
-          };
-          setRooms((prev) => {
-            const room = prev.get(roomId);
-            if (room) {
-              const next = new Map(prev);
-              next.set(roomId, { ...room, members });
-              return next;
-            }
-            return prev;
-          });
-          break;
-        }
-
-        case 'user_online':
-          setOnlineUsers((prev) => new Set([...prev, data.userId]));
-          break;
-
-        case 'user_offline':
-          setOnlineUsers((prev) => {
-            const next = new Set(prev);
-            next.delete(data.userId);
-            return next;
-          });
-          break;
-
-        case 'room_joined':
-          // Room join confirmed
-          break;
-
-        case 'error':
-          console.warn('[Chat]', data.message);
-          break;
-      }
-    },
-    [userId, activeRoom],
-  );
 
   // Connect on mount
   useEffect(() => {
@@ -318,6 +419,7 @@ export function ChatProvider({
   return (
     <ChatContext.Provider
       value={{
+        userId,
         isConnected,
         isPopupOpen,
         activeRoom,
@@ -325,6 +427,7 @@ export function ChatProvider({
         messages,
         onlineUsers,
         friends,
+        groups,
         unreadTotal,
         networkDrawerOpen,
         openChat,

@@ -11,7 +11,7 @@ import { useChat } from './ChatProvider';
 
 export function ContactList() {
   const t = useTranslations('chat');
-  const { rooms, friends, activeRoom, setActiveRoom, onlineUsers, openChat } = useChat();
+  const { userId, rooms, friends, activeRoom, setActiveRoom, onlineUsers, openChat, joinRoom } = useChat();
 
   // Separate group chats and private chats
   const groupRooms = Array.from(rooms.values()).filter(
@@ -77,7 +77,7 @@ export function ContactList() {
             <p className="px-2 py-3 text-xs text-gray-400">{t('noFriends')}</p>
           )}
           {friends.map((friend) => {
-            const privateRoomId = `private:${[friend.userId].sort().join(':')}`;
+            const privateRoomId = `private:${[userId, friend.userId].sort().join(':')}`;
             const room = rooms.get(privateRoomId);
             const isOnline = onlineUsers.has(friend.userId);
 
@@ -85,6 +85,8 @@ export function ContactList() {
               <button
                 key={friend.userId}
                 onClick={() => {
+                  // Ensure room exists in local state and joined on server
+                  joinRoom(privateRoomId, friend.name || friend.username);
                   setActiveRoom(privateRoomId);
                   openChat(privateRoomId);
                 }}

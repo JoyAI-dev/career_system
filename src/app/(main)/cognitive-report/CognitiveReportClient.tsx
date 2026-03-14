@@ -5,6 +5,8 @@ import { useTranslations, useFormatter } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { CircleHelp } from 'lucide-react';
 import { updateCurrentAnswer, createSnapshot } from '@/server/actions/questionnaire';
 import { QuestionReflections } from '@/components/QuestionReflections';
 import type { ScoringResult } from '@/server/scoring';
@@ -251,7 +253,19 @@ export function CognitiveReportClient({
       {/* Topic Score Bars */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('topicScores')}</CardTitle>
+          <CardTitle className="flex items-center gap-1.5">
+            {t('topicScores')}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex cursor-help">
+                  <CircleHelp className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  {t('topicScoresHint')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </CardTitle>
           <CardDescription>{t('assessmentBreakdown')}</CardDescription>
         </CardHeader>
         <CardContent>

@@ -66,6 +66,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
             userId={session!.user.id}
             username={session!.user.username}
             initialFriends={friends}
+            initialGroups={groups}
           >
             <div className="flex min-h-screen">
               {/* Desktop sidebar — admin only */}
@@ -97,6 +98,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           userId={session!.user.id}
           username={session!.user.username}
           initialFriends={friends}
+          initialGroups={groups}
         >
           <div className="flex min-h-screen flex-col bg-[#F5F8FF]">
             <Header initialUnreadCount={unreadCount} variant="student" />
