@@ -641,6 +641,11 @@
       "countdown": "Compte à rebours",
       "countdownField": "Compte à rebours (secondes)",
       "countdownHint": "Durée pendant laquelle les nouveaux inscrits doivent consulter cette annonce avant de pouvoir la fermer (0 = pas d'attente forcée).",
+      "audience": "Public",
+      "audienceField": "Public cible",
+      "audienceAll": "Tous les étudiants",
+      "audienceLeader": "Chefs de groupe uniquement",
+      "audienceHint": "Sélectionnez « Chefs de groupe uniquement » pour afficher cette annonce uniquement aux chefs de groupe virtuel.",
       "noAnnouncements": "Aucune annonce. Créez-en une pour commencer.",
       "actions": "Actions",
       "edit": "Modifier",
@@ -861,6 +866,11 @@
   },
   "announcement": {
     "closeIn": "Fermer ({seconds}s)",
+    "close": "Fermer"
+  },
+  "leaderGuide": {
+    "viewGuide": "Voir le guide du chef",
+    "loading": "Chargement...",
     "close": "Fermer"
   },
   "languageSwitcher": {

@@ -30,12 +30,18 @@ type AnnouncementItem = {
   content: string;
   isActive: boolean;
   countdownSeconds: number;
+  targetAudience: string;
   createdAt: string;
 };
 
 type Props = {
   items: AnnouncementItem[];
 };
+
+const AUDIENCE_OPTIONS = [
+  { value: 'ALL', labelKey: 'audienceAll' as const },
+  { value: 'LEADER', labelKey: 'audienceLeader' as const },
+];
 
 export function AnnouncementManager({ items }: Props) {
   const t = useTranslations('admin.announcements');
@@ -56,6 +62,7 @@ export function AnnouncementManager({ items }: Props) {
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="px-4 py-3 text-left font-medium">{t('titleField')}</th>
+                <th className="px-4 py-3 text-left font-medium">{t('audience')}</th>
                 <th className="px-4 py-3 text-left font-medium">{t('status')}</th>
                 <th className="px-4 py-3 text-left font-medium">{t('countdown')}</th>
                 <th className="px-4 py-3 text-left font-medium">{t('created')}</th>
@@ -103,6 +110,8 @@ function AnnouncementRow({ item }: { item: AnnouncementItem }) {
   const d = new Date(item.createdAt);
   const formattedDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+  const audienceLabel = item.targetAudience === 'LEADER' ? t('audienceLeader') : t('audienceAll');
+
   return (
     <tr className="border-b last:border-0">
       <td className="px-4 py-3">
@@ -110,6 +119,17 @@ function AnnouncementRow({ item }: { item: AnnouncementItem }) {
         <div className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
           {item.content.slice(0, 100)}
         </div>
+      </td>
+      <td className="px-4 py-3">
+        <span
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+            item.targetAudience === 'LEADER'
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          {audienceLabel}
+        </span>
       </td>
       <td className="px-4 py-3">
         <span
@@ -152,6 +172,28 @@ function AnnouncementRow({ item }: { item: AnnouncementItem }) {
   );
 }
 
+function AudienceSelect({ defaultValue = 'ALL' }: { defaultValue?: string }) {
+  const t = useTranslations('admin.announcements');
+  return (
+    <div>
+      <Label htmlFor="targetAudience">{t('audienceField')}</Label>
+      <select
+        id="targetAudience"
+        name="targetAudience"
+        defaultValue={defaultValue}
+        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        {AUDIENCE_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {t(opt.labelKey)}
+          </option>
+        ))}
+      </select>
+      <p className="mt-1 text-xs text-muted-foreground">{t('audienceHint')}</p>
+    </div>
+  );
+}
+
 function AddAnnouncementButton() {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(createAnnouncement, {});
@@ -182,6 +224,7 @@ function AddAnnouncementButton() {
               <p className="mt-1 text-xs text-destructive">{state.errors.title[0]}</p>
             )}
           </div>
+          <AudienceSelect />
           <div>
             <Label htmlFor="content">{t('content')}</Label>
             <MarkdownEditor
@@ -248,6 +291,7 @@ function EditAnnouncementButton({ item }: { item: AnnouncementItem }) {
               <p className="mt-1 text-xs text-destructive">{state.errors.title[0]}</p>
             )}
           </div>
+          <AudienceSelect defaultValue={item.targetAudience} />
           <div>
             <Label htmlFor="edit-content">{t('content')}</Label>
             <MarkdownEditor

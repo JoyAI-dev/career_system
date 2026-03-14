@@ -517,6 +517,7 @@ model Announcement {
   content          String
   isActive         Boolean  @default(false)
   countdownSeconds Int      @default(20)
+  targetAudience   String   @default("ALL") // "ALL" = everyone, "LEADER" = group leaders only
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

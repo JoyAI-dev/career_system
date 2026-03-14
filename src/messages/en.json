@@ -641,6 +641,11 @@
       "countdown": "Countdown",
       "countdownField": "Countdown (seconds)",
       "countdownHint": "How long new registrants must view this announcement before dismissing (0 = no forced wait).",
+      "audience": "Audience",
+      "audienceField": "Target Audience",
+      "audienceAll": "All Students",
+      "audienceLeader": "Leaders Only",
+      "audienceHint": "Select \"Leaders Only\" to show this announcement only to virtual group leaders.",
       "noAnnouncements": "No announcements yet. Create one to get started.",
       "actions": "Actions",
       "edit": "Edit",
@@ -861,6 +866,11 @@
   },
   "announcement": {
     "closeIn": "Close ({seconds}s)",
+    "close": "Close"
+  },
+  "leaderGuide": {
+    "viewGuide": "View Leader Guide",
+    "loading": "Loading...",
     "close": "Close"
   },
   "languageSwitcher": {

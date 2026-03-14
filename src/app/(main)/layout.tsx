@@ -10,7 +10,7 @@ import { auth } from '@/lib/auth';
 import { hasCompletedPreference } from '@/server/queries/preference';
 import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 import { getUnreadCount } from '@/server/queries/notification';
-import { getActiveAnnouncement, hasUserViewedAnnouncement } from '@/server/queries/announcement';
+import { getActiveAnnouncement, hasUserViewedAnnouncement, isUserLeaderInAnyGroup } from '@/server/queries/announcement';
 import { getUserFriends } from '@/server/queries/friendship';
 import { getUserChatGroups } from '@/server/queries/chatGroups';
 import { ChatProvider } from '@/components/chat/ChatProvider';
@@ -38,14 +38,32 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   const unreadCount = session?.user ? await getUnreadCount(session.user.id) : 0;
 
   // Announcement popup for non-admin users (always show, countdown only for first-time viewers)
+  // Priority: leader guide (LEADER audience) > general announcement (ALL audience)
   let announcementData: { id: string; title: string; content: string; countdownSeconds: number } | null = null;
   let hasViewed = false;
 
   if (!isAdmin && session?.user) {
-    const announcement = await getActiveAnnouncement();
-    if (announcement) {
-      announcementData = announcement;
-      hasViewed = await hasUserViewedAnnouncement(session.user.id, announcement.id);
+    // Check leader guide first (highest priority)
+    const isLeader = await isUserLeaderInAnyGroup(session.user.id);
+    if (isLeader) {
+      const leaderGuide = await getActiveAnnouncement('LEADER');
+      if (leaderGuide) {
+        const leaderViewed = await hasUserViewedAnnouncement(session.user.id, leaderGuide.id);
+        if (!leaderViewed) {
+          // Leader guide: no countdown, can close immediately
+          announcementData = { ...leaderGuide, countdownSeconds: 0 };
+          hasViewed = false;
+        }
+      }
+    }
+
+    // If no leader guide to show, fall back to general announcement
+    if (!announcementData) {
+      const announcement = await getActiveAnnouncement('ALL');
+      if (announcement) {
+        announcementData = announcement;
+        hasViewed = await hasUserViewedAnnouncement(session.user.id, announcement.id);
+      }
     }
   }
 

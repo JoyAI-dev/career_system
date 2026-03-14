@@ -641,6 +641,11 @@
       "countdown": "倒计时",
       "countdownField": "倒计时（秒）",
       "countdownHint": "新注册用户必须查看公告的时长，超过后才能关闭（0 = 无强制等待）。",
+      "audience": "受众",
+      "audienceField": "目标受众",
+      "audienceAll": "所有学生",
+      "audienceLeader": "仅小组长",
+      "audienceHint": "选择「仅小组长」将只对虚拟小组的组长显示此公告。",
       "noAnnouncements": "暂无公告。点击创建开始使用。",
       "actions": "操作",
       "edit": "编辑",
@@ -861,6 +866,11 @@
   },
   "announcement": {
     "closeIn": "关闭 ({seconds}秒)",
+    "close": "关闭"
+  },
+  "leaderGuide": {
+    "viewGuide": "查看小组长指南",
+    "loading": "加载中...",
     "close": "关闭"
   },
   "languageSwitcher": {
