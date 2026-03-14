@@ -12,14 +12,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { submitQuestionnaire, saveQuestionnaireDraft, type ActionState } from '@/server/actions/questionnaire';
+import { submitQuestionnaire, submitQuestionnaireUpdate, saveQuestionnaireDraft, type ActionState } from '@/server/actions/questionnaire';
 import { DimensionNav } from '@/components/DimensionNav';
 import { QuestionReflections } from '@/components/QuestionReflections';
+import Link from 'next/link';
 import {
   type Question,
   type Topic,
   type UserPreferences,
-  type VisibleContent,
   getVisibleContent,
   getAnswerKey,
   getExpectedAnswerCount,
@@ -48,15 +48,31 @@ export function QuestionnaireFlow({
   reflectionsByQuestion = {},
   savedAnswers = {},
   userPreferences = {},
+  // Update mode props
+  mode = 'initial',
+  previousAnswers,
+  activityId,
+  activityTitle,
+  activityStage,
 }: {
   version: Version;
   reflectionsByQuestion?: Record<string, ReflectionItem[]>;
   savedAnswers?: Record<string, string>;
   userPreferences?: UserPreferences;
+  mode?: 'initial' | 'update';
+  previousAnswers?: Record<string, string>;
+  activityId?: string;
+  activityTitle?: string;
+  activityStage?: string;
 }) {
+  const isUpdate = mode === 'update';
   const t = useTranslations('questionnaire');
+  const tUpdate = useTranslations('questionnaire.update');
+  const tCommon = useTranslations('common');
   const [answers, setAnswers] = useState<Record<string, string>>(savedAnswers);
-  const [state, formAction] = useActionState<ActionState, FormData>(submitQuestionnaire, {});
+  const [state, formAction] = useActionState<ActionState, FormData>(
+    isUpdate ? submitQuestionnaireUpdate : submitQuestionnaire, {}
+  );
   const [saveState, saveDraftAction] = useActionState<ActionState, FormData>(saveQuestionnaireDraft, {});
   const [isPending, startTransition] = useTransition();
   const [isSaving, startSavingTransition] = useTransition();
@@ -67,6 +83,12 @@ export function QuestionnaireFlow({
   const [isSubmitAttempt, setIsSubmitAttempt] = useState(false);
   // For REPEAT mode: track which tab is active per topic
   const [activeRepeatTab, setActiveRepeatTab] = useState<Record<string, number>>({});
+
+  // Change tracking (update mode only)
+  const changedCount = useMemo(() => {
+    if (!isUpdate || !previousAnswers) return 0;
+    return Object.entries(answers).filter(([k, v]) => previousAnswers[k] !== v).length;
+  }, [isUpdate, previousAnswers, answers]);
 
   // Compute visible topics (skip topics with no visible content)
   const visibleTopics = useMemo(() => {
@@ -105,32 +127,32 @@ export function QuestionnaireFlow({
   const sectionExpected = currentContent ? getExpectedAnswerCount(currentContent) : 0;
   const sectionAnswered = currentContent ? getAnsweredCount(currentContent, answers) : 0;
 
-  if (!currentTopic || !currentContent) {
-    return (
-      <div className="text-center">
-        <h1 className="text-2xl font-bold">{t('notAvailable')}</h1>
-      </div>
-    );
-  }
-
   // ─── Auto-save: debounced save after each answer selection ───────────
+  // (All hooks must be called before any early return)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const answersRef = useRef(answers);
-  answersRef.current = answers;
   const prevIsSavingRef = useRef(false);
 
+  // Keep answersRef in sync with answers state (via effect, not during render)
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
   // Detect when isSaving transitions from true → false (save completed)
+  // We use queueMicrotask to avoid calling setState synchronously in the effect body
   useEffect(() => {
     if (prevIsSavingRef.current && !isSaving) {
-      // Transition ended: check result
-      if (saveState?.errors && Object.keys(saveState.errors).length > 0) {
-        setSaveStatus('error');
-      } else {
-        setSaveStatus('saved');
-      }
-      // Auto-dismiss after 1s
-      dismissTimerRef.current = setTimeout(() => setSaveStatus('idle'), 1000);
+      queueMicrotask(() => {
+        // Transition ended: check result
+        if (saveState?.errors && Object.keys(saveState.errors).length > 0) {
+          setSaveStatus('error');
+        } else {
+          setSaveStatus('saved');
+        }
+        // Auto-dismiss after 1s
+        dismissTimerRef.current = setTimeout(() => setSaveStatus('idle'), 1000);
+      });
     }
     prevIsSavingRef.current = isSaving;
   }, [isSaving, saveState]);
@@ -161,6 +183,34 @@ export function QuestionnaireFlow({
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     };
   }, []);
+
+  // Use helpers for SubTopic section visibility and navigation
+  const showSections = currentContent ? shouldShowSubTopicSections(currentContent) : false;
+  const showTabs = currentContent ? shouldShowSubTopicTabs(currentContent) : false;
+
+  // Build groups for vertical tab navigation (only used when showTabs is true)
+  const subTopicGroups = useMemo(() => {
+    if (!showTabs || !currentContent) return undefined;
+    return buildSubTopicGroups(currentContent).map(g => ({
+      ...g,
+      answeredCount: getGroupAnsweredCount(g, answers),
+      totalCount: g.questionIds.length,
+    }));
+  }, [showTabs, currentContent, answers]);
+
+  // Flat dimensions for single-group mode
+  const flatDimensions = useMemo(() => {
+    if (showTabs || !currentContent) return [];
+    return currentContent.dimensions.map(d => ({ id: d.id, name: d.name }));
+  }, [showTabs, currentContent]);
+
+  if (!currentTopic || !currentContent) {
+    return (
+      <div className="text-center">
+        <h1 className="text-2xl font-bold">{t('notAvailable')}</h1>
+      </div>
+    );
+  }
 
   function selectAnswer(answerKey: string, optionId: string) {
     setAnswers(prev => ({ ...prev, [answerKey]: optionId }));
@@ -211,6 +261,10 @@ export function QuestionnaireFlow({
   function buildFormData() {
     const formData = new FormData();
     formData.set('versionId', version.id);
+    // In update mode, include activityId if provided
+    if (isUpdate && activityId) {
+      formData.set('activityId', activityId);
+    }
     for (const [answerKey, optionId] of Object.entries(answers)) {
       if (answerKey.includes('::')) {
         // REPEAT: answerKey = questionId::prefOptionId
@@ -234,6 +288,11 @@ export function QuestionnaireFlow({
   }
 
   function doSubmit() {
+    // Cancel any pending auto-save to avoid unnecessary server work
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
     const formData = buildFormData();
     startTransition(() => {
       formAction(formData);
@@ -256,31 +315,22 @@ export function QuestionnaireFlow({
     doSubmit();
   }
 
+  // Helper: check if a specific answer was changed from previous (update mode)
+  function isAnswerChanged(answerKey: string): boolean {
+    if (!isUpdate || !previousAnswers) return false;
+    return previousAnswers[answerKey] !== undefined && answers[answerKey] !== previousAnswers[answerKey];
+  }
+
+  // Submit button label
+  const submitLabel = isUpdate
+    ? (changedCount > 0 ? tUpdate('submitUpdateWithCount', { count: changedCount }) : tUpdate('submitUpdate'))
+    : t('submit');
+
   // Get current REPEAT tab index for current topic
   const currentRepeatTabIdx = activeRepeatTab[currentTopic.id] ?? 0;
   const currentRepeatInstance = currentContent.mode === 'REPEAT'
     ? currentContent.repeatInstances[currentRepeatTabIdx]
     : null;
-
-  // Use helpers for SubTopic section visibility and navigation
-  const showSections = shouldShowSubTopicSections(currentContent);
-  const showTabs = shouldShowSubTopicTabs(currentContent);
-
-  // Build groups for vertical tab navigation (only used when showTabs is true)
-  const subTopicGroups = useMemo(() => {
-    if (!showTabs || !currentContent) return undefined;
-    return buildSubTopicGroups(currentContent).map(g => ({
-      ...g,
-      answeredCount: getGroupAnsweredCount(g, answers),
-      totalCount: g.questionIds.length,
-    }));
-  }, [showTabs, currentContent, answers]);
-
-  // Flat dimensions for single-group mode
-  const flatDimensions = useMemo(() => {
-    if (showTabs) return [];
-    return currentContent.dimensions.map(d => ({ id: d.id, name: d.name }));
-  }, [showTabs, currentContent]);
 
   return (
     <div>
@@ -315,13 +365,38 @@ export function QuestionnaireFlow({
         </div>
       )}
 
-      {/* Header */}
-      <div className="mb-4 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-      </div>
-      <div className="mb-6 whitespace-pre-line rounded-lg bg-muted/50 p-4 text-sm leading-relaxed text-muted-foreground">
-        {t('description')}
-      </div>
+      {/* Header — mode-specific */}
+      {isUpdate ? (
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold tracking-tight">{tUpdate('title')}</h1>
+          {activityTitle ? (
+            <p
+              className="mt-1 text-sm text-muted-foreground"
+              dangerouslySetInnerHTML={{
+                __html: tUpdate('descriptionWithActivity', { activity: activityTitle }),
+              }}
+            />
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {tUpdate('descriptionGeneric')}
+            </p>
+          )}
+          {changedCount > 0 && (
+            <p className="mt-1 text-xs text-primary">
+              {tUpdate('answersChanged', { count: changedCount })}
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="mb-4 text-center">
+            <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+          </div>
+          <div className="mb-6 whitespace-pre-line rounded-lg bg-muted/50 p-4 text-sm leading-relaxed text-muted-foreground">
+            {t('description')}
+          </div>
+        </>
+      )}
 
       {/* Total progress bar */}
       <div className="mb-6">
@@ -458,6 +533,9 @@ export function QuestionnaireFlow({
                     selectedOptionId={answers[answerKey]}
                     onSelect={selectAnswer}
                     reflections={reflectionsByQuestion[question.id] ?? []}
+                    wasChanged={isAnswerChanged(answerKey)}
+                    changedLabel={tUpdate('changed')}
+                    activityTag={isUpdate ? (activityStage ?? activityTitle) : undefined}
                   />
                 );
               })}
@@ -481,6 +559,9 @@ export function QuestionnaireFlow({
                       selectedOptionId={answers[question.id]}
                       onSelect={selectAnswer}
                       reflections={reflectionsByQuestion[question.id] ?? []}
+                      wasChanged={isAnswerChanged(question.id)}
+                      changedLabel={tUpdate('changed')}
+                      activityTag={isUpdate ? (activityStage ?? activityTitle) : undefined}
                     />
                   ))}
                 </div>
@@ -500,6 +581,9 @@ export function QuestionnaireFlow({
                   selectedOptionId={answers[question.id]}
                   onSelect={selectAnswer}
                   reflections={reflectionsByQuestion[question.id] ?? []}
+                  wasChanged={isAnswerChanged(question.id)}
+                  changedLabel={tUpdate('changed')}
+                  activityTag={isUpdate ? (activityStage ?? activityTitle) : undefined}
                 />
               ))}
             </div>
@@ -514,15 +598,22 @@ export function QuestionnaireFlow({
         </div>
       )}
 
-      {/* Navigation */}
+      {/* Navigation — mode-specific */}
       <div className="mt-8 flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={goPrev}
-          disabled={isFirstTopic}
-        >
-          {t('previous')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={goPrev}
+            disabled={isFirstTopic}
+          >
+            {t('previous')}
+          </Button>
+          {isUpdate && (
+            <Link href={activityId ? '/activities' : '/cognitive-report'}>
+              <Button variant="ghost" size="sm">{tCommon('cancel')}</Button>
+            </Link>
+          )}
+        </div>
 
         <div className="flex items-center gap-2">
           <Button
@@ -533,12 +624,19 @@ export function QuestionnaireFlow({
             {isSaving ? t('saving') : t('save')}
           </Button>
 
+          {/* Update mode: early submit button on non-last topics */}
+          {isUpdate && !isLastTopic && (
+            <Button variant="outline" onClick={handleSubmit} disabled={isPending}>
+              {isPending ? t('submitting') : submitLabel}
+            </Button>
+          )}
+
           {isLastTopic ? (
             <Button
               onClick={handleSubmit}
               disabled={isPending || Object.keys(answers).length === 0}
             >
-              {isPending ? t('submitting') : t('submit')}
+              {isPending ? t('submitting') : submitLabel}
             </Button>
           ) : (
             <Button onClick={handleNext}>
@@ -576,9 +674,12 @@ export function QuestionnaireFlow({
               {t('goBack')}
             </Button>
             {isSubmitAttempt ? (
-              <Button onClick={() => { setUnansweredDialogOpen(false); doSubmit(); }}>
-                {t('submitAnyway')}
-              </Button>
+              // In update mode, don't allow "Submit Anyway" — only "Go Back"
+              !isUpdate && (
+                <Button onClick={() => { setUnansweredDialogOpen(false); doSubmit(); }}>
+                  {t('submitAnyway')}
+                </Button>
+              )
             ) : (
               <Button onClick={handleContinueAnyway}>
                 {t('continueAnyway')}
@@ -599,17 +700,28 @@ function QuestionCard({
   selectedOptionId,
   onSelect,
   reflections,
+  wasChanged,
+  changedLabel,
+  activityTag,
 }: {
   question: Question;
   answerKey: string;
   selectedOptionId?: string;
   onSelect: (answerKey: string, optionId: string) => void;
   reflections: ReflectionItem[];
+  wasChanged?: boolean;
+  changedLabel?: string;
+  activityTag?: string;
 }) {
   return (
-    <Card id={`question-${answerKey}`} className="scroll-mt-60">
+    <Card id={`question-${answerKey}`} className={`scroll-mt-60 ${wasChanged ? 'ring-1 ring-primary/30' : ''}`}>
       <CardHeader>
-        <CardTitle className="text-sm">{question.title}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm">{question.title}</CardTitle>
+          {wasChanged && changedLabel && (
+            <span className="text-xs text-primary">{changedLabel}</span>
+          )}
+        </div>
         {question.notes.length > 0 && (
           <CardDescription>
             {question.notes.map(note => (
@@ -643,6 +755,7 @@ function QuestionCard({
         <QuestionReflections
           questionId={question.id}
           initialReflections={reflections}
+          activityTag={activityTag}
         />
       </CardContent>
     </Card>

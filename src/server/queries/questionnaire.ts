@@ -149,7 +149,9 @@ export async function getCurrentRecord(userId: string) {
 }
 
 /**
- * Get the user's most recent snapshot answers as a map of questionId → optionId.
+ * Get the user's most recent snapshot answers as a map of answerKey → optionId.
+ * For REPEAT mode: key is `questionId::preferenceOptionId`
+ * For FILTER/CONTEXT: key is `questionId`
  */
 export async function getLatestSnapshotAnswers(userId: string): Promise<Record<string, string>> {
   const latestSnapshot = await prisma.responseSnapshot.findFirst({
@@ -157,14 +159,17 @@ export async function getLatestSnapshotAnswers(userId: string): Promise<Record<s
     orderBy: { completedAt: 'desc' },
     select: {
       answers: {
-        select: { questionId: true, selectedOptionId: true },
+        select: { questionId: true, selectedOptionId: true, preferenceOptionId: true },
       },
     },
   });
   if (!latestSnapshot) return {};
   const map: Record<string, string> = {};
   for (const answer of latestSnapshot.answers) {
-    map[answer.questionId] = answer.selectedOptionId;
+    const key = answer.preferenceOptionId
+      ? `${answer.questionId}::${answer.preferenceOptionId}`
+      : answer.questionId;
+    map[key] = answer.selectedOptionId;
   }
   return map;
 }

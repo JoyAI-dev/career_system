@@ -1,8 +1,9 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getActiveVersionWithStructure, getLatestSnapshotAnswers } from '@/server/queries/questionnaire';
+import { getUserPreferenceLabels } from '@/server/queries/preference';
 import { getUserReflections } from '@/server/queries/reflection';
-import { QuestionnaireUpdateFlow } from './QuestionnaireUpdateFlow';
+import { QuestionnaireFlow } from '@/app/(questionnaire)/questionnaire/QuestionnaireFlow';
 import { getTranslations } from 'next-intl/server';
 
 type SearchParams = Promise<{ activityId?: string }>;
@@ -17,10 +18,11 @@ export default async function QuestionnaireUpdatePage({
 
   const { activityId } = await searchParams;
 
-  const [version, previousAnswers, reflectionsByQuestion, t] = await Promise.all([
+  const [version, previousAnswers, reflectionsByQuestion, userPreferences, t] = await Promise.all([
     getActiveVersionWithStructure(),
     getLatestSnapshotAnswers(session.user.id),
     getUserReflections(session.user.id),
+    getUserPreferenceLabels(session.user.id),
     getTranslations('questionnaire'),
   ]);
 
@@ -52,13 +54,16 @@ export default async function QuestionnaireUpdatePage({
   }
 
   return (
-    <QuestionnaireUpdateFlow
+    <QuestionnaireFlow
       version={version}
+      savedAnswers={previousAnswers}
+      userPreferences={userPreferences}
+      reflectionsByQuestion={reflectionsByQuestion}
+      mode="update"
       previousAnswers={previousAnswers}
       activityId={activityId}
       activityTitle={activityTitle}
       activityStage={activityStage}
-      reflectionsByQuestion={reflectionsByQuestion}
     />
   );
 }

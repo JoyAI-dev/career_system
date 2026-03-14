@@ -129,6 +129,7 @@
     "unansweredDescription": "Vous avez {count} question(s) sans réponse. Cliquez pour y accéder.",
     "goBack": "Retour",
     "continueAnyway": "Continuer quand même",
+    "submitAnyway": "Soumettre quand même",
     "save": "Sauvegarder",
     "saving": "Sauvegarde...",
     "saved": "Sauvegardé",

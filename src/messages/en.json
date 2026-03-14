@@ -129,6 +129,7 @@
     "unansweredDescription": "You have {count} unanswered question(s). Click a question to jump to it.",
     "goBack": "Go Back",
     "continueAnyway": "Continue Anyway",
+    "submitAnyway": "Submit Anyway",
     "save": "Save Progress",
     "saving": "Saving...",
     "saved": "Saved",
