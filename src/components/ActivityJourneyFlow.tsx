@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { ClipboardList, Users, BarChart3, ChevronRight, Loader2 } from 'lucide-react';
+import { ClipboardList, Users, BarChart3, ChevronRight, Loader2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ActivityDetailDialog } from '@/components/ActivityDetailDialog';
 import { getActivityForCalendarPopup } from '@/server/actions/activity';
@@ -24,6 +24,8 @@ interface Props {
   /** Activities in the current type that the user is involved in */
   currentActivities: CurrentActivity[];
   currentUserId: string;
+  /** Whether the user has completed the initial questionnaire */
+  hasCompletedQuestionnaire?: boolean;
 }
 
 const STATUS_DOT: Record<string, string> = {
@@ -42,7 +44,7 @@ const STATUS_LABEL: Record<string, string> = {
   COMPLETED: '已完成',
 };
 
-export function ActivityJourneyFlow({ currentTypeName, currentActivities, currentUserId }: Props) {
+export function ActivityJourneyFlow({ currentTypeName, currentActivities, currentUserId, hasCompletedQuestionnaire }: Props) {
   const t = useTranslations('dashboard');
   const tCal = useTranslations('calendar');
 
@@ -97,7 +99,11 @@ export function ActivityJourneyFlow({ currentTypeName, currentActivities, curren
             href="/questionnaire"
             className="group flex flex-col items-center gap-2 rounded-lg border bg-white p-4 text-center transition-colors hover:border-primary/30 hover:bg-primary/5"
           >
-            <span className="text-2xl font-bold text-green-600">1</span>
+            {hasCompletedQuestionnaire ? (
+              <CheckCircle2 className="size-7 text-green-600" />
+            ) : (
+              <span className="text-2xl font-bold text-green-600">1</span>
+            )}
             <ClipboardList className="size-5 text-green-600" />
             <span className="text-xs font-medium leading-tight text-green-700">
               {t('step1Label')}

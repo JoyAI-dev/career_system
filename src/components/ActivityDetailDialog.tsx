@@ -273,55 +273,54 @@ export function ActivityDetailDialog({ activity, onClose, joinByType, currentUse
             )}
           </div>
 
-          {/* Joined member list — only show when there is NO virtual group (to avoid duplication with VirtualGroupInfo) */}
-          {!hasVirtualGroup && (
-            <div className="border-t pt-3">
-              <h3 className="mb-2 text-sm font-medium">{t('joinedMembers')}</h3>
-              {activity.members && activity.members.length > 0 ? (
-                <ul className="space-y-1 text-sm text-muted-foreground">
-                  {activity.members.map((m) => (
-                    <li key={m.username} className="flex items-center justify-between gap-2">
-                      <span>
-                        {m.username}
-                        {m.name ? ` (${m.name})` : ''}
-                      </span>
-                      {m.role === 'LEADER' && (
-                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-                          {t('leader')}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">{t('noJoinedMembers')}</p>
-              )}
-            </div>
-          )}
+          {/* Side-by-side: Members/VirtualGroup + Activity Guide */}
+          {(() => {
+            const hasGuide = !!(activity.type.guideContent || activity.guideMarkdown);
+            const hasMemberSection = hasVirtualGroup || (activity.members && activity.members.length > 0);
+            if (!hasMemberSection && !hasGuide) return null;
+            const useTwoCols = hasMemberSection && hasGuide;
+            return (
+              <div className="border-t pt-3">
+                <div className={`grid gap-4 ${useTwoCols ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {/* Left column: Members */}
+                  {hasVirtualGroup && currentUserId ? (
+                    <VirtualGroupInfo
+                      group={activity.virtualGroup!}
+                      currentUserId={currentUserId}
+                    />
+                  ) : activity.members && activity.members.length > 0 ? (
+                    <div>
+                      <h3 className="mb-2 text-sm font-medium">{t('joinedMembers')}</h3>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        {activity.members.map((m) => (
+                          <li key={m.username} className="flex items-center justify-between gap-2">
+                            <span>
+                              {m.username}
+                              {m.name ? ` (${m.name})` : ''}
+                            </span>
+                            {m.role === 'LEADER' && (
+                              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                                {t('leader')}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
 
-          {/* Side-by-side: Virtual Group + Activity Guide */}
-          {(hasVirtualGroup || activity.type.guideContent || activity.guideMarkdown) && (
-            <div className="border-t pt-3">
-              <div className={`grid gap-4 ${hasVirtualGroup && (activity.type.guideContent || activity.guideMarkdown) ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                {/* Virtual Group Info */}
-                {hasVirtualGroup && currentUserId && (
-                  <VirtualGroupInfo
-                    group={activity.virtualGroup!}
-                    currentUserId={currentUserId}
-                  />
-                )}
-
-                {/* Activity guide (from ActivityType or legacy guideMarkdown) */}
-                {(activity.type.guideContent || activity.guideMarkdown) && (
-                  <ActivityGuideView
-                    guideContent={activity.type.guideContent}
-                    guideMarkdown={activity.guideMarkdown}
-                    allowView={activity.isEligible || activity.type.allowViewLocked !== false}
-                  />
-                )}
+                  {/* Right column: Activity guide */}
+                  {hasGuide && (
+                    <ActivityGuideView
+                      guideContent={activity.type.guideContent}
+                      guideMarkdown={activity.guideMarkdown}
+                      allowView={activity.isEligible || activity.type.allowViewLocked !== false}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Completion mode indicator */}
           {activity.type.completionMode && showInstanceFeatures && (

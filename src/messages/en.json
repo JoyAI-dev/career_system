@@ -113,7 +113,7 @@
   },
   "questionnaire": {
     "title": "Exploring Cognitive Boundaries -- Known & Unknown",
-    "description": "Slide the slider based on your level of understanding for each question. After completing each question, you can record your thoughts in the text box below.",
+    "description": "1. This questionnaire aims to broaden your perspective on real-world social conditions, inspiring and guiding your subsequent learning and reflection;\n2. Please relax — there are no scores or right/wrong answers, and there is no time limit. Completion time varies by person (typically 15–50 minutes). We suggest taking a short break after completing half (7 topics) before continuing;\n3. Please honestly select your level of familiarity with the facts in each question based on your own experience — no need to deeply contemplate the questions themselves at this stage;\n4. Take it easy! The more unfamiliar areas you discover, the more directions you have for future career exploration — that's something to be excited about! And the more familiar areas you have, the clearer and deeper your career path becomes;\n5. Finally, enjoy this hardcore self-\"interrogation\"!",
     "notAvailable": "Questionnaire Not Available",
     "notConfigured": "No active questionnaire is currently configured. Please contact an administrator.",
     "progress": "Progress",
@@ -210,7 +210,10 @@
     "date": "Date:",
     "description": "Description:",
     "viewInActivities": "View in Activities",
-    "loadingDetail": "Loading activity details..."
+    "loadingDetail": "Loading activity details...",
+    "pendingActivities": "Pending Activities",
+    "waitingForMembers": "Waiting for members",
+    "waitingForSchedule": "Waiting for scheduling"
   },
   "cognitiveReport": {
     "title": "Cognitive Boundary Report",

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@/lib/auth';
 import { getActivityProgress, getUserJoinedActivities } from '@/server/queries/activity';
+import { hasCompletedQuestionnaire } from '@/server/queries/questionnaire';
 import { ActivityStepper } from '@/components/ActivityStepper';
 import { ActivityJourneyFlow } from '@/components/ActivityJourneyFlow';
 import { LandingCalendar } from '@/components/LandingCalendar';
@@ -26,9 +27,10 @@ export default async function DashboardPage() {
   }
 
   // Student landing page — fetch all data in parallel
-  const [steps, joinedActivities, t] = await Promise.all([
+  const [steps, joinedActivities, questionnaireCompleted, t] = await Promise.all([
     getActivityProgress(session.user.id),
     getUserJoinedActivities(session.user.id),
+    hasCompletedQuestionnaire(session.user.id),
     getTranslations('dashboard'),
   ]);
 
@@ -73,6 +75,7 @@ export default async function DashboardPage() {
           currentTypeName={currentStep?.typeName ?? null}
           currentActivities={currentActivities}
           currentUserId={session.user.id}
+          hasCompletedQuestionnaire={questionnaireCompleted}
         />
       </section>
 

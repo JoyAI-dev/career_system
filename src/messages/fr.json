@@ -113,7 +113,7 @@
   },
   "questionnaire": {
     "title": "Explorer les frontières cognitives -- Connu et Inconnu",
-    "description": "Faites glisser le curseur selon votre niveau de compréhension pour chaque question. Après chaque question, vous pouvez noter vos réflexions dans la zone de texte ci-dessous.",
+    "description": "1. Ce questionnaire vise à élargir votre vision des réalités sociales, à vous inspirer et à guider votre apprentissage et réflexion ultérieurs ;\n2. Soyez tranquille — il n'y a ni notes ni bonnes ou mauvaises réponses, et aucune limite de temps. La durée varie selon chacun (généralement 15 à 50 minutes). Nous suggérons de faire une courte pause après avoir complété la moitié (7 sujets) avant de continuer ;\n3. Veuillez honnêtement sélectionner votre niveau de connaissance des faits dans chaque question selon votre propre expérience — pas besoin de réfléchir en profondeur aux questions elles-mêmes à ce stade ;\n4. Détendez-vous ! Plus vous découvrez de domaines inconnus, plus vous avez de directions à explorer pour votre carrière — c'est une excellente nouvelle ! Et plus vous maîtrisez de domaines, plus votre parcours professionnel est clair et approfondi ;\n5. Enfin, profitez de cet intense auto-\u00ab interrogatoire \u00bb !",
     "notAvailable": "Questionnaire non disponible",
     "notConfigured": "Aucun questionnaire actif n'est actuellement configuré. Veuillez contacter un administrateur.",
     "progress": "Progression",
@@ -210,7 +210,10 @@
     "date": "Date :",
     "description": "Description :",
     "viewInActivities": "Voir dans les activités",
-    "loadingDetail": "Chargement des détails..."
+    "loadingDetail": "Chargement des détails...",
+    "pendingActivities": "Activités en attente",
+    "waitingForMembers": "En attente de membres",
+    "waitingForSchedule": "En attente de planification"
   },
   "cognitiveReport": {
     "title": "Rapport de frontière cognitive",

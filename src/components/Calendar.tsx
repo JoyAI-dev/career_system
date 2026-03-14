@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { ActivityDetailDialog } from '@/components/ActivityDetailDialog';
 import { getActivityForCalendarPopup } from '@/server/actions/activity';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Clock, Users } from 'lucide-react';
 
 const FC_LOCALES: Record<string, typeof zhCnLocale> = {
   zh: zhCnLocale,
@@ -44,10 +44,20 @@ type RecruitmentEvent = {
   eventDate: string;
 };
 
+type PendingActivity = {
+  id: string;
+  title: string;
+  status: string;
+  capacity: number;
+  type: { id: string; name: string; order: number };
+  _count: { memberships: number };
+};
+
 type ActivityType = { id: string; name: string };
 
 type Props = {
   events: CalendarEvent[];
+  pendingActivities?: PendingActivity[];
   recruitmentEvents?: RecruitmentEvent[];
   activityTypes?: ActivityType[];
   userId: string;
@@ -66,7 +76,7 @@ const RECRUITMENT_COLORS = { bg: '#fce7f3', border: '#ec4899', text: '#9d174d' }
 // Type for ActivityDetailDialog's activity prop (inferred from server action return)
 type ActivityDetail = NonNullable<Awaited<ReturnType<typeof getActivityForCalendarPopup>>>;
 
-export function CalendarView({ events, recruitmentEvents = [], activityTypes = [], userId }: Props) {
+export function CalendarView({ events, pendingActivities = [], recruitmentEvents = [], activityTypes = [], userId }: Props) {
   const t = useTranslations('calendar');
   const locale = useLocale();
   const calendarRef = useRef<FullCalendar>(null);
@@ -119,16 +129,7 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
     return [...activityItems, ...recruitmentItems];
   }, [filteredActivityEvents, filteredRecruitmentEvents]);
 
-  const handleEventClick = useCallback(async (info: EventClickArg) => {
-    const props = info.event.extendedProps;
-
-    if (props.kind === 'recruitment') {
-      setSelectedRecruitment(props.data as RecruitmentEvent);
-      return;
-    }
-
-    // Activity click — lazy load full detail
-    const activityId = props.activityId as string;
+  const handleActivityClick = useCallback(async (activityId: string) => {
     loadingRef.current = activityId;
     setLoadingActivityId(activityId);
     setActivityDetail(null);
@@ -147,6 +148,16 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
       }
     }
   }, []);
+
+  const handleEventClick = useCallback((info: EventClickArg) => {
+    const props = info.event.extendedProps;
+    if (props.kind === 'recruitment') {
+      setSelectedRecruitment(props.data as RecruitmentEvent);
+      return;
+    }
+    const activityId = props.activityId as string;
+    void handleActivityClick(activityId);
+  }, [handleActivityClick]);
 
   const handleActivityDetailClose = useCallback(() => {
     setActivityDetail(null);
@@ -228,6 +239,34 @@ export function CalendarView({ events, recruitmentEvents = [], activityTypes = [
           </div>
         )}
       </div>
+
+      {/* Pending activities banner (unscheduled, waiting for team / scheduling) */}
+      {pendingActivities.length > 0 && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div className="mb-2 flex items-center gap-1.5 text-sm font-medium text-amber-800">
+            <Clock className="size-4" />
+            {t('pendingActivities')}
+          </div>
+          <div className="space-y-1.5">
+            {pendingActivities.map((pa) => (
+              <button
+                key={pa.id}
+                onClick={() => void handleActivityClick(pa.id)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-amber-100"
+              >
+                <span className="font-medium text-amber-900">{pa.type.name}</span>
+                <span className="flex items-center gap-1 text-xs text-amber-700">
+                  <Users className="size-3" />
+                  {pa._count.memberships}/{pa.capacity}
+                </span>
+                <span className="ml-auto text-xs text-amber-600">
+                  {pa.status === 'OPEN' ? t('waitingForMembers') : t('waitingForSchedule')}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="rounded-lg border bg-card p-4">
         <FullCalendar
