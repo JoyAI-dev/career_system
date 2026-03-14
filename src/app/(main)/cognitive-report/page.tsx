@@ -7,6 +7,7 @@ import {
 } from '@/server/queries/questionnaire';
 import { getActivityProgress } from '@/server/queries/activity';
 import { getUserReflections } from '@/server/queries/reflection';
+import { getUserPreferenceLabels } from '@/server/queries/preference';
 import { getSnapshotScores } from '@/server/scoring';
 import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
@@ -19,13 +20,14 @@ export default async function CognitiveReportPage() {
     redirect('/login');
   }
 
-  const [snapshotMeta, currentRecord, version, reflectionsByQuestion, steps, t] = await Promise.all([
+  const [snapshotMeta, currentRecord, version, reflectionsByQuestion, steps, t, preferenceLabels] = await Promise.all([
     getUserSnapshotIds(session.user.id),
     getCurrentRecord(session.user.id),
     getActiveVersionWithStructure(),
     getUserReflections(session.user.id),
     getActivityProgress(session.user.id),
     getTranslations('cognitiveReport'),
+    getUserPreferenceLabels(session.user.id),
   ]);
 
   const currentStep = steps.find((s) => s.state === 'current');
@@ -93,6 +95,7 @@ export default async function CognitiveReportPage() {
           name: t.name,
           order: t.order,
           showInReport: t.showInReport,
+          preferenceCategorySlug: t.preferenceCategory?.slug ?? null,
           subTopics: t.subTopics.map((st) => ({
             id: st.id,
             name: st.name,
@@ -141,6 +144,7 @@ export default async function CognitiveReportPage() {
         versionStructure={versionStructure}
         reflectionsByQuestion={reflectionsByQuestion}
         currentStageLabel={currentStep?.typeName ?? null}
+        preferenceLabels={preferenceLabels}
       />
     </div>
   );

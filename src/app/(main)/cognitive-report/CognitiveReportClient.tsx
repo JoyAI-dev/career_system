@@ -31,7 +31,7 @@ type Question = {
 };
 type Dimension = { id: string; name: string; order: number; questions: Question[] };
 type SubTopic = { id: string; name: string; order: number; dimensions: Dimension[] };
-type Topic = { id: string; name: string; order: number; showInReport: boolean; subTopics: SubTopic[] };
+type Topic = { id: string; name: string; order: number; showInReport: boolean; preferenceCategorySlug: string | null; subTopics: SubTopic[] };
 type VersionStructure = { id: string; topics: Topic[] } | null;
 
 type SnapshotEntry = {
@@ -46,12 +46,16 @@ type CurrentAnswer = { optionId: string; score: number };
 
 type ReflectionItem = { id: string; content: string; activityTag: string | null; createdAt: string };
 
+type PreferenceLabel = { id: string; label: string; value: string };
+type PreferenceLabels = Record<string, PreferenceLabel[]>;
+
 type Props = {
   snapshots: SnapshotEntry[];
   currentAnswers: Record<string, CurrentAnswer>;
   versionStructure: VersionStructure;
   reflectionsByQuestion?: Record<string, ReflectionItem[]>;
   currentStageLabel?: string | null;
+  preferenceLabels?: PreferenceLabels;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -84,6 +88,7 @@ export function CognitiveReportClient({
   versionStructure,
   reflectionsByQuestion = {},
   currentStageLabel = null,
+  preferenceLabels = {},
 }: Props) {
   const t = useTranslations('cognitiveReport');
   const format = useFormatter();
@@ -256,8 +261,10 @@ export function CognitiveReportClient({
                 (st) => st.topicName === topic.topicName,
               );
               const change = snapshotTopic ? topic.score - snapshotTopic.score : 0;
-              const topicQuestions = versionStructure?.topics
-                .find((t) => t.id === topic.topicId)
+              const topicInVersion = versionStructure?.topics.find((t) => t.id === topic.topicId);
+              const prefSlug = topicInVersion?.preferenceCategorySlug;
+              const selections = prefSlug ? preferenceLabels[prefSlug] : undefined;
+              const topicQuestions = topicInVersion
                 ?.subTopics.flatMap((st) => st.dimensions.flatMap((d) => d.questions)) ?? [];
               const topicReflections = topicQuestions
                 .flatMap((q) => reflectionsByQuestion[q.id] ?? [])
@@ -279,6 +286,19 @@ export function CognitiveReportClient({
                         )}
                       </div>
                     </div>
+
+                    {selections && selections.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {selections.map((s) => (
+                          <span
+                            key={s.id}
+                            className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary"
+                          >
+                            {s.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     {topicReflections.length > 0 && (
                       <div className="mt-3 space-y-2 border-t pt-2">
