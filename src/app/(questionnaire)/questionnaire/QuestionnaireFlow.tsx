@@ -370,12 +370,12 @@ export function QuestionnaireFlow({
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">{tUpdate('title')}</h1>
           {activityTitle ? (
-            <p
-              className="mt-1 text-sm text-muted-foreground"
-              dangerouslySetInnerHTML={{
-                __html: tUpdate('descriptionWithActivity', { activity: activityTitle }),
-              }}
-            />
+            <p className="mt-1 text-sm text-muted-foreground">
+              {tUpdate.rich('descriptionWithActivity', {
+                activity: activityTitle,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
+            </p>
           ) : (
             <p className="mt-1 text-sm text-muted-foreground">
               {tUpdate('descriptionGeneric')}
@@ -536,6 +536,7 @@ export function QuestionnaireFlow({
                     wasChanged={isAnswerChanged(answerKey)}
                     changedLabel={tUpdate('changed')}
                     activityTag={isUpdate ? (activityStage ?? activityTitle) : undefined}
+                    showReflections={isUpdate}
                   />
                 );
               })}
@@ -562,6 +563,7 @@ export function QuestionnaireFlow({
                       wasChanged={isAnswerChanged(question.id)}
                       changedLabel={tUpdate('changed')}
                       activityTag={isUpdate ? (activityStage ?? activityTitle) : undefined}
+                      showReflections={isUpdate}
                     />
                   ))}
                 </div>
@@ -584,6 +586,7 @@ export function QuestionnaireFlow({
                   wasChanged={isAnswerChanged(question.id)}
                   changedLabel={tUpdate('changed')}
                   activityTag={isUpdate ? (activityStage ?? activityTitle) : undefined}
+                  showReflections={isUpdate}
                 />
               ))}
             </div>
@@ -703,6 +706,7 @@ function QuestionCard({
   wasChanged,
   changedLabel,
   activityTag,
+  showReflections = false,
 }: {
   question: Question;
   answerKey: string;
@@ -712,6 +716,7 @@ function QuestionCard({
   wasChanged?: boolean;
   changedLabel?: string;
   activityTag?: string;
+  showReflections?: boolean;
 }) {
   return (
     <Card id={`question-${answerKey}`} className={`scroll-mt-60 ${wasChanged ? 'ring-1 ring-primary/30' : ''}`}>
@@ -752,11 +757,13 @@ function QuestionCard({
             );
           })}
         </div>
-        <QuestionReflections
-          questionId={question.id}
-          initialReflections={reflections}
-          activityTag={activityTag}
-        />
+        {showReflections && (
+          <QuestionReflections
+            questionId={question.id}
+            initialReflections={reflections}
+            activityTag={activityTag}
+          />
+        )}
       </CardContent>
     </Card>
   );
