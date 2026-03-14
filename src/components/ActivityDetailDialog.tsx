@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useActionState, useTransition } from 'react';
+import { useState, useEffect, useActionState, useTransition, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { useChat, type ActivityCommentData } from '@/components/chat/ChatProvider';
 import {
   Dialog,
   DialogContent,
@@ -508,7 +509,17 @@ function CommentSection({ activityId }: { activityId: string }) {
   const [newComment, setNewComment] = useState('');
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const commentListRef = useRef<HTMLDivElement>(null);
 
+  const {
+    isConnected,
+    joinActivity,
+    leaveActivity,
+    subscribeActivityComment,
+    unsubscribeActivityComment,
+  } = useChat();
+
+  // Load initial comments from DB
   useEffect(() => {
     getActivityComments(activityId).then((data) => {
       setComments(
@@ -519,6 +530,37 @@ function CommentSection({ activityId }: { activityId: string }) {
       );
     });
   }, [activityId]);
+
+  // Join/leave activity WS room & subscribe to real-time comments
+  const handleNewComment = useCallback(
+    (comment: ActivityCommentData) => {
+      setComments((prev) => {
+        // Deduplicate by comment ID
+        if (prev.some((c) => c.id === comment.id)) return prev;
+        return [...prev, comment];
+      });
+      // Auto-scroll to bottom
+      setTimeout(() => {
+        commentListRef.current?.scrollTo({
+          top: commentListRef.current.scrollHeight,
+          behavior: 'smooth',
+        });
+      }, 50);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!isConnected) return;
+
+    joinActivity(activityId);
+    subscribeActivityComment(activityId, handleNewComment);
+
+    return () => {
+      leaveActivity(activityId);
+      unsubscribeActivityComment(activityId, handleNewComment);
+    };
+  }, [activityId, isConnected, joinActivity, leaveActivity, subscribeActivityComment, unsubscribeActivityComment, handleNewComment]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -531,14 +573,16 @@ function CommentSection({ activityId }: { activityId: string }) {
         setError(result.errors._form[0]);
       } else {
         setNewComment('');
-        // Refresh comments
-        const data = await getActivityComments(activityId);
-        setComments(
-          data.map((c) => ({
-            ...c,
-            createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
-          })),
-        );
+        // If WS is not connected, fallback to manual re-fetch
+        if (!isConnected) {
+          const data = await getActivityComments(activityId);
+          setComments(
+            data.map((c) => ({
+              ...c,
+              createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
+            })),
+          );
+        }
       }
     });
   }
@@ -548,7 +592,7 @@ function CommentSection({ activityId }: { activityId: string }) {
       <h3 className="mb-3 text-sm font-medium">{t('groupComments')}</h3>
 
       {/* Comment list */}
-      <div className="mb-3 max-h-48 space-y-2 overflow-y-auto">
+      <div ref={commentListRef} className="mb-3 max-h-48 space-y-2 overflow-y-auto">
         {comments.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t('noComments')}</p>
         ) : (

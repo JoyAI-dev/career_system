@@ -2,6 +2,7 @@ import { createServer } from 'http';
 import next from 'next';
 import { parse } from 'url';
 import { ChatServer } from './src/server/chat/ChatServer.js';
+import { prisma } from './src/lib/db.js';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';
@@ -14,6 +15,14 @@ const jwtSecret = process.env.AUTH_SECRET || 'staging_secret_key_2026_local_dev'
 
 app.prepare().then(() => {
   const chatServer = new ChatServer(jwtSecret);
+
+  // Inject activity membership checker (keeps ChatServer decoupled from Prisma)
+  chatServer.setMembershipChecker(async (activityId, userId) => {
+    const membership = await prisma.membership.findUnique({
+      where: { activityId_userId: { activityId, userId } },
+    });
+    return !!membership;
+  });
 
   // Store chat server instance globally for API routes to access
   (globalThis as Record<string, unknown>).__chatServer = chatServer;

@@ -21,9 +21,16 @@ interface AuthenticatedSocket extends WebSocket {
 }
 
 interface RoomInfo {
-  type: 'community' | 'group' | 'private';
+  type: 'community' | 'group' | 'private' | 'activity';
   name: string;
   members: Set<string>;
+}
+
+export interface ActivityCommentData {
+  id: string;
+  content: string;
+  createdAt: string;
+  user: { id: string; name: string | null; username: string };
 }
 
 type ClientMessage =
@@ -31,7 +38,9 @@ type ClientMessage =
   | { type: 'join_room'; roomId: string }
   | { type: 'leave_room'; roomId: string }
   | { type: 'message'; roomId: string; content: string; mentions?: string[] }
-  | { type: 'typing'; roomId: string };
+  | { type: 'typing'; roomId: string }
+  | { type: 'join_activity'; activityId: string }
+  | { type: 'leave_activity'; activityId: string };
 
 type ServerMessage =
   | { type: 'authenticated'; userId: string; username: string }
@@ -42,7 +51,8 @@ type ServerMessage =
   | { type: 'user_offline'; userId: string }
   | { type: 'room_members'; roomId: string; members: { userId: string; username: string; online: boolean }[] }
   | { type: 'room_joined'; roomId: string }
-  | { type: 'message_counts'; counts: Record<string, number> };
+  | { type: 'message_counts'; counts: Record<string, number> }
+  | { type: 'activity_comment'; activityId: string; comment: ActivityCommentData };
 
 // ─── ChatServer ───────────────────────────────────────────────────────
 
@@ -56,6 +66,7 @@ export class ChatServer {
   private jwtSecret: Uint8Array;
   private messageIdCounter = 0;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  private checkActivityMembership: ((activityId: string, userId: string) => Promise<boolean>) | null = null;
 
   constructor(jwtSecret: string) {
     this.jwtSecret = new TextEncoder().encode(jwtSecret);
@@ -130,6 +141,14 @@ export class ChatServer {
         if (!socket.userId) return this.send(socket, { type: 'error', message: 'Not authenticated' });
         this.handleTyping(socket, message.roomId);
         break;
+      case 'join_activity':
+        if (!socket.userId) return this.send(socket, { type: 'error', message: 'Not authenticated' });
+        await this.handleJoinActivity(socket, message.activityId);
+        break;
+      case 'leave_activity':
+        if (!socket.userId) return this.send(socket, { type: 'error', message: 'Not authenticated' });
+        this.handleLeaveRoom(socket, `activity:${message.activityId}`);
+        break;
     }
   }
 
@@ -174,7 +193,9 @@ export class ChatServer {
         ? 'community'
         : roomId.startsWith('group:')
           ? 'group'
-          : 'private';
+          : roomId.startsWith('activity:')
+            ? 'activity'
+            : 'private';
       this.rooms.set(roomId, { type, name: roomId, members: new Set() });
     }
 
@@ -321,6 +342,43 @@ export class ChatServer {
     if (socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(message));
     }
+  }
+
+  // ─── Activity comments ──────────────────────────────────────────
+
+  private async handleJoinActivity(socket: AuthenticatedSocket, activityId: string) {
+    if (!socket.userId) return;
+
+    // Verify membership if checker is configured
+    if (this.checkActivityMembership) {
+      const isMember = await this.checkActivityMembership(activityId, socket.userId);
+      if (!isMember) {
+        return this.send(socket, { type: 'error', message: 'Not a member of this activity' });
+      }
+    }
+
+    const roomId = `activity:${activityId}`;
+    this.handleJoinRoom(socket, roomId);
+  }
+
+  /**
+   * Set the membership checker for activity rooms (injected to avoid Prisma dependency).
+   */
+  setMembershipChecker(checker: (activityId: string, userId: string) => Promise<boolean>) {
+    this.checkActivityMembership = checker;
+  }
+
+  /**
+   * Broadcast a new activity comment to all users in the activity room.
+   * Called from Server Actions after DB write completes.
+   */
+  broadcastActivityComment(activityId: string, comment: ActivityCommentData) {
+    const roomId = `activity:${activityId}`;
+    this.broadcastToRoom(roomId, {
+      type: 'activity_comment',
+      activityId,
+      comment,
+    });
   }
 
   // ─── Public API (for admin stats) ────────────────────────────────

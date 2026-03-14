@@ -22,6 +22,15 @@ export interface ChatMessageData {
   timestamp: number;
 }
 
+export interface ActivityCommentData {
+  id: string;
+  content: string;
+  createdAt: string;
+  user: { id: string; name: string | null; username: string };
+}
+
+export type ActivityCommentListener = (comment: ActivityCommentData) => void;
+
 export interface RoomMember {
   userId: string;
   username: string;
@@ -71,6 +80,11 @@ interface ChatContextType {
   sendTyping: (roomId: string) => void;
   setNetworkDrawerOpen: (open: boolean) => void;
   setFriends: (friends: FriendInfo[]) => void;
+  // Activity comment real-time support
+  joinActivity: (activityId: string) => void;
+  leaveActivity: (activityId: string) => void;
+  subscribeActivityComment: (activityId: string, listener: ActivityCommentListener) => void;
+  unsubscribeActivityComment: (activityId: string, listener: ActivityCommentListener) => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -141,6 +155,9 @@ export function ChatProvider({
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const initialGroupsRef = useRef(initialGroups);
+
+  // ─── Activity comment listeners ──────────────────────────────────
+  const activityCommentListenersRef = useRef<Map<string, Set<ActivityCommentListener>>>(new Map());
 
   // ─── Refs for avoiding stale closures in WebSocket handlers ──────
   // The WebSocket onmessage handler is set once during connect() and captures
@@ -259,6 +276,21 @@ export function ChatProvider({
         case 'room_joined':
           // Room join confirmed
           break;
+
+        case 'activity_comment': {
+          // Dispatch to activity comment listeners
+          const { activityId, comment } = data as {
+            activityId: string;
+            comment: ActivityCommentData;
+          };
+          const listeners = activityCommentListenersRef.current.get(activityId);
+          if (listeners) {
+            for (const listener of listeners) {
+              listener(comment);
+            }
+          }
+          break;
+        }
 
         case 'error':
           console.warn('[Chat]', data.message);
@@ -416,6 +448,45 @@ export function ChatProvider({
     }
   }, []);
 
+  // ─── Activity comment real-time support ────────────────────────
+
+  const joinActivity = useCallback((activityId: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'join_activity', activityId }));
+    }
+  }, []);
+
+  const leaveActivity = useCallback((activityId: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'leave_activity', activityId }));
+    }
+  }, []);
+
+  const subscribeActivityComment = useCallback(
+    (activityId: string, listener: ActivityCommentListener) => {
+      const listeners = activityCommentListenersRef.current;
+      if (!listeners.has(activityId)) {
+        listeners.set(activityId, new Set());
+      }
+      listeners.get(activityId)!.add(listener);
+    },
+    [],
+  );
+
+  const unsubscribeActivityComment = useCallback(
+    (activityId: string, listener: ActivityCommentListener) => {
+      const listeners = activityCommentListenersRef.current;
+      const set = listeners.get(activityId);
+      if (set) {
+        set.delete(listener);
+        if (set.size === 0) {
+          listeners.delete(activityId);
+        }
+      }
+    },
+    [],
+  );
+
   return (
     <ChatContext.Provider
       value={{
@@ -438,6 +509,10 @@ export function ChatProvider({
         sendTyping,
         setNetworkDrawerOpen,
         setFriends,
+        joinActivity,
+        leaveActivity,
+        subscribeActivityComment,
+        unsubscribeActivityComment,
       }}
     >
       {children}

@@ -752,9 +752,32 @@ export async function addActivityComment(
     return { errors: { _form: [te('notMember')] } };
   }
 
-  await prisma.activityComment.create({
+  const comment = await prisma.activityComment.create({
     data: { activityId, userId, content: content.trim() },
+    include: {
+      user: { select: { id: true, name: true, username: true } },
+    },
   });
+
+  // IMPORTANT: Broadcast AFTER db write completes to ensure data consistency
+  try {
+    const { getChatServer } = await import('@/server/chat/getChatServer');
+    const chatServer = getChatServer();
+    if (chatServer) {
+      chatServer.broadcastActivityComment(activityId, {
+        id: comment.id,
+        content: comment.content,
+        createdAt: comment.createdAt.toISOString(),
+        user: {
+          id: comment.user.id,
+          name: comment.user.name,
+          username: comment.user.username,
+        },
+      });
+    }
+  } catch {
+    // WebSocket broadcast failure should not affect the comment being saved
+  }
 
   revalidatePath(ACTIVITIES_PATH);
   return { success: true };
