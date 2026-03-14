@@ -228,6 +228,7 @@
     "growthSummary": "成长摘要",
     "topicsRankedByChange": "按变化排名的主题",
     "topicScores": "主题分数",
+    "topicScoresHint": "这个分数的数字是为了提供更直观的参考和对比而非评判用户，用户可通过分数的数字直接判断自己最陌生的领域和最熟悉的领域",
     "assessmentBreakdown": "评估明细",
     "snapshotHistory": "快照历史",
     "allAssessments": "所有评估及总分趋势",
