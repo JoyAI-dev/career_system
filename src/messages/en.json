@@ -195,7 +195,21 @@
     "finishing": "Finishing...",
     "alreadyFinished": "You have already completed this activity.",
     "joinedMembers": "Joined Members",
-    "noJoinedMembers": "No joined members yet."
+    "noJoinedMembers": "No joined members yet.",
+    "meetingMinutes": "Meeting Minutes",
+    "addMinutes": "Add Minutes",
+    "minutesContent": "Content",
+    "minutesContentPlaceholder": "Enter meeting minutes...",
+    "uploadFile": "Upload File",
+    "download": "Download",
+    "deleteMinutes": "Delete",
+    "noMinutesYet": "No meeting minutes yet",
+    "minutesSubmitting": "Submitting...",
+    "minutesSubmit": "Submit",
+    "minutesDeleting": "Deleting...",
+    "minutesDeleteConfirm": "Are you sure you want to delete this entry?",
+    "minutesFileTooLarge": "File too large. Maximum 20MB",
+    "minutesInvalidFileType": "Unsupported file type"
   },
   "calendar": {
     "title": "Calendar",

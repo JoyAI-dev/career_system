@@ -195,7 +195,21 @@
     "finishing": "En cours...",
     "alreadyFinished": "Vous avez déjà terminé cette activité.",
     "joinedMembers": "Membres inscrits",
-    "noJoinedMembers": "Aucun membre inscrit."
+    "noJoinedMembers": "Aucun membre inscrit.",
+    "meetingMinutes": "Compte rendu",
+    "addMinutes": "Ajouter un compte rendu",
+    "minutesContent": "Contenu",
+    "minutesContentPlaceholder": "Saisissez le compte rendu...",
+    "uploadFile": "Joindre un fichier",
+    "download": "Telecharger",
+    "deleteMinutes": "Supprimer",
+    "noMinutesYet": "Aucun compte rendu pour le moment",
+    "minutesSubmitting": "Envoi...",
+    "minutesSubmit": "Soumettre",
+    "minutesDeleting": "Suppression...",
+    "minutesDeleteConfirm": "Voulez-vous vraiment supprimer cette entree ?",
+    "minutesFileTooLarge": "Fichier trop volumineux. Maximum 20 Mo",
+    "minutesInvalidFileType": "Type de fichier non pris en charge"
   },
   "calendar": {
     "title": "Calendrier",

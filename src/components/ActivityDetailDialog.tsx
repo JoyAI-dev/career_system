@@ -32,7 +32,8 @@ import { VirtualGroupInfo } from '@/components/VirtualGroupInfo';
 import { PairingPanel } from '@/components/PairingPanel';
 import { CompetitionPanel } from '@/components/CompetitionPanel';
 import { ActivityGuideView } from '@/components/ActivityGuideView';
-import { Users, UserCheck } from 'lucide-react';
+import { Users, UserCheck, FileText, Paperclip, Download, Trash2, Upload } from 'lucide-react';
+import { deleteMeetingMinutes, getMeetingMinutes } from '@/server/actions/meetingMinutes';
 
 type Tag = { id: string; name: string };
 
@@ -94,6 +95,18 @@ type Activity = {
   winnerId?: string | null;
   pairings?: PairingData[];
   opponentGroup?: OpponentGroupData | null;
+  meetingMinutes?: MeetingMinutesData[];
+};
+
+type MeetingMinutesData = {
+  id: string;
+  content: string | null;
+  fileName: string | null;
+  fileUrl: string | null;
+  fileSize: number | null;
+  fileMimeType: string | null;
+  createdAt: string;
+  user: { id: string; name: string | null; username: string };
 };
 
 type Comment = {
@@ -418,6 +431,17 @@ export function ActivityDetailDialog({ activity, onClose, joinByType, currentUse
             </div>
           )}
 
+          {/* Meeting Minutes for joined members (instance-scoped) */}
+          {showInstanceFeatures && (
+            <div className="border-t pt-4">
+              <MeetingMinutesSection
+                activityId={activity.id}
+                currentUserId={currentUserId ?? ''}
+                initialMinutes={activity.meetingMinutes ?? []}
+              />
+            </div>
+          )}
+
           {/* Finish Activity button */}
           {canFinish && (
             <div className="border-t pt-4">
@@ -626,6 +650,271 @@ function CommentSection({ activityId }: { activityId: string }) {
       </form>
       {error && (
         <p className="mt-1 text-xs text-red-600">{error}</p>
+      )}
+    </div>
+  );
+}
+
+const MEETING_MINUTES_ALLOWED_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+  'application/json',
+  'text/yaml',
+  'application/x-yaml',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+];
+const MEETING_MINUTES_MAX_SIZE = 20 * 1024 * 1024; // 20MB
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function MeetingMinutesSection({
+  activityId,
+  currentUserId,
+  initialMinutes,
+}: {
+  activityId: string;
+  currentUserId: string;
+  initialMinutes: MeetingMinutesData[];
+}) {
+  const t = useTranslations('activities');
+  const tCommon = useTranslations('common');
+  const [minutes, setMinutes] = useState<MeetingMinutesData[]>(initialMinutes);
+  const [content, setContent] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!MEETING_MINUTES_ALLOWED_TYPES.includes(file.type)) {
+      setError(t('minutesInvalidFileType'));
+      e.target.value = '';
+      return;
+    }
+    if (file.size > MEETING_MINUTES_MAX_SIZE) {
+      setError(t('minutesFileTooLarge'));
+      e.target.value = '';
+      return;
+    }
+
+    setError(null);
+    setSelectedFile(file);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!content.trim() && !selectedFile) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.set('activityId', activityId);
+      if (content.trim()) formData.set('content', content.trim());
+      if (selectedFile) formData.set('file', selectedFile);
+
+      const res = await fetch('/api/upload/meeting-minutes', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error?.message || 'Upload failed');
+      }
+
+      // Refresh list
+      const updated = await getMeetingMinutes(activityId);
+      setMinutes(
+        updated.map((m) => ({
+          ...m,
+          createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : String(m.createdAt),
+        })),
+      );
+      setContent('');
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setShowForm(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDelete(minutesId: string) {
+    if (!confirm(t('minutesDeleteConfirm'))) return;
+    setIsDeleting(minutesId);
+    try {
+      const result = await deleteMeetingMinutes(minutesId);
+      if (result.success) {
+        setMinutes((prev) => prev.filter((m) => m.id !== minutesId));
+      }
+    } finally {
+      setIsDeleting(null);
+    }
+  }
+
+  function getDownloadUrl(m: MeetingMinutesData): string {
+    if (!m.fileUrl) return '#';
+    const filename = m.fileUrl.split('/').pop() || '';
+    return `/api/files/meeting-minutes/${activityId}/${filename}`;
+  }
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="flex items-center gap-1.5 text-sm font-medium">
+          <FileText className="size-4" />
+          {t('meetingMinutes')}
+        </h3>
+        {!showForm && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowForm(true)}
+            className="h-7 text-xs"
+          >
+            {t('addMinutes')}
+          </Button>
+        )}
+      </div>
+
+      {/* Minutes list */}
+      <div className="mb-3 max-h-64 space-y-2 overflow-y-auto">
+        {minutes.length === 0 && !showForm ? (
+          <p className="text-xs text-muted-foreground">{t('noMinutesYet')}</p>
+        ) : (
+          minutes.map((m) => (
+            <div key={m.id} className="rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium">
+                  {m.user.name ?? m.user.username}
+                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(m.createdAt).toLocaleString()}
+                  </span>
+                  {m.user.id === currentUserId && (
+                    <button
+                      onClick={() => handleDelete(m.id)}
+                      disabled={isDeleting === m.id}
+                      className="ml-1 rounded p-0.5 text-muted-foreground hover:text-red-600 disabled:opacity-50"
+                      title={t('deleteMinutes')}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              {m.content && (
+                <p className="mt-1.5 whitespace-pre-wrap text-sm">{m.content}</p>
+              )}
+              {m.fileName && m.fileUrl && (
+                <div className="mt-2 flex items-center gap-2 rounded bg-muted/50 px-2 py-1.5">
+                  <Paperclip className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate text-xs font-medium">{m.fileName}</span>
+                  {m.fileSize && (
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      ({formatFileSize(m.fileSize)})
+                    </span>
+                  )}
+                  <a
+                    href={getDownloadUrl(m)}
+                    download={m.fileName}
+                    className="shrink-0 rounded p-0.5 text-primary hover:text-primary/80"
+                    title={t('download')}
+                  >
+                    <Download className="size-3.5" />
+                  </a>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Add form */}
+      {showForm && (
+        <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border bg-muted/20 p-3">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={t('minutesContentPlaceholder')}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            rows={3}
+          />
+          <div className="flex items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs hover:bg-muted">
+              <Upload className="size-3.5" />
+              {t('uploadFile')}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.json,.yaml,.yml,.jpg,.jpeg,.png,.webp"
+              />
+            </label>
+            {selectedFile && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Paperclip className="size-3" />
+                {selectedFile.name}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="ml-0.5 text-red-500 hover:text-red-700"
+                >
+                  x
+                </button>
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSubmitting || (!content.trim() && !selectedFile)}
+            >
+              {isSubmitting ? t('minutesSubmitting') : t('minutesSubmit')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowForm(false);
+                setContent('');
+                setSelectedFile(null);
+                setError(null);
+              }}
+            >
+              {tCommon('cancel')}
+            </Button>
+          </div>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+        </form>
       )}
     </div>
   );

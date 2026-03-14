@@ -38,6 +38,26 @@ export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number];
 
 export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
+/** Meeting minutes: broad set of allowed MIME types */
+export const MEETING_MINUTES_ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+  'application/json',
+  'text/yaml',
+  'application/x-yaml',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+
+export const MEETING_MINUTES_MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+
 const MIME_TO_EXT: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -120,6 +140,44 @@ export function mimeFromFilename(filename: string): string {
     jpeg: 'image/jpeg',
     png: 'image/png',
     webp: 'image/webp',
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ppt: 'application/vnd.ms-powerpoint',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    txt: 'text/plain',
+    json: 'application/json',
+    yaml: 'text/yaml',
+    yml: 'text/yaml',
   };
   return map[ext] || 'application/octet-stream';
+}
+
+/**
+ * Sanitize a file name: remove path separators, null bytes, and limit length.
+ */
+export function sanitizeFileName(name: string): string {
+  return name
+    .replace(/[/\\]/g, '_')      // Remove path separators
+    .replace(/\.\./g, '_')       // Remove parent-dir traversals
+    .replace(/\0/g, '')          // Remove null bytes
+    .replace(/[<>:"|?*]/g, '_')  // Remove Windows-unsafe chars
+    .slice(0, 200);              // Limit length
+}
+
+/**
+ * Build the on-disk path for a meeting minutes file.
+ * Returns both the relative path (stored in DB) and the absolute path.
+ */
+export function buildMeetingMinutesPath(
+  activityId: string,
+  fileName: string,
+): { relative: string; absolute: string } {
+  const sanitized = sanitizeFileName(fileName);
+  const timestampedName = `${Date.now()}_${sanitized}`;
+  const relative = `uploads/meeting-minutes/${activityId}/${timestampedName}`;
+  const absolute = path.join(getDataDir(), relative);
+  return { relative, absolute };
 }

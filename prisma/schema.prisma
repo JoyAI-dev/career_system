@@ -30,6 +30,7 @@ model User {
   memberships          Membership[]
   createdActivities    Activity[]
   activityComments     ActivityComment[]
+  meetingMinutes       MeetingMinutes[]
   recruitmentInfos     RecruitmentInfo[]
   responseComments     ResponseComment[]
   reflections          Reflection[]
@@ -362,6 +363,7 @@ model Activity {
   activityTags        ActivityTag[]
   memberships         Membership[]
   activityComments    ActivityComment[]
+  meetingMinutes      MeetingMinutes[]
   pairings            Pairing[]
 
   @@index([status])
@@ -412,6 +414,24 @@ model ActivityComment {
 
   @@index([activityId, createdAt])
   @@map("activity_comments")
+}
+
+model MeetingMinutes {
+  id           String   @id @default(cuid())
+  activityId   String
+  userId       String
+  content      String?
+  fileName     String?
+  fileUrl      String?
+  fileSize     Int?
+  fileMimeType String?
+  createdAt    DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([activityId, createdAt])
+  @@map("meeting_minutes")
 }
 
 // ─── Recruitment Info ───────────────────────────────────────────────

@@ -195,7 +195,21 @@
     "finishing": "完成中...",
     "alreadyFinished": "您已完成此活动。",
     "joinedMembers": "已加入成员",
-    "noJoinedMembers": "暂无已加入成员。"
+    "noJoinedMembers": "暂无已加入成员。",
+    "meetingMinutes": "会议纪要",
+    "addMinutes": "添加纪要",
+    "minutesContent": "纪要内容",
+    "minutesContentPlaceholder": "输入会议纪要内容...",
+    "uploadFile": "上传文件",
+    "download": "下载",
+    "deleteMinutes": "删除",
+    "noMinutesYet": "暂无会议纪要",
+    "minutesSubmitting": "提交中...",
+    "minutesSubmit": "提交",
+    "minutesDeleting": "删除中...",
+    "minutesDeleteConfirm": "确定要删除这条纪要吗？",
+    "minutesFileTooLarge": "文件过大，最大20MB",
+    "minutesInvalidFileType": "不支持的文件类型"
   },
   "calendar": {
     "title": "日历",

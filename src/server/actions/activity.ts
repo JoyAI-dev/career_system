@@ -860,6 +860,10 @@ export async function getActivityForCalendarPopup(activityId: string) {
           user2: { select: { id: true, name: true, username: true } },
         },
       },
+      meetingMinutes: {
+        include: { user: { select: { id: true, username: true, name: true } } },
+        orderBy: { createdAt: 'asc' as const },
+      },
       _count: { select: { memberships: true } },
     },
   });
@@ -945,6 +949,16 @@ export async function getActivityForCalendarPopup(activityId: string) {
       user2: p.user2,
     })),
     opponentGroup,
+    meetingMinutes: activity.meetingMinutes.map((m) => ({
+      id: m.id,
+      content: m.content,
+      fileName: m.fileName,
+      fileUrl: m.fileUrl,
+      fileSize: m.fileSize,
+      fileMimeType: m.fileMimeType,
+      createdAt: m.createdAt.toISOString(),
+      user: m.user,
+    })),
   };
 }
 
