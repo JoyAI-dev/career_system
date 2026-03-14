@@ -3,11 +3,13 @@
 import { useState, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { ClipboardList, Users, BarChart3, ChevronRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { ClipboardList, Users, BarChart3, ChevronRight, Loader2, CheckCircle2, Handshake } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ActivityDetailDialog } from '@/components/ActivityDetailDialog';
+import { PairingPanel } from '@/components/PairingPanel';
 import { getActivityForCalendarPopup } from '@/server/actions/activity';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import type { PairingDataForStep } from '@/server/queries/activity';
 
 type ActivityDetail = NonNullable<Awaited<ReturnType<typeof getActivityForCalendarPopup>>>;
 
@@ -34,6 +36,8 @@ interface Props {
   hasCompletedQuestionnaire?: boolean;
   /** Summary of user's FORMING groups (waiting for more members) */
   formingGroupsSummary?: FormingGroupsSummary;
+  /** Pairing data when current step is PAIR_2 type with no activities yet */
+  pairingData?: PairingDataForStep | null;
 }
 
 const STATUS_DOT: Record<string, string> = {
@@ -52,7 +56,7 @@ const STATUS_LABEL: Record<string, string> = {
   COMPLETED: '已完成',
 };
 
-export function ActivityJourneyFlow({ currentTypeName, currentActivities, currentUserId, hasCompletedQuestionnaire, formingGroupsSummary }: Props) {
+export function ActivityJourneyFlow({ currentTypeName, currentActivities, currentUserId, hasCompletedQuestionnaire, formingGroupsSummary, pairingData }: Props) {
   const t = useTranslations('dashboard');
   const tCal = useTranslations('calendar');
 
@@ -60,6 +64,9 @@ export function ActivityJourneyFlow({ currentTypeName, currentActivities, curren
   const [activityDetail, setActivityDetail] = useState<ActivityDetail | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const loadingRef = useRef<string | null>(null);
+
+  // Pairing dialog state
+  const [showPairingDialog, setShowPairingDialog] = useState(false);
 
   const handleClick = useCallback(async (activityId: string) => {
     loadingRef.current = activityId;
@@ -104,7 +111,7 @@ export function ActivityJourneyFlow({ currentTypeName, currentActivities, curren
         <div className="grid grid-cols-3 gap-3">
           {/* Step 1: 摸索认知边界 */}
           <Link
-            href="/questionnaire"
+            href="/questionnaire-update"
             className="group flex flex-col items-center gap-2 rounded-lg border bg-white p-4 text-center transition-colors hover:border-primary/30 hover:bg-primary/5"
           >
             {hasCompletedQuestionnaire ? (
@@ -118,11 +125,25 @@ export function ActivityJourneyFlow({ currentTypeName, currentActivities, curren
             </span>
           </Link>
 
-          {/* Step 2: Current activities */}
+          {/* Step 2: Current activities or Pairing entry */}
           <div className="flex flex-col items-center gap-2 rounded-lg border bg-white p-4 text-center">
             <span className="text-2xl font-bold text-blue-600">2</span>
             <Users className="size-5 text-blue-600" />
-            {currentActivities.length === 0 && formingGroupsSummary ? (
+            {currentActivities.length === 0 && pairingData ? (
+              /* PAIR_2 type: show pairing entry button */
+              <button
+                onClick={() => setShowPairingDialog(true)}
+                className="flex w-full flex-col items-center gap-1.5 rounded-md px-2 py-1.5 text-center transition-colors hover:bg-blue-50"
+              >
+                <Handshake className="size-4 text-blue-500" />
+                <span className="text-xs font-medium text-blue-700">
+                  {t('step2SelectPartner')}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {pairingData.members.length} {t('step2Members')}
+                </span>
+              </button>
+            ) : currentActivities.length === 0 && formingGroupsSummary ? (
               <div className="space-y-1">
                 <span className="text-xs font-medium text-amber-600">
                   {t('step2Forming')}
@@ -203,6 +224,33 @@ export function ActivityJourneyFlow({ currentTypeName, currentActivities, curren
         currentUserId={currentUserId}
         onRefresh={handleRefresh}
       />
+
+      {/* Pairing dialog for PAIR_2 step */}
+      {pairingData && (
+        <Dialog open={showPairingDialog} onOpenChange={setShowPairingDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Handshake className="size-5" />
+                {pairingData.activityTypeName} - {t('step2SelectPartner')}
+              </DialogTitle>
+            </DialogHeader>
+            <PairingPanel
+              virtualGroupId={pairingData.virtualGroupId}
+              activityTypeId={pairingData.activityTypeId}
+              currentUserId={currentUserId}
+              isLeader={pairingData.isLeader}
+              pairingMode={pairingData.pairingMode}
+              members={pairingData.members}
+              pairings={pairingData.pairings}
+              onPairingChange={() => {
+                // Close dialog - revalidatePath in pairingActions will refresh the page
+                setShowPairingDialog(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

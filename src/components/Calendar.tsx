@@ -368,6 +368,7 @@ export function CalendarView({ events, pendingActivities = [], recruitmentEvents
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin]}
           initialView="dayGridMonth"
+          timeZone="UTC"
           locale={FC_LOCALES[locale] ?? zhCnLocale}
           headerToolbar={{
             left: 'prev,next today',
