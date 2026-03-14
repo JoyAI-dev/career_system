@@ -81,6 +81,8 @@
     "step1Label": "Explorer les frontières\ncognitives",
     "step2Empty": "Aucune activité en cours",
     "step2Forming": "Formation du groupe…",
+    "step2SelectPartner": "Choisir un partenaire",
+    "step2Members": "membres",
     "step3Label": "Obtenir le graphique\ncomparatif cognitif"
   },
   "profile": {
@@ -182,9 +184,14 @@
     "startMeeting": "Démarrer la réunion",
     "completeMeeting": "Terminer la réunion",
     "dateTime": "Date et heure",
+    "date": "Date",
+    "time": "Heure",
     "locationLabel": "Lieu",
     "onlineMeeting": "Réunion en ligne",
     "confirmSchedule": "Confirmer la planification",
+    "reschedule": "Reprogrammer",
+    "confirmReschedule": "Confirmer",
+    "rescheduling": "Reprogrammation...",
     "scheduling": "Planification...",
     "statusOpen": "Ouvert",
     "statusFull": "Complet",
@@ -839,6 +846,9 @@
     "notificationActivityFullMsg": "« {title} » a atteint sa capacité maximale. Le leader peut maintenant planifier une réunion.",
     "notificationMeetingScheduled": "Réunion planifiée",
     "notificationMeetingScheduledMsg": "« {title} » est planifié pour {date}.",
+    "notificationMeetingRescheduled": "Réunion reprogrammée",
+    "notificationMeetingRescheduledMsg": "« {title} » a été reprogrammé pour {date}.",
+    "failedToReschedule": "Impossible de reprogrammer la réunion.",
     "activityNotCompleted": "L'activité doit être terminée avant de pouvoir la finaliser.",
     "alreadyFinished": "Vous avez déjà terminé cette activité.",
     "failedToFinish": "Impossible de terminer l'activité."

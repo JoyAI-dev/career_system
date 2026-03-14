@@ -81,6 +81,8 @@
     "step1Label": "Explore Cognitive\nBoundaries",
     "step2Empty": "No activities in progress",
     "step2Forming": "Forming group…",
+    "step2SelectPartner": "Select Partner",
+    "step2Members": "members",
     "step3Label": "Get Cognitive\nComparison Chart"
   },
   "profile": {
@@ -182,9 +184,14 @@
     "startMeeting": "Start Meeting",
     "completeMeeting": "Complete Meeting",
     "dateTime": "Date & Time",
+    "date": "Date",
+    "time": "Time",
     "locationLabel": "Location",
     "onlineMeeting": "Online meeting",
     "confirmSchedule": "Confirm Schedule",
+    "reschedule": "Reschedule",
+    "confirmReschedule": "Confirm Reschedule",
+    "rescheduling": "Rescheduling...",
     "scheduling": "Scheduling...",
     "statusOpen": "Open",
     "statusFull": "Full",
@@ -839,6 +846,9 @@
     "notificationActivityFullMsg": "\"{title}\" has reached full capacity. The leader can now schedule a meeting.",
     "notificationMeetingScheduled": "Meeting Scheduled",
     "notificationMeetingScheduledMsg": "\"{title}\" has been scheduled for {date}.",
+    "notificationMeetingRescheduled": "Meeting Rescheduled",
+    "notificationMeetingRescheduledMsg": "\"{title}\" has been rescheduled to {date}.",
+    "failedToReschedule": "Failed to reschedule meeting.",
     "activityNotCompleted": "Activity must be completed before you can finish it.",
     "alreadyFinished": "You have already finished this activity.",
     "failedToFinish": "Failed to finish activity."

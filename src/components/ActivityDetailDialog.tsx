@@ -19,6 +19,7 @@ import {
   joinActivityType,
   leaveActivity,
   scheduleMeeting,
+  rescheduleMeeting,
   startMeeting,
   completeMeeting,
   finishActivity,
@@ -28,6 +29,7 @@ import {
 } from '@/server/actions/activity';
 import { getAvailableActions, type TransitionAction } from '@/server/stateMachine';
 import type { ActivityStatus, MemberRole } from '@prisma/client';
+import { Pencil } from 'lucide-react';
 import { VirtualGroupInfo } from '@/components/VirtualGroupInfo';
 import { PairingPanel } from '@/components/PairingPanel';
 import { CompetitionPanel } from '@/components/CompetitionPanel';
@@ -146,6 +148,7 @@ const STATUS_KEYS: Record<string, string> = {
 
 const ACTION_KEYS: Record<string, string> = {
   SCHEDULE: 'scheduleMeeting',
+  RESCHEDULE: 'reschedule',
   START: 'startMeeting',
   COMPLETE: 'completeMeeting',
 };
@@ -158,6 +161,8 @@ export function ActivityDetailDialog({ activity, onClose, joinByType, currentUse
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const rescheduleFormRef = useRef<HTMLDivElement>(null);
 
   if (!activity) return null;
 
@@ -234,6 +239,13 @@ export function ActivityDetailDialog({ activity, onClose, joinByType, currentUse
       setShowScheduleForm(true);
       return;
     }
+    if (action === 'RESCHEDULE') {
+      setShowRescheduleForm(true);
+      setTimeout(() => {
+        rescheduleFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      return;
+    }
     const confirmMsg = action === 'START'
       ? t('confirmStart')
       : t('confirmComplete');
@@ -284,7 +296,24 @@ export function ActivityDetailDialog({ activity, onClose, joinByType, currentUse
             {activity.location && <p>{t('location', { location: activity.location })}</p>}
             {activity.isOnline && <p>{t('onlineActivity')}</p>}
             {activity.scheduledAt && (
-              <p>{t('scheduled', { date: new Date(activity.scheduledAt).toLocaleString() })}</p>
+              <p className="flex items-center gap-1">
+                {t('scheduled', { date: new Date(activity.scheduledAt).toLocaleString(undefined, { timeZone: 'UTC' }) })}
+                {activity.status === 'SCHEDULED' && userRole === 'LEADER' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRescheduleForm(true);
+                      setTimeout(() => {
+                        rescheduleFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }, 100);
+                    }}
+                    className="ml-1 inline-flex items-center rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    title={t('reschedule')}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </p>
             )}
           </div>
 
@@ -430,6 +459,22 @@ export function ActivityDetailDialog({ activity, onClose, joinByType, currentUse
             />
           )}
 
+          {/* Reschedule Form (shown when leader clicks Reschedule in SCHEDULED state) */}
+          <div ref={rescheduleFormRef}>
+            {showRescheduleForm && (
+              <ScheduleForm
+                activityId={activity.id}
+                onSuccess={onClose}
+                onError={(msg) => setError(msg)}
+                onCancel={() => setShowRescheduleForm(false)}
+                isReschedule
+                defaultScheduledAt={activity.scheduledAt ?? undefined}
+                defaultLocation={activity.location ?? undefined}
+                defaultIsOnline={activity.isOnline}
+              />
+            )}
+          </div>
+
           {/* Group comments for joined members (instance-scoped) */}
           {showInstanceFeatures && (
             <div className="border-t pt-4">
@@ -486,7 +531,7 @@ export function ActivityDetailDialog({ activity, onClose, joinByType, currentUse
 
         <DialogFooter>
           {/* Leader actions */}
-          {availableActions.length > 0 && !showScheduleForm && (
+          {availableActions.length > 0 && !showScheduleForm && !showRescheduleForm && (
             <div className="flex gap-2">
               {availableActions.map((action) => (
                 <Button
@@ -931,24 +976,59 @@ function ScheduleForm({
   onSuccess,
   onError,
   onCancel,
+  isReschedule,
+  defaultScheduledAt,
+  defaultLocation,
+  defaultIsOnline,
 }: {
   activityId: string;
   onSuccess: () => void;
   onError: (msg: string) => void;
   onCancel: () => void;
+  isReschedule?: boolean;
+  defaultScheduledAt?: string;
+  defaultLocation?: string;
+  defaultIsOnline?: boolean;
 }) {
   const t = useTranslations('activities');
   const tCommon = useTranslations('common');
-  const [state, formAction] = useActionState<ActionState, FormData>(scheduleMeeting, {});
   const [isPending, startTransition] = useTransition();
+
+  // Parse default time using UTC to avoid timezone shifts.
+  // We store "wall clock time" as UTC — what the user enters is what gets stored/displayed.
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const defaultDate = defaultScheduledAt
+    ? (() => {
+        const d = new Date(defaultScheduledAt);
+        return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+      })()
+    : undefined;
+  const defaultHour24 = defaultScheduledAt ? new Date(defaultScheduledAt).getUTCHours() : 9;
+  const defaultMinute = defaultScheduledAt ? new Date(defaultScheduledAt).getUTCMinutes() : 0;
+  const defaultHour12 = defaultHour24 === 0 ? 12 : defaultHour24 > 12 ? defaultHour24 - 12 : defaultHour24;
+  const defaultAmPm = defaultHour24 >= 12 ? 'PM' : 'AM';
+
+  const [hour, setHour] = useState(defaultHour12);
+  const [minute, setMinute] = useState(defaultMinute);
+  const [ampm, setAmpm] = useState(defaultAmPm);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     formData.set('activityId', activityId);
+    // Combine date + hour/minute/ampm into a UTC ISO string
+    const dateVal = formData.get('_date') as string;
+    let h = hour;
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    // Append Z so server treats it as UTC (no timezone shift)
+    formData.set('scheduledAt', `${dateVal}T${pad(h)}:${pad(minute)}:00.000Z`);
+    formData.delete('_date');
+
+    const action = isReschedule ? rescheduleMeeting : scheduleMeeting;
 
     startTransition(async () => {
-      const result = await scheduleMeeting({}, formData);
+      const result = await action({}, formData);
       if (result.errors?._form) {
         onError(result.errors._form[0]);
       } else if (result.errors) {
@@ -962,16 +1042,51 @@ function ScheduleForm({
 
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-4">
-      <h3 className="mb-3 text-sm font-medium">{t('scheduleMeeting')}</h3>
+      <h3 className="mb-3 text-sm font-medium">
+        {isReschedule ? t('reschedule') : t('scheduleMeeting')}
+      </h3>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <Label htmlFor="scheduledAt">{t('dateTime')}</Label>
+          <Label htmlFor="schedule-date">{t('date')}</Label>
           <Input
-            id="scheduledAt"
-            name="scheduledAt"
-            type="datetime-local"
+            id="schedule-date"
+            name="_date"
+            type="date"
             required
+            defaultValue={defaultDate}
           />
+        </div>
+        <div>
+          <Label>{t('time')}</Label>
+          <div className="flex items-center gap-2">
+            <select
+              value={hour}
+              onChange={(e) => setHour(Number(e.target.value))}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((h) => (
+                <option key={h} value={h}>{pad(h)}</option>
+              ))}
+            </select>
+            <span className="text-lg font-medium">:</span>
+            <select
+              value={minute}
+              onChange={(e) => setMinute(Number(e.target.value))}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                <option key={m} value={m}>{pad(m)}</option>
+              ))}
+            </select>
+            <select
+              value={ampm}
+              onChange={(e) => setAmpm(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm font-medium"
+            >
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+          </div>
         </div>
         <div>
           <Label htmlFor="schedule-location">{t('locationLabel')}</Label>
@@ -979,6 +1094,7 @@ function ScheduleForm({
             id="schedule-location"
             name="location"
             placeholder="Meeting room, address, etc."
+            defaultValue={defaultLocation}
           />
         </div>
         <div className="flex items-center gap-2">
@@ -988,12 +1104,15 @@ function ScheduleForm({
             name="isOnline"
             value="true"
             className="size-4 rounded border-border"
+            defaultChecked={defaultIsOnline}
           />
           <Label htmlFor="schedule-isOnline">{t('onlineMeeting')}</Label>
         </div>
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={isPending}>
-            {isPending ? t('scheduling') : t('confirmSchedule')}
+            {isPending
+              ? (isReschedule ? t('rescheduling') : t('scheduling'))
+              : (isReschedule ? t('confirmReschedule') : t('confirmSchedule'))}
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={onCancel}>
             {tCommon('cancel')}

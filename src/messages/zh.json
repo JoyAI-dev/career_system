@@ -81,6 +81,8 @@
     "step1Label": "摸索认知边界\n知与不知",
     "step2Empty": "暂无进行中的活动",
     "step2Forming": "正在组队中…",
+    "step2SelectPartner": "选择搭子",
+    "step2Members": "位成员",
     "step3Label": "获取完整的\n认知边界对比图"
   },
   "profile": {
@@ -182,9 +184,14 @@
     "startMeeting": "开始会议",
     "completeMeeting": "完成会议",
     "dateTime": "日期和时间",
+    "date": "日期",
+    "time": "时间",
     "locationLabel": "地点",
     "onlineMeeting": "线上会议",
     "confirmSchedule": "确认安排",
+    "reschedule": "修改时间",
+    "confirmReschedule": "确认修改",
+    "rescheduling": "修改中...",
     "scheduling": "安排中...",
     "statusOpen": "开放",
     "statusFull": "已满",
@@ -839,6 +846,9 @@
     "notificationActivityFullMsg": "「{title}」已达到满员。组长现在可以安排会议。",
     "notificationMeetingScheduled": "会议已安排",
     "notificationMeetingScheduledMsg": "「{title}」已安排在{date}。",
+    "notificationMeetingRescheduled": "会议时间已更改",
+    "notificationMeetingRescheduledMsg": "「{title}」的会议时间已更改为{date}。",
+    "failedToReschedule": "修改会议时间失败。",
     "activityNotCompleted": "活动尚未完成，无法标记完成。",
     "alreadyFinished": "您已完成此活动。",
     "failedToFinish": "完成活动失败。"

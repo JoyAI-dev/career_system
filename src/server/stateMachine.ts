@@ -2,6 +2,7 @@ import type { ActivityStatus, MemberRole } from '@prisma/client';
 
 export type TransitionAction =
   | 'SCHEDULE'
+  | 'RESCHEDULE'
   | 'START'
   | 'COMPLETE';
 
@@ -21,6 +22,7 @@ type TransitionDef = {
  */
 const TRANSITIONS: TransitionDef[] = [
   { from: 'FULL', to: 'SCHEDULED', requiredRole: 'LEADER', action: 'SCHEDULE' },
+  { from: 'SCHEDULED', to: 'SCHEDULED', requiredRole: 'LEADER', action: 'RESCHEDULE' },
   { from: 'SCHEDULED', to: 'IN_PROGRESS', requiredRole: 'LEADER', action: 'START' },
   { from: 'IN_PROGRESS', to: 'COMPLETED', requiredRole: 'LEADER', action: 'COMPLETE' },
 ];
@@ -86,6 +88,8 @@ export function getActionLabel(action: TransitionAction): string {
   switch (action) {
     case 'SCHEDULE':
       return 'Schedule Meeting';
+    case 'RESCHEDULE':
+      return 'Reschedule Meeting';
     case 'START':
       return 'Start Meeting';
     case 'COMPLETE':

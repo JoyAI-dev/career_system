@@ -531,6 +531,7 @@ export async function scheduleMeeting(
       });
       const title = activityData?.title ?? 'Activity';
       const dateStr = parsed.data.scheduledAt.toLocaleDateString(locale, {
+        timeZone: 'UTC',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
@@ -548,6 +549,88 @@ export async function scheduleMeeting(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : te('failedToSchedule');
+    return { errors: { _form: [message] } };
+  }
+
+  revalidatePath(ACTIVITIES_PATH);
+  return { success: true };
+}
+
+/**
+ * Reschedule a meeting (SCHEDULED → SCHEDULED).
+ * Leader can update date/time, location, and online/offline.
+ */
+export async function rescheduleMeeting(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const tv = await getTranslations('validation');
+  const te = await getTranslations('serverErrors');
+  const locale = await getLocale();
+  const scheduleSchema = getScheduleSchema(tv);
+
+  const parsed = scheduleSchema.safeParse({
+    activityId: formData.get('activityId'),
+    scheduledAt: formData.get('scheduledAt'),
+    location: formData.get('location') || undefined,
+    isOnline: formData.get('isOnline'),
+  });
+  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const activities = await tx.$queryRaw<
+        { id: string; status: ActivityStatus }[]
+      >(
+        Prisma.sql`SELECT id, status FROM activities WHERE id = ${parsed.data.activityId} FOR UPDATE`,
+      );
+      if (activities.length === 0) throw new Error(te('activityNotFound'));
+      const activity = activities[0];
+
+      const membership = await tx.membership.findUnique({
+        where: { activityId_userId: { activityId: parsed.data.activityId, userId } },
+      });
+      const userRole: MemberRole | null = membership?.role ?? null;
+
+      const result = validateTransition(activity.status, 'RESCHEDULE', userRole, te);
+      if (!result.valid) throw new Error(result.error);
+
+      await tx.activity.update({
+        where: { id: parsed.data.activityId },
+        data: {
+          scheduledAt: parsed.data.scheduledAt,
+          location: parsed.data.location || null,
+          isOnline: parsed.data.isOnline ?? false,
+        },
+      });
+
+      // Fetch activity title for notification
+      const activityData = await tx.activity.findUnique({
+        where: { id: parsed.data.activityId },
+        select: { title: true },
+      });
+      const title = activityData?.title ?? 'Activity';
+      const dateStr = parsed.data.scheduledAt.toLocaleDateString(locale, {
+        timeZone: 'UTC',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      await notifyActivityMembers(
+        parsed.data.activityId,
+        'TIME_CONFIRMED',
+        te('notificationMeetingRescheduled'),
+        te('notificationMeetingRescheduledMsg', { title, date: dateStr }),
+        tx,
+        userId,
+      );
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : te('failedToReschedule');
     return { errors: { _form: [message] } };
   }
 
