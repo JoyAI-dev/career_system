@@ -34,15 +34,23 @@ npx vitest run --testNamePattern "pattern"              # By test name
 
 ### Local Development (Staging)
 
-Dev server is managed by **pm2** via `ecosystem.config.cjs` (pm2 name: `career-staging`, port 3450). Environment variables are embedded in `ecosystem.config.cjs` (sourced from `.env.dev`).
+Staging runs in **production build mode** (`NODE_ENV=production`) via pm2. This is required because Next.js 16 dev mode + Turbopack causes `base-ui` hydration ID mismatches, which breaks interactive components (Drawer, Tooltip, DropdownMenu, etc.).
 
+**⚠️ IMPORTANT: After any code change, you MUST build before restarting:**
+```bash
+npm run build && pm2 restart career-staging    # Build + restart (REQUIRED workflow)
+```
+
+Other pm2 commands:
 ```bash
 pm2 start ecosystem.config.cjs    # First time: register and start
-pm2 restart career-staging         # Restart (cleanly kills entire process tree including next-server)
+pm2 restart career-staging         # Restart (only if already built)
 pm2 stop career-staging            # Stop
 pm2 logs career-staging            # View logs (stdout + stderr)
 pm2 status                         # Check status
 ```
+
+**Why production mode instead of dev mode**: Next.js 16 dev mode with Turbopack generates different `base-ui` component IDs on server vs client, causing hydration mismatches. This silently breaks Vaul Drawer, Tooltip, DropdownMenu and other interactive components — the overlay appears but content doesn't render. Production build eliminates this issue.
 
 **Why pm2 instead of `./dev.sh`**: `next dev` spawns a deep process tree (`npx` → `sh` → `node` → `next-server` → `node`). Manually killing the top process leaves orphan `next-server` processes holding the port. pm2's `treekill` ensures all child processes are properly terminated on stop/restart.
 
@@ -75,7 +83,7 @@ pm2 start ecosystem.config.cjs
 **ai_helper on staging**: `https://career-staging.joysort.cn/ai_helper/` is protected by HTTP basic auth (admin / L0ndon2016!).
 
 **Env files**:
-- `ecosystem.config.cjs` — pm2 config with embedded env vars for dev/staging (the primary way to run dev server)
+- `ecosystem.config.cjs` — pm2 config with embedded env vars for staging (NODE_ENV=production, port 3450)
 - `.env.dev` — env var reference file (not directly used by pm2, kept for manual `./dev.sh` testing)
 - `.env.local` — production config (only exists on prod server `8.131.74.70:/opt/career_system/.env.local`)
 - Never use `.env.local` locally
