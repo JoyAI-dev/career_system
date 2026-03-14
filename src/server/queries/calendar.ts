@@ -97,6 +97,8 @@ export async function getProjectedActivityChain(
       intervalHours: true,
       guideContent: true,
       peopleRequired: true,
+      prerequisiteTypeId: true,
+      scope: true,
     },
   });
 
@@ -154,6 +156,13 @@ export async function getProjectedActivityChain(
   const bestFormingMemberCount = hasFormingGroup
     ? Math.max(...formingGroups.map((g) => g.virtualGroup._count.members))
     : 0;
+
+  // 3b. Get user's completed activity type IDs (for prerequisite unlock check)
+  const finishedMemberships = await prisma.membership.findMany({
+    where: { userId, completedAt: { not: null } },
+    select: { activity: { select: { typeId: true } } },
+  });
+  const finishedTypeIds = new Set(finishedMemberships.map((m) => m.activity.typeId));
 
   // 4. Determine default activity time from scheduling config
   const config = await getSchedulingConfig();
@@ -222,8 +231,11 @@ export async function getProjectedActivityChain(
         projected.setDate(projected.getDate() + 1);
       }
 
-      // First unmatched type with forming groups → mark as 'forming'
+      // Check if this type is unlocked (prerequisite completed)
+      const isUnlocked = !type.prerequisiteTypeId || finishedTypeIds.has(type.prerequisiteTypeId);
+
       if (hasFormingGroup && !firstFormingUsed) {
+        // First unmatched type with forming groups → mark as 'forming'
         firstFormingUsed = true;
         result.push({
           typeId: type.id,
@@ -237,6 +249,22 @@ export async function getProjectedActivityChain(
             requiredMembers: type.peopleRequired,
           },
           guideContent: type.guideContent,
+        });
+      } else if (isUnlocked) {
+        // Prerequisite met but no activity yet (e.g., waiting for pairing)
+        // Show as 'forming' (unlocked, ready) instead of 'projected' (locked)
+        result.push({
+          typeId: type.id,
+          typeName: type.name,
+          typeOrder: type.order,
+          date: projected.toISOString(),
+          kind: 'forming',
+          status: 'unlocked',
+          guideContent: type.guideContent,
+          formingInfo: {
+            currentMembers: 0,
+            requiredMembers: type.peopleRequired,
+          },
         });
       } else {
         result.push({
