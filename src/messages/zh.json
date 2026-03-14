@@ -825,7 +825,7 @@
   },
   "reflections": {
     "title": "反思笔记",
-    "placeholder": "写下你对这道题的思考...",
+    "placeholder": "记录你对这个问题的思考...",
     "add": "添加",
     "adding": "添加中..."
   },
