@@ -642,7 +642,7 @@ async function main() {
       ],
     },
     {
-      name: '企业规模', slug: 'company-size', icon: 'Building', order: 6,
+      name: '平台规模', slug: 'company-size', icon: 'Building', order: 6,
       inputType: 'SINGLE_SELECT', isGroupingBasis: true,
       options: [
         { label: '财富500强/跨国企业 (万亿/千亿)', value: 'fortune500', order: 1 },
@@ -653,7 +653,7 @@ async function main() {
       ],
     },
     {
-      name: '企业文化-层级结构', slug: 'culture-hierarchy', icon: 'Network', order: 7,
+      name: '平台文化-层级结构', slug: 'culture-hierarchy', icon: 'Network', order: 7,
       inputType: 'SINGLE_SELECT',
       options: [
         { label: '扁平化', value: 'flat', order: 1 },
@@ -661,7 +661,7 @@ async function main() {
       ],
     },
     {
-      name: '企业文化-工作环境', slug: 'culture-environment', icon: 'Briefcase', order: 8,
+      name: '平台文化-工作环境', slug: 'culture-environment', icon: 'Briefcase', order: 8,
       inputType: 'SINGLE_SELECT',
       options: [
         { label: '企业型', value: 'corporate', order: 1 },

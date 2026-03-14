@@ -22,7 +22,7 @@
 | 3 | 发展方向 | FILTER | development-direction | private-sector |
 | 4 | 行业领域 | CONTEXT | industry | technology, finance, healthcare |
 | 5 | 平台性质 | CONTEXT | platform-type | domestic |
-| 6 | 企业规模 | CONTEXT | company-size | fortune-500 |
+| 6 | 平台规模 | CONTEXT | company-size | fortune-500 |
 | 7 | 文化-层级 | CONTEXT | culture-hierarchy | flat |
 | 8 | 文化-环境 | CONTEXT | culture-environment | corporate |
 | 9 | 领导风格 | CONTEXT | leadership-style | slider=6 |

@@ -436,10 +436,10 @@ export const QUESTIONNAIRE_V2_DATA: SeedTopic[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  // 6. 企业规模 — CONTEXT mode
+  // 6. 平台规模 — CONTEXT mode
   // ═══════════════════════════════════════════════════════════════════
   {
-    name: '企业规模',
+    name: '平台规模',
     preferenceMode: 'CONTEXT',
     showInReport: true,
     preferenceCategorySlug: 'company-size',
@@ -453,11 +453,11 @@ export const QUESTIONNAIRE_V2_DATA: SeedTopic[] = [
             { title: '你了解你所选择的行业的不同规模的企业都有哪几家？' },
           ] },
           { name: D2, questions: [
-            { title: '企业规模对你职业发展的影响是什么？' },
+            { title: '平台规模对你职业发展的影响是什么？' },
             { title: '大企业有更多的培训和晋升机会，小企业则可能让你承担更多职责？' },
           ] },
           { name: D3, questions: [
-            { title: '企业规模可能决定了你能接触到的项目类型、技术发展方向以及跨部门的合作机会？' },
+            { title: '平台规模可能决定了你能接触到的项目类型、技术发展方向以及跨部门的合作机会？' },
           ] },
           { name: D4, questions: [
             { title: '大企业可能会让你更倾向于专注于某个小领域的深耕，而小企业或创业公司则要求你接触更广泛的工作内容。你能分清楚平台价值以及个人价值吗？' },
@@ -481,10 +481,10 @@ export const QUESTIONNAIRE_V2_DATA: SeedTopic[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  // 7. 企业文化-层级结构 — CONTEXT mode
+  // 7. 平台文化-层级结构 — CONTEXT mode
   // ═══════════════════════════════════════════════════════════════════
   {
-    name: '企业文化-层级结构',
+    name: '平台文化-层级结构',
     preferenceMode: 'CONTEXT',
     showInReport: true,
     preferenceCategorySlug: 'culture-hierarchy',
@@ -493,7 +493,7 @@ export const QUESTIONNAIRE_V2_DATA: SeedTopic[] = [
         name: '层级结构认知',
         dimensions: [
           { name: D1, questions: [
-            { title: '你更喜欢扁平化结构还是垂直化结构的企业文化？' },
+            { title: '你更喜欢扁平化结构还是垂直化结构的平台文化？' },
             { title: '这种不同设定的背后的底层逻辑是什么？' },
             { title: '你是否了解决策人使用某种特定的模式想要解决的问题、谋求的利益是什么？' },
           ] },
@@ -513,7 +513,7 @@ export const QUESTIONNAIRE_V2_DATA: SeedTopic[] = [
             { title: '你的兴趣在哪一种结构可以得到更大的发挥空间？' },
           ] },
           { name: D5, questions: [
-            { title: '在不同的企业文化中，你的职业发展会如何受到影响？' },
+            { title: '在不同的平台文化中，你的职业发展会如何受到影响？' },
             { title: '如何评估这些文化对你的适应性？' },
             { title: '这两种结构中的人才是否具有流动性？' },
           ] },
@@ -523,10 +523,10 @@ export const QUESTIONNAIRE_V2_DATA: SeedTopic[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  // 8. 企业文化-工作环境 — CONTEXT mode
+  // 8. 平台文化-工作环境 — CONTEXT mode
   // ═══════════════════════════════════════════════════════════════════
   {
-    name: '企业文化-工作环境',
+    name: '平台文化-工作环境',
     preferenceMode: 'CONTEXT',
     showInReport: true,
     preferenceCategorySlug: 'culture-environment',
@@ -701,11 +701,11 @@ export const QUESTIONNAIRE_V2_DATA: SeedTopic[] = [
         name: '文化与准则',
         preferenceOptionValue: 'culture-guidelines',
         dimensions: [
-          { name: D1, questions: [{ title: '你是否愿意了解并参与公司文化与准则培训？公司文化与准则培训帮助员工理解公司的价值观、行为规范和发展战略，以确保其与企业文化保持一致。' }] },
+          { name: D1, questions: [{ title: '你是否愿意了解并参与公司文化与准则培训？公司文化与准则培训帮助员工理解公司的价值观、行为规范和发展战略，以确保其与平台文化保持一致。' }] },
           { name: D2, questions: [{ title: '了解并参与公司文化与准则培训意味着什么？这对你适应职场环境、理解公司价值观和发展战略有什么样的影响？' }] },
           { name: D3, questions: [{ title: '了解公司文化与准则对你感兴趣的领域有什么样的影响？这对你理解不同类型平台的运作方式和价值取向有什么帮助？' }] },
           { name: D4, questions: [{ title: '参与公司文化与准则培训是否会影响你对某些工作环境和领域的偏好？这对你的职业兴趣和价值取向有什么样的影响？' }] },
-          { name: D5, questions: [{ title: '参与公司文化与准则培训对你在人才市场上的定位有什么样的影响？这对你适应不同企业文化和环境有什么样的帮助？' }] },
+          { name: D5, questions: [{ title: '参与公司文化与准则培训对你在人才市场上的定位有什么样的影响？这对你适应不同平台文化和环境有什么样的帮助？' }] },
         ],
       },
     ],
