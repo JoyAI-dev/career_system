@@ -1,0 +1,7 @@
+{
+  "id": "Q-chat",
+  "name": "Chat System E2E Test",
+  "description": "Tests real-time chat: friend requests, private messaging, and group chat across 2 browser sessions",
+  "users": ["a14", "a15"],
+  "requires": ["websocket", "community", "virtual-group", "friendship"]
+}
