@@ -43,15 +43,16 @@ app.prepare().then(() => {
     }
   });
 
-  // Handle WebSocket upgrade
+  // Handle WebSocket upgrade — only intercept /api/ws for chat
+  // Let Next.js internal upgrade handler manage HMR (/_next/webpack-hmr) etc.
   server.on('upgrade', (request, socket, head) => {
     const { pathname } = parse(request.url!, true);
 
     if (pathname === '/api/ws') {
       chatServer.handleUpgrade(request, socket, head);
-    } else {
-      socket.destroy();
     }
+    // Don't destroy other upgrade requests — Next.js dev server
+    // needs /_next/webpack-hmr for Hot Module Replacement
   });
 
   server.listen(port, hostname, () => {
