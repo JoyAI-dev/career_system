@@ -71,6 +71,7 @@ export function DimensionNav({ dimensions, groups, sectionAnswered = 0, sectionT
   }, [dimensions, groups, hasGroups, activeGroupIdx]);
 
   const scrollTo = useCallback((id: string) => {
+    setActiveDimId(id);
     const el = document.getElementById(`dimension-${id}`);
     if (!el) return;
     // Dynamically calculate offset based on actual nav height
