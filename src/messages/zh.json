@@ -741,7 +741,18 @@
       "page": "第 {page} 页",
       "prevPage": "上一页",
       "nextPage": "下一页",
-      "createdAt": "创建于"
+      "createdAt": "创建于",
+      "loadingMembers": "加载成员信息...",
+      "memberCol": "成员",
+      "questionnaireCol": "问卷",
+      "virtualGroupCol": "虚拟小组",
+      "status_submitted": "已提交",
+      "status_draft": "草稿",
+      "status_not_started": "未开始",
+      "status_completed": "已完成",
+      "status_in_progress": "进行中",
+      "answeredCount": "已答 {answered}/{total} 题",
+      "noGroup": "未分组"
     },
     "settings": {
       "title": "系统设置",

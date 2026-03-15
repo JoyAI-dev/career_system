@@ -741,7 +741,18 @@
       "page": "Page {page}",
       "prevPage": "Précédent",
       "nextPage": "Suivant",
-      "createdAt": "Créé le"
+      "createdAt": "Créé le",
+      "loadingMembers": "Chargement des membres...",
+      "memberCol": "Membre",
+      "questionnaireCol": "Questionnaire",
+      "virtualGroupCol": "Groupe Virtuel",
+      "status_submitted": "Soumis",
+      "status_draft": "Brouillon",
+      "status_not_started": "Non commencé",
+      "status_completed": "Terminé",
+      "status_in_progress": "En cours",
+      "answeredCount": "{answered}/{total} répondu",
+      "noGroup": "Aucun groupe"
     },
     "settings": {
       "title": "Paramètres système",

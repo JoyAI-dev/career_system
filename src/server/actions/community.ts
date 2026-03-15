@@ -95,6 +95,12 @@ export async function fetchCommunityVirtualGroupsAction(communityId: string) {
   return getCommunityVirtualGroups(communityId);
 }
 
+export async function fetchCommunityMemberDetailsAction(communityId: string) {
+  await requireAdmin();
+  const { getCommunityMemberDetails } = await import('@/server/queries/community');
+  return getCommunityMemberDetails(communityId);
+}
+
 // Track user activity (called from ActivityTracker component)
 export async function trackActivity(): Promise<void> {
   // Import auth dynamically to avoid circular deps

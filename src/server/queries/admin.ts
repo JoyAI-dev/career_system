@@ -229,6 +229,54 @@ export async function searchUsers({
   };
 }
 
+/** Lightweight user list for standby management (no score calculation). */
+export type UserListItemLite = {
+  id: string;
+  username: string;
+  name: string | null;
+  school: string | null;
+  major: string | null;
+};
+
+const STANDBY_PAGE_SIZE = 15;
+
+export async function searchUsersLite({
+  query,
+  page = 1,
+}: {
+  query?: string;
+  page?: number;
+}): Promise<{ users: UserListItemLite[]; total: number; pageSize: number }> {
+  const take = STANDBY_PAGE_SIZE;
+  const skip = (page - 1) * take;
+
+  const conditions: Prisma.UserWhereInput[] = [{ role: 'USER' }];
+  if (query) {
+    conditions.push({
+      OR: [
+        { username: { contains: query, mode: 'insensitive' as const } },
+        { name: { contains: query, mode: 'insensitive' as const } },
+        { school: { contains: query, mode: 'insensitive' as const } },
+        { major: { contains: query, mode: 'insensitive' as const } },
+      ],
+    });
+  }
+  const where: Prisma.UserWhereInput = { AND: conditions };
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take,
+      skip,
+      select: { id: true, username: true, name: true, school: true, major: true },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return { users, total, pageSize: take };
+}
+
 export async function getUserDetail(userId: string) {
   const [user, snapshotCount, activityCount, studentIdCheck, latestSnapshot] = await Promise.all([
     prisma.user.findUnique({

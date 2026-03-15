@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { Settings, ChevronRight, ChevronLeft, Users, Hash, Activity } from 'lucide-react';
+import { Settings, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, Users, Hash, Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -21,11 +21,14 @@ import type {
   GroupingCategory,
   DrilldownResult,
   DrilldownNode,
+  CommunityMemberDetail,
+  CommunityMemberDetailsResult,
 } from '@/server/queries/community';
 import {
   fetchCommunityListAction,
   fetchDrilldownAction,
   fetchStatsAction,
+  fetchCommunityMemberDetailsAction,
   updateCommunitySettings,
   updateHierarchicalMatchLevel,
   triggerRecompute,
@@ -392,6 +395,23 @@ function ListMode({
   onPageChange: (p: number) => void;
 }) {
   const t = useTranslations('admin.communities');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailsData, setDetailsData] = useState<CommunityMemberDetailsResult | null>(null);
+  const [isLoadingDetails, startDetailTransition] = useTransition();
+
+  function toggleExpand(communityId: string) {
+    if (expandedId === communityId) {
+      setExpandedId(null);
+      setDetailsData(null);
+      return;
+    }
+    setExpandedId(communityId);
+    setDetailsData(null);
+    startDetailTransition(async () => {
+      const data = await fetchCommunityMemberDetailsAction(communityId);
+      setDetailsData(data);
+    });
+  }
 
   if (total === 0) {
     return (
@@ -409,27 +429,53 @@ function ListMode({
       </p>
 
       <div className="space-y-2">
-        {items.map((community) => (
-          <Card key={community.id} size="sm">
-            <CardContent className="flex items-center justify-between py-3">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {community.tags.map((tag, idx) => (
-                  <span key={idx}>
-                    {idx > 0 && (
-                      <span className="mx-1 text-muted-foreground/50">·</span>
-                    )}
-                    <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                      {tag.option.label}
+        {items.map((community) => {
+          const isExpanded = expandedId === community.id;
+          return (
+            <Card key={community.id} size="sm">
+              <CardContent
+                className="flex cursor-pointer items-center justify-between py-3 transition-colors hover:bg-muted/50"
+                onClick={() => toggleExpand(community.id)}
+              >
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {community.tags.map((tag, idx) => (
+                    <span key={idx}>
+                      {idx > 0 && (
+                        <span className="mx-1 text-muted-foreground/50">·</span>
+                      )}
+                      <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        {tag.option.label}
+                      </span>
                     </span>
+                  ))}
+                </div>
+                <div className="ml-4 flex shrink-0 items-center gap-2">
+                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
+                    {t('members', { count: community.memberCount })}
                   </span>
-                ))}
-              </div>
-              <span className="ml-4 shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
-                {t('members', { count: community.memberCount })}
-              </span>
-            </CardContent>
-          </Card>
-        ))}
+                  {isExpanded ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+              </CardContent>
+
+              {/* Expanded member details */}
+              {isExpanded && (
+                <div className="border-t px-4 py-3">
+                  {isLoadingDetails ? (
+                    <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+                      {t('loadingMembers')}
+                    </div>
+                  ) : detailsData ? (
+                    <MemberDetailTable data={detailsData} />
+                  ) : null}
+                </div>
+              )}
+            </Card>
+          );
+        })}
       </div>
 
       {/* Pagination */}
@@ -458,6 +504,119 @@ function ListMode({
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Member Detail Table ──────────────────────────────────────────
+
+const Q_STATUS_STYLES: Record<string, string> = {
+  submitted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  draft: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  not_started: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+};
+
+const A_STATUS_STYLES: Record<string, string> = {
+  completed: 'bg-green-500',
+  in_progress: 'bg-blue-500',
+  not_started: 'bg-gray-300 dark:bg-gray-600',
+};
+
+function MemberDetailTable({ data }: { data: CommunityMemberDetailsResult }) {
+  const t = useTranslations('admin.communities');
+  const { members, activityTypes } = data;
+
+  if (members.length === 0) {
+    return (
+      <p className="py-4 text-center text-sm text-muted-foreground">
+        {t('noData')}
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-left text-xs text-muted-foreground">
+            <th className="pb-2 pr-4 font-medium">{t('memberCol')}</th>
+            <th className="pb-2 pr-4 font-medium">{t('questionnaireCol')}</th>
+            <th className="pb-2 pr-4 font-medium">{t('virtualGroupCol')}</th>
+            {activityTypes.map((at) => (
+              <th key={at.id} className="pb-2 pr-2 text-center font-medium whitespace-nowrap">
+                {at.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {members.map((m) => (
+            <tr key={m.userId} className="border-b last:border-b-0">
+              {/* Member name */}
+              <td className="py-2 pr-4">
+                <div className="font-medium">{m.name || m.username}</div>
+                {m.name && (
+                  <div className="text-xs text-muted-foreground">@{m.username}</div>
+                )}
+              </td>
+
+              {/* Questionnaire status */}
+              <td className="py-2 pr-4">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ${Q_STATUS_STYLES[m.questionnaire.status]}`}
+                  >
+                    {t(`status_${m.questionnaire.status}`)}
+                  </span>
+                  {m.questionnaire.status !== 'not_started' && (
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {t('answeredCount', {
+                        answered: m.questionnaire.answeredCount,
+                        total: m.questionnaire.totalCount,
+                      })}
+                    </span>
+                  )}
+                </div>
+              </td>
+
+              {/* Virtual group */}
+              <td className="py-2 pr-4">
+                {m.virtualGroup ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-medium">
+                      {m.virtualGroup.groupName || 'Group'}
+                    </span>
+                    <span
+                      className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium ${
+                        m.virtualGroup.groupStatus === 'ACTIVE'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : m.virtualGroup.groupStatus === 'FORMING'
+                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {m.virtualGroup.groupStatus} {m.virtualGroup.memberCount}/6
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">{t('noGroup')}</span>
+                )}
+              </td>
+
+              {/* Activity progress dots */}
+              {m.activityProgress.map((ap) => (
+                <td key={ap.typeId} className="py-2 pr-2 text-center">
+                  <div className="flex items-center justify-center" title={`${ap.typeName}: ${t(`status_${ap.status}`)}`}>
+                    <span
+                      className={`inline-block h-2.5 w-2.5 rounded-full ${A_STATUS_STYLES[ap.status]}`}
+                    />
+                  </div>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

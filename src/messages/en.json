@@ -741,7 +741,18 @@
       "page": "Page {page}",
       "prevPage": "Previous",
       "nextPage": "Next",
-      "createdAt": "Created"
+      "createdAt": "Created",
+      "loadingMembers": "Loading member details...",
+      "memberCol": "Member",
+      "questionnaireCol": "Questionnaire",
+      "virtualGroupCol": "Virtual Group",
+      "status_submitted": "Submitted",
+      "status_draft": "Draft",
+      "status_not_started": "Not Started",
+      "status_completed": "Completed",
+      "status_in_progress": "In Progress",
+      "answeredCount": "{answered}/{total} answered",
+      "noGroup": "No group"
     },
     "settings": {
       "title": "System Settings",

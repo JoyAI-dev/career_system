@@ -215,6 +215,194 @@ export async function getCommunitySettings(): Promise<{ autoDeleteEmpty: boolean
   return { autoDeleteEmpty: setting ? setting.value === 'true' : true };
 }
 
+// ── Member Detail Query (for expandable community cards) ──────────
+
+export interface CommunityMemberDetail {
+  userId: string;
+  username: string;
+  name: string | null;
+  questionnaire: {
+    status: 'submitted' | 'draft' | 'not_started';
+    answeredCount: number;
+    totalCount: number;
+  };
+  virtualGroup: {
+    groupId: string;
+    groupName: string | null;
+    groupStatus: string;
+    memberCount: number;
+  } | null;
+  activityProgress: Array<{
+    typeId: string;
+    typeName: string;
+    order: number;
+    status: 'completed' | 'in_progress' | 'not_started';
+  }>;
+}
+
+export interface CommunityMemberDetailsResult {
+  members: CommunityMemberDetail[];
+  activityTypes: Array<{ id: string; name: string; order: number }>;
+}
+
+export async function getCommunityMemberDetails(
+  communityId: string,
+): Promise<CommunityMemberDetailsResult> {
+  // 1. Get community members with user data
+  const communityMembers = await prisma.communityMember.findMany({
+    where: { communityId },
+    include: {
+      user: { select: { id: true, username: true, name: true } },
+    },
+    orderBy: { joinedAt: 'asc' },
+  });
+
+  if (communityMembers.length === 0) {
+    return { members: [], activityTypes: [] };
+  }
+
+  const userIds = communityMembers.map((m) => m.user.id);
+
+  // 2. Parallel batch queries
+  const [
+    totalQuestionCount,
+    activityTypes,
+    snapshots,
+    vgMemberships,
+    allMemberships,
+  ] = await Promise.all([
+    // Total questions in active questionnaire version
+    prisma.question.count({
+      where: {
+        dimension: {
+          subTopic: { topic: { version: { isActive: true } } },
+        },
+      },
+    }),
+    // All enabled activity types
+    prisma.activityType.findMany({
+      where: { isEnabled: true },
+      orderBy: { order: 'asc' },
+      select: { id: true, name: true, order: true },
+    }),
+    // User snapshots (both draft and submitted)
+    prisma.responseSnapshot.findMany({
+      where: { userId: { in: userIds } },
+      select: {
+        userId: true,
+        isSnapshot: true,
+        _count: { select: { answers: true } },
+      },
+    }),
+    // Virtual group memberships for this community
+    prisma.virtualGroupMember.findMany({
+      where: {
+        userId: { in: userIds },
+        virtualGroup: { communityId },
+      },
+      include: {
+        virtualGroup: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            _count: { select: { members: true } },
+          },
+        },
+      },
+    }),
+    // Activity memberships (completed + in-progress)
+    prisma.membership.findMany({
+      where: { userId: { in: userIds } },
+      select: {
+        userId: true,
+        completedAt: true,
+        activity: { select: { typeId: true, status: true } },
+      },
+    }),
+  ]);
+
+  // 3. Build lookup maps
+  // Questionnaire status per user
+  const snapshotMap = new Map<string, { hasSubmitted: boolean; answeredCount: number }>();
+  for (const snap of snapshots) {
+    const existing = snapshotMap.get(snap.userId);
+    if (snap.isSnapshot) {
+      // Submitted snapshot — takes priority
+      snapshotMap.set(snap.userId, {
+        hasSubmitted: true,
+        answeredCount: Math.max(snap._count.answers, existing?.answeredCount ?? 0),
+      });
+    } else if (!existing?.hasSubmitted) {
+      // Draft — only use if no submitted snapshot yet
+      snapshotMap.set(snap.userId, {
+        hasSubmitted: false,
+        answeredCount: Math.max(snap._count.answers, existing?.answeredCount ?? 0),
+      });
+    }
+  }
+
+  // Virtual group per user
+  const vgMap = new Map<string, CommunityMemberDetail['virtualGroup']>();
+  for (const vgm of vgMemberships) {
+    vgMap.set(vgm.userId, {
+      groupId: vgm.virtualGroup.id,
+      groupName: vgm.virtualGroup.name,
+      groupStatus: vgm.virtualGroup.status,
+      memberCount: vgm.virtualGroup._count.members,
+    });
+  }
+
+  // Activity progress per user: completed and in-progress type IDs
+  const completedTypes = new Map<string, Set<string>>();
+  const inProgressTypes = new Map<string, Set<string>>();
+  for (const m of allMemberships) {
+    if (m.completedAt) {
+      if (!completedTypes.has(m.userId)) completedTypes.set(m.userId, new Set());
+      completedTypes.get(m.userId)!.add(m.activity.typeId);
+    } else if (['OPEN', 'FULL', 'SCHEDULED', 'IN_PROGRESS'].includes(m.activity.status)) {
+      if (!inProgressTypes.has(m.userId)) inProgressTypes.set(m.userId, new Set());
+      inProgressTypes.get(m.userId)!.add(m.activity.typeId);
+    }
+  }
+
+  // 4. Assemble result
+  const members: CommunityMemberDetail[] = communityMembers.map((cm) => {
+    const uid = cm.user.id;
+    const snapInfo = snapshotMap.get(uid);
+    const userCompleted = completedTypes.get(uid) ?? new Set<string>();
+    const userInProgress = inProgressTypes.get(uid) ?? new Set<string>();
+
+    return {
+      userId: uid,
+      username: cm.user.username,
+      name: cm.user.name,
+      questionnaire: {
+        status: snapInfo
+          ? snapInfo.hasSubmitted
+            ? 'submitted'
+            : 'draft'
+          : 'not_started',
+        answeredCount: snapInfo?.answeredCount ?? 0,
+        totalCount: totalQuestionCount,
+      },
+      virtualGroup: vgMap.get(uid) ?? null,
+      activityProgress: activityTypes.map((at) => ({
+        typeId: at.id,
+        typeName: at.name,
+        order: at.order,
+        status: userCompleted.has(at.id)
+          ? ('completed' as const)
+          : userInProgress.has(at.id)
+            ? ('in_progress' as const)
+            : ('not_started' as const),
+      })),
+    };
+  });
+
+  return { members, activityTypes };
+}
+
 export async function getGroupingCategories(): Promise<GroupingCategory[]> {
   return prisma.preferenceCategory.findMany({
     where: { isGroupingBasis: true, isActive: true },
